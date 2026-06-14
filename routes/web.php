@@ -79,3 +79,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
 });
+
+Route::get('/migrate-fresh', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate:fresh --seed --force');
+    return 'Live database migrated and seeded successfully.';
+});
