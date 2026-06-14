@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 PRD v3.1 — EduID Ethiopia (SaaS)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c0f;--surface:#111418;--surface2:#181d24;--border:#1e2530;--gold:#c9a84c;--gold-dim:#8a6e2f;--green:#2dbe6c;--green-dim:#1a7342;--red:#e05252;--blue:#4a9eff;--text:#e8eaf0;--text-dim:#8892a0;--text-faint:#4a5568;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--display:'Playfair Display',serif}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7}
+.cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:80px 60px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.cover::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(201,168,76,0.08)0%,transparent 70%);pointer-events:none}
+.doc-label{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:32px;display:flex;align-items:center;gap:12px}
+.doc-label::before{content:'';width:40px;height:1px;background:var(--gold)}
+h1.cover-title{font-family:var(--display);font-size:clamp(42px,6vw,80px);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:24px;max-width:700px}
+h1.cover-title span{color:var(--gold)}
+.cover-sub{font-size:18px;color:var(--text-dim);max-width:560px;margin-bottom:48px}
+.cover-meta{display:flex;gap:40px;flex-wrap:wrap}
+.meta-item{display:flex;flex-direction:column;gap:4px}
+.meta-label{font-family:var(--mono);font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:2px}
+.meta-value{font-family:var(--mono);font-size:14px;color:var(--gold)}
+.page{max-width:1000px;margin:0 auto;padding:80px 60px}
+.section{margin-bottom:80px;padding-bottom:80px;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.section-num{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.section-num::before{content:'';width:24px;height:1px;background:var(--gold)}
+h2{font-family:var(--display);font-size:38px;font-weight:700;margin-bottom:32px;letter-spacing:-1px;line-height:1.1}
+h3{font-family:var(--sans);font-size:18px;font-weight:600;color:var(--text);margin-bottom:16px;margin-top:36px;display:flex;align-items:center;gap:10px}
+h3::before{content:'';width:3px;height:18px;background:var(--gold);border-radius:2px;flex-shrink:0}
+h4{font-family:var(--mono);font-size:12px;color:var(--gold-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;margin-top:28px}
+p{color:var(--text-dim);margin-bottom:16px}
+strong{color:var(--text);font-weight:600}
+code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,0.06);padding:2px 7px;border-radius:4px;color:var(--blue)}
+.callout{border-left:3px solid var(--gold);background:rgba(201,168,76,0.05);padding:20px 24px;margin:24px 0;border-radius:0 8px 8px 0}
+.callout.red{border-color:var(--red);background:rgba(224,82,82,0.05)}
+.callout.green{border-color:var(--green);background:rgba(45,190,108,0.05)}
+.callout.blue{border-color:var(--blue);background:rgba(74,158,255,0.05)}
+.callout-title{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;color:var(--gold)}
+.callout.red .callout-title{color:var(--red)}
+.callout.green .callout-title{color:var(--green)}
+.callout.blue .callout-title{color:var(--blue)}
+.data-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
+.data-table th{text-align:left;padding:12px 16px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text-faint);border-bottom:1px solid var(--border);background:var(--surface)}
+.data-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-dim);vertical-align:top}
+.data-table tr:last-child td{border-bottom:none}
+.data-table td:first-child{font-family:var(--mono);font-size:13px;color:var(--gold);white-space:nowrap}
+.schema-block{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:16px 0;font-family:var(--mono);font-size:12px;line-height:1.9;overflow-x:auto;white-space:pre}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;margin:2px}
+.tag.gold{background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.2)}
+.tag.green{background:rgba(45,190,108,0.12);color:var(--green);border:1px solid rgba(45,190,108,0.2)}
+.tag.red{background:rgba(224,82,82,0.12);color:var(--red);border:1px solid rgba(224,82,82,0.2)}
+.tag.blue{background:rgba(74,158,255,0.12);color:var(--blue);border:1px solid rgba(74,158,255,0.2)}
+.tag.gray{background:rgba(255,255,255,0.05);color:var(--text-faint);border:1px solid var(--border)}
+.checklist{list-style:none;margin:16px 0}
+.checklist li{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-dim);font-size:14px}
+.checklist li:last-child{border-bottom:none}
+.checklist li::before{content:'→';color:var(--gold);font-family:var(--mono);flex-shrink:0;margin-top:2px}
+.changelog{background:var(--surface);border:1px solid rgba(45,190,108,0.2);border-radius:12px;padding:28px;margin:32px 0}
+.changelog-title{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+.changelog li{font-size:13px;color:var(--text-dim);padding:4px 0;list-style:none}
+.changelog li::before{content:'✦ ';color:var(--green);font-family:var(--mono)}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;margin-bottom:60px}
+.toc-title{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px}
+.toc ol{list-style:none;counter-reset:toc}
+.toc ol li{counter-increment:toc;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:16px}
+.toc ol li:last-child{border-bottom:none}
+.toc ol li::before{content:counter(toc,decimal-leading-zero);font-family:var(--mono);font-size:11px;color:var(--text-faint);flex-shrink:0}
+.toc ol li a{color:var(--text-dim);text-decoration:none;font-size:14px}
+.toc ol li a:hover{color:var(--gold)}
+.toc ol li a .nb{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:1px;margin-left:8px;background:rgba(45,190,108,0.1);padding:2px 6px;border-radius:3px;vertical-align:middle}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin:24px 0}
+.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;position:relative;overflow:hidden}
+.feature-card.core{border-color:rgba(201,168,76,0.3)}
+.feature-card.core::before{content:'CORE';position:absolute;top:16px;right:16px;font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:2px;background:rgba(201,168,76,0.1);padding:3px 8px;border-radius:4px}
+.feature-card.new{border-color:rgba(45,190,108,0.3)}
+.feature-card.new::before{content:'NEW v3';position:absolute;top:16px;right:16px;font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:2px;background:rgba(45,190,108,0.1);padding:3px 8px;border-radius:4px}
+.card-icon{font-size:28px;margin-bottom:16px}
+.card-title{font-weight:600;font-size:16px;margin-bottom:10px;color:var(--text)}
+.card-desc{font-size:13px;color:var(--text-dim);line-height:1.6}
+.flow{display:flex;flex-direction:column;gap:0;margin:24px 0}
+.flow-step{display:flex;gap:20px;position:relative}
+.flow-step-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:40px}
+.flow-dot{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--gold);flex-shrink:0;z-index:1}
+.flow-line{width:2px;flex:1;background:var(--border);margin:4px 0;min-height:24px}
+.flow-step:last-child .flow-line{display:none}
+.flow-content{padding:6px 0 28px 0}
+.flow-title{font-weight:600;font-size:15px;margin-bottom:6px}
+.flow-desc{font-size:13px;color:var(--text-dim);line-height:1.6}
+.price-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center}
+.price-card.highlight{border-color:rgba(201,168,76,0.4);background:rgba(201,168,76,0.04)}
+.price-tier{font-family:var(--mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.price-amount{font-family:var(--display);font-size:48px;font-weight:900;color:var(--text);line-height:1;margin-bottom:4px}
+.price-unit{font-family:var(--mono);font-size:12px;color:var(--text-faint);margin-bottom:24px}
+.price-features{list-style:none;text-align:left}
+.price-features li{padding:8px 0;font-size:13px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:8px}
+.price-features li::before{content:'✓';color:var(--green);font-family:var(--mono)}
+@media(max-width:768px){.cover,.page{padding:40px 24px}h2{font-size:28px}.feature-grid{grid-template-columns:1fr}.schema-block{font-size:11px;padding:16px}.cover-meta{gap:20px}}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="doc-label">Product Requirements Document — Phase 1 SaaS</div>
+  <h1 class="cover-title">Smart School <span>Identity</span> Platform — Full SaaS</h1>
+  <p class="cover-sub">Complete redesign as a centralized SaaS platform. Arkeon controls hosting, printing, and delivery. Schools access via browser and app. Card printing is a managed service — no downloadable PDFs.</p>
+  <div class="cover-meta">
+    <div class="meta-item"><div class="meta-label">Version</div><div class="meta-value">v3.1.0</div></div>
+    <div class="meta-item"><div class="meta-label">Model</div><div class="meta-value">Full SaaS (Centralized)</div></div>
+    <div class="meta-item"><div class="meta-label">Revenue</div><div class="meta-value">Setup + Print Service</div></div>
+    <div class="meta-item"><div class="meta-label">Tables</div><div class="meta-value">12 (app) + 1 (framework)</div></div>
+    <div class="meta-item"><div class="meta-label">Build Time</div><div class="meta-value">14 Weeks</div></div>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="changelog">
+  <div class="changelog-title">Critical Changes v3.0 → v3.1</div>
+  <ul>
+    <li><strong>Full database schema included</strong> — all 12 application tables fully specified in this document. No external references needed.</li>
+    <li><strong>Table count corrected</strong> — 12 application tables + 1 framework table (migrations). Previously miscounted as 13.</li>
+    <li><strong>Student UID generation algorithm</strong> — format, uniqueness guarantees, and code example now documented.</li>
+    <li><strong>QR Token lifecycle fully specified</strong> — HMAC-SHA256 generation, verification, annual renewal. No longer references v1.</li>
+    <li><strong>Offline sync protocol fully specified</strong> — idempotent batch POST, conflict resolution, retry logic. No longer references v1.</li>
+    <li><strong>Error handling and edge cases</strong> — new section covering photo session conflicts, order cancellations, CSV validation rules, password reset, rate limiting.</li>
+    <li><strong>Calendar conversion specified</strong> — Ethiopian calendar library and conversion approach documented.</li>
+    <li><strong>Security hardening</strong> — CORS, CSP, XSS protection, rate limiting, file upload limits all specified.</li>
+    <li><strong>Monitoring and health checks</strong> — health check endpoint, logging strategy, backup restoration procedure.</li>
+    <li>Removed: <code>migrations</code> from the application table count (it's Laravel framework infrastructure).</li>
+  </ul>
+</div>
+
+<div class="changelog" style="border-color:rgba(138,110,47,0.3);">
+  <div class="changelog-title" style="color:var(--gold-dim);">Previous: v2.0 → v3.0 Changes</div>
+  <ul>
+    <li><strong>Architecture: Full SaaS from day one</strong> — all schools on one Arkeon-managed VPS. No per-school installation. Arkeon controls everything.</li>
+    <li><strong>No downloadable PDFs</strong> — system generates card PREVIEW only. Printing is an order-through-Arkeon service. Schools never see print files.</li>
+    <li><strong>Card Order + Confirmation Code system</strong> — school orders cards → gets confirmation code → shares code with Arkeon → Arkeon prints and ships.</li>
+    <li><strong>Photo Session Mode</strong> — structured workflow for schools to photograph students and link photos correctly.</li>
+    <li><strong>All packages include first batch printing</strong> — setup fee covers software + first card delivery.</li>
+    <li><strong>Calendar is configurable</strong> — Super Admin sets Ethiopian or Gregorian per school. Not forced.</li>
+    <li><strong>New tables: card_orders, photo_sessions</strong> — replaced id_card_prints and system_version.</li>
+    <li><strong>VPS requirements specified</strong> — from 200 students to 10,000 users with exact server specs.</li>
+    <li><strong>Phase 2+ update model defined</strong> — bug fixes free with maintenance. New features are paid add-on modules.</li>
+  </ul>
+</div>
+
+<div class="toc">
+  <div class="toc-title">Table of Contents</div>
+  <ol>
+    <li><a href="#arch">SaaS Architecture Decision</a></li>
+    <li><a href="#scope">Phase 1 Feature Scope</a></li>
+    <li><a href="#print">Card Printing Service — Core Revenue</a></li>
+    <li><a href="#photo">Photo Management System</a></li>
+    <li><a href="#schema">Database Schema — 12 Tables <span class="nb">COMPLETE</span></a></li>
+    <li><a href="#qr">QR Token Lifecycle <span class="nb">NEW v3.1</span></a></li>
+    <li><a href="#sync">Offline Sync Protocol <span class="nb">NEW v3.1</span></a></li>
+    <li><a href="#edges">Error Handling &amp; Edge Cases <span class="nb">NEW v3.1</span></a></li>
+    <li><a href="#flows">Key User Flows</a></li>
+    <li><a href="#revenue">Revenue Model &amp; Pricing</a></li>
+    <li><a href="#security">Security Specification <span class="nb">NEW v3.1</span></a></li>
+    <li><a href="#vps">VPS Server Requirements</a></li>
+    <li><a href="#updates">Phase 2+ Update Model</a></li>
+    <li><a href="#build">Build Plan — 14 Weeks</a></li>
+    <li><a href="#phases">Phase 2–4 Roadmap</a></li>
+  </ol>
+</div>
+
+<!-- SECTION 1: ARCHITECTURE -->
+<div class="section" id="arch">
+  <div class="section-num">01</div>
+  <h2>SaaS Architecture — Centralized from Day One</h2>
+
+  <div class="callout red">
+    <div class="callout-title">Why This Changed</div>
+    <p>The v2 PRD chose per-school installation. That model breaks when your main revenue is printing — you need server access to generate print files, you manage hosting anyway, and updating 10 separate servers is a nightmare. <strong>Full SaaS solves everything:</strong> one server, you control it, schools access via browser, print files stay on your server, updates deploy once.</p>
+  </div>
+
+  <h3>How It Works</h3>
+  <ul class="checklist">
+    <li><strong>One VPS, all schools:</strong> All school data lives on a single Arkeon-managed VPS (Contabo or DigitalOcean). Each school is isolated by <code>school_id</code> on every database table.</li>
+    <li><strong>School access:</strong> Schools log in at <code>app.eduid.et</code> (or <code>eduid.arkeonethiopia.com</code>). They enter their school code at login. No subdomains needed for Phase 1 — one login page, school code as identifier.</li>
+    <li><strong>Teacher app:</strong> Flutter app connects to the same central server. Teacher enters school code + credentials on first login.</li>
+    <li><strong>Data isolation:</strong> The <code>BelongsToSchool</code> trait on every model auto-scopes all queries by <code>school_id</code>. School A cannot see School B's data — enforced at the ORM level, not just the UI.</li>
+    <li><strong>Backups:</strong> One nightly mysqldump + photo backup. You manage it. No reliance on school IT staff.</li>
+    <li><strong>Updates:</strong> You deploy once to one server. All schools get the update immediately. No ZIP files, no per-school migration scripts.</li>
+  </ul>
+
+  <h3>Calendar System — Configurable Per School</h3>
+  <p>The <code>schools</code> table has a <code>calendar_system</code> field: <code>'ethiopian'</code> or <code>'gregorian'</code>. The Super Admin sets this during school creation. All date displays — dashboard, reports, card validity, Flutter app — respect this setting. Database always stores Gregorian dates regardless. International schools in Ethiopia use Gregorian. Local schools use Ethiopian. The system supports both without code changes.</p>
+</div>
+
+<!-- SECTION 2: SCOPE -->
+<div class="section" id="scope">
+  <div class="section-num">02</div>
+  <h2>Phase 1 Feature Scope</h2>
+
+  <div class="feature-grid">
+    <div class="feature-card core">
+      <div class="card-icon">🪪</div>
+      <div class="card-title">ID Card Print Service</div>
+      <div class="card-desc">School orders cards through the system → gets confirmation code → Arkeon prints on PVC card stock → ships within 3 days. No downloadable PDFs. First batch included in setup fee.</div>
+    </div>
+    <div class="feature-card core">
+      <div class="card-icon">📱</div>
+      <div class="card-title">QR Attendance App</div>
+      <div class="card-desc">Teacher scans student cards with phone. Works 100% offline. Syncs automatically when internet returns. Manual fallback for teachers without smartphones.</div>
+    </div>
+    <div class="feature-card core">
+      <div class="card-icon">👥</div>
+      <div class="card-title">Student Registry</div>
+      <div class="card-desc">Complete profiles with photos, guardians (many-to-many), class assignment. CSV bulk import with validate-all-then-import. Search by name, UID, guardian, class.</div>
+    </div>
+    <div class="feature-card new">
+      <div class="card-icon">📸</div>
+      <div class="card-title">Photo Session Mode</div>
+      <div class="card-desc">Structured photography workflow: create a session queue, photograph students in order, system auto-links each photo to the correct student. Bulk ZIP upload also supported.</div>
+    </div>
+    <div class="feature-card new">
+      <div class="card-icon">🔖</div>
+      <div class="card-title">Order + Confirmation Codes</div>
+      <div class="card-desc">School places card order → gets unique code (ORD-AIA-2024-0847) → shares with Arkeon via WhatsApp → Arkeon confirms and prints. Full order tracking in dashboard.</div>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Dashboard & Reports</div>
+      <div class="card-desc">Daily attendance overview, per-class detail, date range reports. Export to Excel. Calendar display configurable (Ethiopian or Gregorian).</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: PRINT SERVICE -->
+<div class="section" id="print">
+  <div class="section-num">03</div>
+  <h2>Card Printing Service — Core Revenue Engine</h2>
+
+  <div class="callout red">
+    <div class="callout-title">The Golden Rule</div>
+    <p>The system <strong>NEVER</strong> generates a downloadable, printable PDF. Schools see a low-resolution card PREVIEW on screen. The high-resolution print-ready layout is generated server-side only, accessible only to Super Admin (you). This is not a limitation to apologize for — it's a premium service: "We handle everything. Professional PVC cards delivered to your door."</p>
+  </div>
+
+  <h3>Card Order Flow — With Confirmation Code</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">1</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">School Admin clicks "Order Cards"</div>
+        <div class="flow-desc">Selects students: all students, by class, or individual. Sees a low-res preview of each card. Confirms the order.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">2</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">System generates a Confirmation Code</div>
+        <div class="flow-desc">Unique code like <code>ORD-AIA-2026-0847</code>. Displayed to the school admin with message: "Share this code with Arkeon to confirm your order." Order status: <strong>Pending</strong>.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">3</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">School shares the code via WhatsApp/Telegram/Phone</div>
+        <div class="flow-desc">School admin sends: "Our order code is ORD-AIA-2026-0847, 312 cards." This creates a trust moment — the school is in control, they initiated the order.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">4</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">You (Super Admin) enter the code in your dashboard</div>
+        <div class="flow-desc">Super Admin panel has "Process Card Order" → enter code → system shows: school name, student count, preview, amount due. You click "Confirm & Generate Print Files." Status: <strong>Confirmed</strong>.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">5</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">System generates high-res print files (server-side only)</div>
+        <div class="flow-desc">TCPDF generates print-ready PDF with exact CR80 card dimensions, arranged for your PVC card printer. Files stored at <code>storage/app/print_jobs/{order_code}/</code> — never accessible via web URL.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">6</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">You print and ship</div>
+        <div class="flow-desc">Print on PVC card printer. Package cards. Ship/deliver to school. Update status: <strong>Printing → Shipped → Delivered</strong>. School admin sees status update in their dashboard in real-time.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Why Schools Cannot Print Themselves</h3>
+  <ul class="checklist">
+    <li>They never see the print-ready PDF file — only a low-res screen preview</li>
+    <li>Even if they screenshot the preview, PVC card printing requires a specialized printer ($1,500+) that no school owns</li>
+    <li>Paper lamination looks visibly cheap next to a proper PVC card — schools WANT the professional quality</li>
+    <li>QR tokens expire annually — schools MUST order new cards each year or attendance scanning stops working</li>
+    <li>Ordering through the system is easier than DIY — one click, cards arrive at their door</li>
+  </ul>
+
+  <h3>Your Investment: PVC Card Printer</h3>
+  <table class="data-table">
+    <thead><tr><th>Item</th><th>Cost</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Evolis Primacy 2 (or Fargo DTC1250e)</td><td>$1,500–2,000</td><td>Prints 300 cards/hour. Lasts 5–10 years. One-time investment.</td></tr>
+      <tr><td>YMCKO ribbon (full color)</td><td>~$40 per 200 prints</td><td>~20 ETB cost per card for ribbon</td></tr>
+      <tr><td>Blank PVC cards (CR80)</td><td>~$15 per 100 cards</td><td>~8 ETB per blank card</td></tr>
+      <tr><td>Total cost per card</td><td>~28–35 ETB</td><td>You charge 50–80 ETB per card → 50%+ margin</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 4: PHOTO MANAGEMENT -->
+<div class="section" id="photo">
+  <div class="section-num">04</div>
+  <h2>Photo Management System</h2>
+
+  <p>Getting 500 student photos correctly linked to the right student records is the biggest onboarding challenge. Three methods, from best to simplest:</p>
+
+  <h3>Method 1: Photo Session Mode (Recommended)</h3>
+  <div class="callout green">
+    <div class="callout-title">Like School Picture Day</div>
+    <p>This is the recommended method for initial bulk photography. It's a guided workflow that eliminates photo-to-student mismatches.</p>
+  </div>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">1</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Admin creates a Photo Session</div>
+        <div class="flow-desc">Selects which class (or whole school). System generates an ordered queue of students sorted alphabetically. Prints a simple checklist: student name + UID, one per line.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">2</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Students line up in order</div>
+        <div class="flow-desc">Using the printed checklist, students queue in alphabetical order. Teacher checks each name as they step forward.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">3</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Photographer captures via app or uploads</div>
+        <div class="flow-desc"><strong>Option A:</strong> Photographer uses the Flutter app's Photo Session screen — shows the current student's name, taps "Capture," camera opens, photo auto-linked. Tap "Next" for the next student. <strong>Option B:</strong> Photographer uses any camera, names files sequentially (001.jpg, 002.jpg...), uploads ZIP later — system matches by sequence order to the queue.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">4</div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Review & confirm</div>
+        <div class="flow-desc">Admin reviews: each student's name next to their photo. Can swap any mismatches. Once confirmed, session is marked complete. Photos compressed (500KB max) and stored.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Method 2: Bulk Upload by Student UID</h3>
+  <p>If the school already has digital photos, they rename each file to the student's UID: <code>AIA-2026-000412.jpg</code>. Upload a ZIP file → system matches filenames to UIDs automatically. Unmatched photos flagged for manual review. This is best for schools that already have professional photos from a studio.</p>
+
+  <h3>Method 3: Individual Upload</h3>
+  <p>Admin opens each student's profile, clicks "Upload Photo." Best for small batches, new students mid-year, or photo updates. This is the slowest method but always available as a fallback.</p>
+
+  <div class="callout blue">
+    <div class="callout-title">Cards Without Photos Are Allowed</div>
+    <p>If photos aren't ready yet, cards can still be ordered and printed with a placeholder silhouette icon. Don't block onboarding because photography isn't complete. Schools can order replacement cards with photos later.</p>
+  </div>
+</div>
+
+<!-- SECTION 5: DATABASE SCHEMA -->
+<div class="section" id="schema">
+  <div class="section-num">05</div>
+  <h2>Database Schema — 12 Application Tables</h2>
+
+  <div class="callout green">
+    <div class="callout-title">v3.1 — Fully Self-Contained</div>
+    <p>All 12 application tables fully specified below. No external references needed. The 13th table (<code>migrations</code>) is Laravel framework infrastructure, not an application table. Every table with student/school data includes <code>school_id</code> for multi-tenant isolation via the <code>BelongsToSchool</code> trait.</p>
+  </div>
+
+  <h4>1. schools</h4>
+  <div class="schema-block">schools
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  name             VARCHAR(200) NOT NULL
+  code             VARCHAR(10) UNIQUE NOT NULL        -- "AIA", "SJA" etc. Used in login + UID
+  logo_path        VARCHAR(500) NULL                  -- storage/app/logos/{code}.png
+  address          TEXT NULL
+  phone            VARCHAR(20) NULL
+  email            VARCHAR(100) NULL
+  calendar_system  ENUM('ethiopian','gregorian') DEFAULT 'ethiopian'
+  academic_year    VARCHAR(20) NOT NULL               -- "2026/2027" or "2018/2019 EC"
+  hmac_secret      VARCHAR(64) NOT NULL               -- per-school QR signing key (auto-generated)
+  is_active        BOOLEAN DEFAULT TRUE
+  plan_tier        ENUM('starter','standard','premium') DEFAULT 'standard'
+  max_students     INT DEFAULT 800                    -- enforced limit per plan
+  max_teachers     INT DEFAULT 30                     -- enforced limit per plan
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</div>
+
+  <h4>2. users</h4>
+  <div class="schema-block">users
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NULL REFERENCES schools(id)    -- NULL for super_admin
+  name             VARCHAR(100) NOT NULL
+  email            VARCHAR(100) NOT NULL
+  password         VARCHAR(255) NOT NULL              -- bcrypt hashed
+  role             ENUM('super_admin','school_admin','teacher') NOT NULL
+  phone            VARCHAR(20) NULL
+  is_active        BOOLEAN DEFAULT TRUE
+  last_login_at    TIMESTAMP NULL
+  password_reset_token  VARCHAR(100) NULL
+  password_reset_expires TIMESTAMP NULL
+  failed_login_count INT DEFAULT 0
+  locked_until     TIMESTAMP NULL                     -- account lockout after 5 failed attempts
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  
+  UNIQUE(email, school_id)                            -- same email can exist in different schools</div>
+
+  <h4>3. students</h4>
+  <div class="schema-block">students
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NOT NULL REFERENCES schools(id)
+  uid              VARCHAR(30) UNIQUE NOT NULL         -- "AIA-2026-000412"
+  first_name       VARCHAR(100) NOT NULL
+  last_name        VARCHAR(100) NOT NULL
+  first_name_am    VARCHAR(100) NULL                   -- Amharic name (optional)
+  last_name_am     VARCHAR(100) NULL
+  gender           ENUM('male','female') NOT NULL
+  date_of_birth    DATE NULL                           -- stored as Gregorian always
+  class_id         INT NULL REFERENCES classes(id)
+  photo_path       VARCHAR(500) NULL                   -- storage/app/photos/{school_id}/{uid}/photo.jpg
+  blood_type       ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-') NULL
+  medical_notes    TEXT NULL
+  enrollment_date  DATE NOT NULL DEFAULT (CURRENT_DATE)
+  is_active        BOOLEAN DEFAULT TRUE                -- FALSE = withdrawn/graduated
+  qr_token         VARCHAR(255) NULL                   -- HMAC-SHA256 token for current year
+  qr_token_year    VARCHAR(20) NULL                    -- academic year this token is valid for
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+  INDEX idx_school_class (school_id, class_id)
+  INDEX idx_school_active (school_id, is_active)</div>
+
+  <h4>4. guardians</h4>
+  <div class="schema-block">guardians
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NOT NULL REFERENCES schools(id)
+  full_name        VARCHAR(200) NOT NULL
+  phone            VARCHAR(20) NULL
+  phone_alt        VARCHAR(20) NULL
+  email            VARCHAR(100) NULL
+  relationship     ENUM('father','mother','guardian','sibling','other') DEFAULT 'guardian'
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</div>
+
+  <h4>5. student_guardians (junction — many-to-many)</h4>
+  <div class="schema-block">student_guardians
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  student_id       INT NOT NULL REFERENCES students(id) ON DELETE CASCADE
+  guardian_id      INT NOT NULL REFERENCES guardians(id) ON DELETE CASCADE
+  is_primary       BOOLEAN DEFAULT FALSE               -- primary contact for this student
+  
+  UNIQUE(student_id, guardian_id)                       -- no duplicate links</div>
+
+  <h4>6. classes</h4>
+  <div class="schema-block">classes
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NOT NULL REFERENCES schools(id)
+  grade            VARCHAR(20) NOT NULL                -- "Grade 9", "KG-1", "Nursery"
+  section          VARCHAR(10) NOT NULL                -- "A", "B", "C"
+  academic_year    VARCHAR(20) NOT NULL                -- "2026/2027"
+  level_order      INT NOT NULL DEFAULT 0              -- for sorting: KG=1, Grade1=2...Grade12=13
+  is_active        BOOLEAN DEFAULT TRUE
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+  UNIQUE(school_id, grade, section, academic_year)</div>
+
+  <h4>7. teacher_classes (junction — which teachers can take attendance for which classes)</h4>
+  <div class="schema-block">teacher_classes
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  user_id          INT NOT NULL REFERENCES users(id) ON DELETE CASCADE
+  class_id         INT NOT NULL REFERENCES classes(id) ON DELETE CASCADE
+
+  UNIQUE(user_id, class_id)</div>
+
+  <h4>8. attendance_sessions</h4>
+  <div class="schema-block">attendance_sessions
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NOT NULL REFERENCES schools(id)
+  class_id         INT NOT NULL REFERENCES classes(id)
+  teacher_id       INT NOT NULL REFERENCES users(id)
+  session_date     DATE NOT NULL                       -- Gregorian always
+  session_type     ENUM('morning','afternoon','full_day') DEFAULT 'morning'
+  method           ENUM('qr_scan','manual') DEFAULT 'qr_scan'
+  synced_from_app  BOOLEAN DEFAULT FALSE               -- TRUE if created offline then synced
+  device_id        VARCHAR(100) NULL                   -- identifies which phone synced this
+  idempotency_key  VARCHAR(100) NULL UNIQUE            -- prevents duplicate sync submissions
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+  UNIQUE(school_id, class_id, session_date, session_type)  -- one session per class per slot</div>
+
+  <h4>9. attendance_records</h4>
+  <div class="schema-block">attendance_records
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  session_id       INT NOT NULL REFERENCES attendance_sessions(id) ON DELETE CASCADE
+  student_id       INT NOT NULL REFERENCES students(id)
+  status           ENUM('present','absent','late','excused') NOT NULL
+  scanned_at       TIMESTAMP NULL                      -- exact scan time (from phone clock)
+  note             VARCHAR(200) NULL                   -- "arrived 10 min late"
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+  UNIQUE(session_id, student_id)                       -- one record per student per session</div>
+
+  <h4>10. card_orders</h4>
+  <div class="schema-block">card_orders
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NOT NULL REFERENCES schools(id)
+  order_code       VARCHAR(30) UNIQUE NOT NULL          -- "ORD-AIA-2026-0847"
+  ordered_by       INT NOT NULL REFERENCES users(id)
+  student_ids      JSON NOT NULL                        -- array of student IDs
+  student_count    INT NOT NULL
+  order_type       ENUM('first_batch','annual_renewal','replacement','new_student')
+  status           ENUM('pending','confirmed','printing','shipped','delivered','cancelled') DEFAULT 'pending'
+  cancel_reason    TEXT NULL                            -- if cancelled, why
+  print_file_path  VARCHAR(500) NULL                   -- server-side only, never exposed
+  amount_etb       DECIMAL(10,2)                       -- price charged
+  tracking_note    TEXT NULL                            -- "Shipped via X, expected Y"
+  confirmed_at     TIMESTAMP NULL
+  printed_at       TIMESTAMP NULL
+  shipped_at       TIMESTAMP NULL
+  delivered_at     TIMESTAMP NULL
+  cancelled_at     TIMESTAMP NULL
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</div>
+
+  <h4>11. photo_sessions</h4>
+  <div class="schema-block">photo_sessions
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NOT NULL REFERENCES schools(id)
+  created_by       INT NOT NULL REFERENCES users(id)
+  class_id         INT NULL REFERENCES classes(id)      -- NULL = whole school
+  session_type     ENUM('app_capture','zip_upload') DEFAULT 'app_capture'
+  status           ENUM('active','completed','cancelled') DEFAULT 'active'
+  student_queue    JSON NOT NULL                        -- ordered list of student IDs
+  total_students   INT NOT NULL
+  photos_captured  INT DEFAULT 0
+  current_position INT DEFAULT 0                       -- tracks where photographer is in queue
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  completed_at     TIMESTAMP NULL</div>
+
+  <h4>12. audit_logs</h4>
+  <div class="schema-block">audit_logs
+  id               INT PRIMARY KEY AUTO_INCREMENT
+  school_id        INT NULL REFERENCES schools(id)      -- NULL for super_admin actions
+  user_id          INT NOT NULL REFERENCES users(id)
+  action           VARCHAR(50) NOT NULL                 -- 'student.create', 'order.confirm', etc.
+  target_type      VARCHAR(50) NOT NULL                 -- 'student', 'card_order', 'user', etc.
+  target_id        INT NULL                             -- ID of the affected record
+  old_values       JSON NULL                            -- previous state (for updates)
+  new_values       JSON NULL                            -- new state (for creates/updates)
+  ip_address       VARCHAR(45) NULL
+  user_agent       VARCHAR(500) NULL
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+  INDEX idx_school_action (school_id, action)
+  INDEX idx_created (created_at)</div>
+
+  <h4>All 12 Application Tables</h4>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+    <span class="tag gold">schools</span>
+    <span class="tag gold">users</span>
+    <span class="tag gold">students</span>
+    <span class="tag gold">guardians</span>
+    <span class="tag gold">student_guardians</span>
+    <span class="tag gold">classes</span>
+    <span class="tag gold">teacher_classes</span>
+    <span class="tag gold">attendance_sessions</span>
+    <span class="tag gold">attendance_records</span>
+    <span class="tag green">card_orders</span>
+    <span class="tag green">photo_sessions</span>
+    <span class="tag gray">audit_logs</span>
+  </div>
+  <p style="margin-top:16px;font-size:13px;">Plus Laravel's built-in <code>migrations</code> table (framework infrastructure, not counted as an application table).</p>
+
+  <h3>Student UID Generation</h3>
+  <div class="schema-block">// Format: {SCHOOL_CODE}-{YEAR}-{6-DIGIT-SEQ}
+// Example: AIA-2026-000412
+
+public function generateUID(School $school): string
+{
+    $year = date('Y'); // enrollment year, Gregorian
+    $prefix = "{$school->code}-{$year}-";
+    
+    $lastStudent = Student::where('uid', 'LIKE', $prefix . '%')
+        ->orderBy('id', 'desc')
+        ->first();
+    
+    $nextNum = $lastStudent 
+        ? intval(substr($lastStudent->uid, -6)) + 1 
+        : 1;
+    
+    return $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+}
+
+// Uniqueness: enforced by UNIQUE constraint on uid column
+// Collision prevention: sequential within school+year prefix
+// Max capacity: 999,999 students per school per year</div>
+
+  <h3>Calendar Conversion</h3>
+  <div class="callout blue">
+    <div class="callout-title">Implementation</div>
+    <p>Use the <strong><code>andegna/calends</code></strong> PHP package for Ethiopian ↔ Gregorian conversion on the backend. In Flutter, use a custom EthiopianCalendar utility class (same JDN algorithm proven in the WBSS app — passes 10,000/10,000 random date tests). All dates stored in MySQL are Gregorian. Conversion happens at the display layer only: Blade views check <code>$school->calendar_system</code> before formatting dates. The Flutter app stores the school's calendar setting locally and converts dates before display.</p>
+  </div>
+</div>
+
+<!-- SECTION 6: QR TOKEN LIFECYCLE -->
+<div class="section" id="qr">
+  <div class="section-num">06</div>
+  <h2>QR Token Lifecycle</h2>
+
+  <p>Each student's QR code encodes a cryptographic token that proves identity and is tied to a specific academic year. When a teacher scans the QR code, the system can verify the student is real, active, and enrolled for the current year — without needing an internet connection for basic validation.</p>
+
+  <h3>Token Generation (Server-Side)</h3>
+  <div class="schema-block">// Generated when: student is created, or during annual year promotion
+// Each school has a unique HMAC secret (schools.hmac_secret)
+
+public function generateQRToken(Student $student): string
+{
+    $school = $student->school;
+    $payload = "{$student->uid}|{$school->academic_year}";
+    $token = hash_hmac('sha256', $payload, $school->hmac_secret);
+    
+    // Store on student record
+    $student->update([
+        'qr_token' => $token,
+        'qr_token_year' => $school->academic_year,
+    ]);
+    
+    // QR code encodes: "{UID}|{TOKEN}"
+    // Example: "AIA-2026-000412|a3f7c9e2b1d8..."
+    return "{$student->uid}|{$token}";
+}
+
+// Security properties:
+// - Token is unique per student + academic year
+// - Cannot be forged without the school's HMAC secret
+// - Old year tokens automatically fail verification
+// - Each school has a different secret → cross-school forgery impossible</div>
+
+  <h3>Token Verification</h3>
+  <div class="schema-block">// SERVER VERIFICATION (when online):
+// POST /api/v1/attendance/verify-qr { qr_data: "AIA-2026-000412|a3f7c9..." }
+// 1. Split qr_data by "|" → uid, submitted_token
+// 2. Find student by uid (auto-scoped to teacher's school)
+// 3. Recompute: expected = HMAC(uid + school.academic_year, school.hmac_secret)
+// 4. If submitted_token === expected → VALID (student is real, current year)
+// 5. If mismatch → check if token matches PREVIOUS year → "Card expired, needs renewal"
+// 6. If no match at all → "Invalid card"
+
+// FLUTTER SOFT-CHECK (when offline):
+// App caches student list with qr_token on last sync
+// On scan: find student by uid in SQLite, compare cached token
+// This catches obviously fake/expired cards offline
+// Full server verification happens when attendance syncs</div>
+
+  <h3>Annual Renewal (Year Promotion)</h3>
+  <ul class="checklist">
+    <li>During Academic Year Promotion Wizard, ALL students get new QR tokens for the new year</li>
+    <li>Old tokens become invalid immediately — old cards stop scanning</li>
+    <li>This forces annual card renewal (new cards with new QR codes = recurring revenue)</li>
+    <li>Schools MUST order new cards each year or attendance scanning breaks</li>
+    <li>The HMAC secret itself stays the same — only the academic_year in the payload changes</li>
+  </ul>
+</div>
+
+<!-- SECTION 7: OFFLINE SYNC PROTOCOL -->
+<div class="section" id="sync">
+  <div class="section-num">07</div>
+  <h2>Offline Sync Protocol</h2>
+
+  <p>The Flutter app stores attendance data locally in SQLite when offline. When internet connectivity returns, it syncs automatically in the background. The protocol is designed to be <strong>idempotent</strong> — sending the same data twice never creates duplicates.</p>
+
+  <h3>Sync Flow</h3>
+  <div class="schema-block">// 1. Teacher takes attendance offline
+//    → Stored in SQLite: attendance_sessions + attendance_records
+//    → Each session gets a UUID idempotency_key (generated on phone)
+//    → Status: "pending_sync"
+
+// 2. App detects internet connectivity
+//    → SyncService triggers automatically (also manual button available)
+//    → Collects all "pending_sync" sessions
+
+// 3. Batch POST to server
+POST /api/v1/attendance/sync
+{
+  "sessions": [
+    {
+      "idempotency_key": "a1b2c3d4-...",
+      "class_id": 15,
+      "session_date": "2026-09-15",
+      "session_type": "morning",
+      "method": "qr_scan",
+      "device_id": "samsung-a54-xyz",
+      "records": [
+        { "student_id": 412, "status": "present", "scanned_at": "2026-09-15T08:32:00" },
+        { "student_id": 413, "status": "absent" },
+        { "student_id": 414, "status": "late", "scanned_at": "2026-09-15T08:55:00" }
+      ]
+    }
+  ]
+}
+
+// 4. Server processes each session:
+//    → Check idempotency_key: if already exists → skip (return "already_synced")
+//    → Validate class_id belongs to teacher's school
+//    → Validate all student_ids belong to the class
+//    → Create attendance_session + attendance_records in a transaction
+//    → Return: { synced: 1, skipped: 0, failed: 0 }
+
+// 5. App marks synced sessions as "synced" in SQLite
+//    → Failed sessions stay as "pending_sync" for retry
+//    → After 3 consecutive failures → mark as "sync_failed" + alert teacher</div>
+
+  <h3>Conflict Resolution</h3>
+  <ul class="checklist">
+    <li><strong>Same class, same date, same type:</strong> Server rejects duplicate via UNIQUE constraint on (school_id, class_id, session_date, session_type). App receives clear error: "Session already exists."</li>
+    <li><strong>Two teachers scanning same class simultaneously:</strong> First sync wins. Second gets conflict error → teacher can review and merge manually.</li>
+    <li><strong>Phone clock wrong:</strong> Server uses <code>scanned_at</code> from phone (for sequence accuracy) but <code>created_at</code> from server clock (for record-keeping).</li>
+    <li><strong>Offline for days:</strong> All pending sessions queue up. Sync processes them oldest-first. No data loss regardless of offline duration.</li>
+    <li><strong>App deleted and reinstalled:</strong> Unsynced data is lost. Teacher sees warning when >10 sessions are pending: "Sync now to avoid data loss."</li>
+  </ul>
+
+  <h3>Data Refresh (Server → App)</h3>
+  <div class="schema-block">// On each successful sync, app also pulls fresh data:
+GET /api/v1/sync/pull?last_sync=2026-09-14T18:00:00
+// Returns: updated students, new students, class changes, 
+//          deactivated students, new QR tokens
+// App updates local SQLite cache
+// Photos: only download if student.updated_at > cached version</div>
+</div>
+
+<!-- SECTION 8: ERROR HANDLING & EDGE CASES -->
+<div class="section" id="edges">
+  <div class="section-num">08</div>
+  <h2>Error Handling &amp; Edge Cases</h2>
+
+  <h3>Photo Session Conflicts</h3>
+  <ul class="checklist">
+    <li><strong>Two sessions for same class:</strong> System prevents creating a new active session if one already exists for the same class. Error: "An active photo session already exists for Grade 9A. Complete or cancel it first."</li>
+    <li><strong>Session interrupted (photographer leaves mid-session):</strong> Session stays "active" with photos_captured tracking progress. Photographer can resume anytime. Sessions auto-expire after 7 days of inactivity → status changes to "cancelled."</li>
+    <li><strong>Wrong photo taken:</strong> Photographer can tap "Back" to return to previous student and retake. Admin can also manually reassign photos in the review screen before confirming.</li>
+  </ul>
+
+  <h3>Card Order Edge Cases</h3>
+  <ul class="checklist">
+    <li><strong>Order cancellation:</strong> School Admin can cancel a "pending" order (before Super Admin confirms). Super Admin can cancel any order in "pending" or "confirmed" status. Once "printing" starts, cancellation requires Super Admin to manually update. Status becomes "cancelled" with a <code>cancel_reason</code>.</li>
+    <li><strong>Students without photos:</strong> System warns "12 students have no photo" during order creation. School Admin can choose: include them (printed with silhouette placeholder) or exclude them from this order.</li>
+    <li><strong>Student removed after order placed:</strong> If a student is deactivated after being included in a pending order, Super Admin sees a warning during confirmation. Can proceed (card printed anyway) or remove student from the order.</li>
+    <li><strong>Duplicate orders:</strong> System warns if students are already in an active (non-delivered, non-cancelled) order: "These 15 students are already in order ORD-AIA-2026-0844."</li>
+  </ul>
+
+  <h3>CSV Import Validation Rules</h3>
+  <table class="data-table">
+    <thead><tr><th>Field</th><th>Required</th><th>Validation</th></tr></thead>
+    <tbody>
+      <tr><td>first_name</td><td>Yes</td><td>2–100 chars, letters + spaces + hyphens + Ethiopic chars only</td></tr>
+      <tr><td>last_name</td><td>Yes</td><td>2–100 chars, same rules</td></tr>
+      <tr><td>gender</td><td>Yes</td><td>Must be "male" or "female" (case insensitive)</td></tr>
+      <tr><td>grade</td><td>Yes</td><td>Must match existing class grade in this school</td></tr>
+      <tr><td>section</td><td>Yes</td><td>Must match existing class section for this grade</td></tr>
+      <tr><td>date_of_birth</td><td>No</td><td>Accepts DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY. Auto-detects Ethiopian vs Gregorian based on school setting.</td></tr>
+      <tr><td>guardian_name</td><td>No</td><td>If provided, creates guardian + link automatically</td></tr>
+      <tr><td>guardian_phone</td><td>No</td><td>Must be valid Ethiopian phone (09XX or +2519XX)</td></tr>
+      <tr><td>blood_type</td><td>No</td><td>Must be A+, A-, B+, B-, AB+, AB-, O+, O-</td></tr>
+    </tbody>
+  </table>
+  <div class="callout red">
+    <div class="callout-title">Validate-All-Then-Import</div>
+    <p>CSV import uses a two-pass strategy. <strong>Pass 1:</strong> validate every row and collect all errors. Display errors with row numbers: "Row 47: invalid gender 'M' (must be 'male' or 'female')." <strong>Pass 2:</strong> import only happens after ALL rows pass validation — never partial imports. This prevents orphan data and makes it safe to re-upload after fixing errors.</p>
+  </div>
+
+  <h3>Password Reset Flow</h3>
+  <ul class="checklist">
+    <li><strong>School Admin resets teacher password:</strong> Admin goes to teacher management → "Reset Password" → system generates a temporary password → shows it once → teacher must change on first login.</li>
+    <li><strong>Super Admin resets School Admin password:</strong> Same flow from Super Admin panel.</li>
+    <li><strong>Self-service password reset:</strong> Phase 1 does NOT include email-based reset (Ethiopian schools often lack reliable email). Reset is always through the admin hierarchy. Phase 2 could add Telegram-based reset.</li>
+    <li><strong>Account lockout:</strong> After 5 failed login attempts, account is locked for 30 minutes. <code>locked_until</code> timestamp in users table. Admin can unlock immediately via teacher management.</li>
+  </ul>
+
+  <h3>Rate Limiting</h3>
+  <table class="data-table">
+    <thead><tr><th>Endpoint Group</th><th>Limit</th><th>Window</th></tr></thead>
+    <tbody>
+      <tr><td>Login attempts</td><td>5 requests</td><td>Per 15 minutes, per IP + email</td></tr>
+      <tr><td>API (authenticated)</td><td>120 requests</td><td>Per minute, per user</td></tr>
+      <tr><td>Photo upload</td><td>30 requests</td><td>Per minute, per user</td></tr>
+      <tr><td>CSV import</td><td>3 requests</td><td>Per hour, per school</td></tr>
+      <tr><td>Card order creation</td><td>5 requests</td><td>Per hour, per school</td></tr>
+      <tr><td>Sync endpoint</td><td>30 requests</td><td>Per minute, per device</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 9: KEY USER FLOWS -->
+<div class="section" id="flows">
+  <div class="section-num">09</div>
+  <h2>Key User Flows</h2>
+
+  <h3>Flow: School Onboarding (SaaS)</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">1</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-title">School signs contract + pays setup fee</div><div class="flow-desc">Paper agreement with Arkeon. 50% upfront via Telebirr or bank transfer. Non-negotiable.</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">2</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-title">You create school on the central platform</div><div class="flow-desc">Log in to Super Admin at <code>app.eduid.et/admin</code>. Create school record: name, code, logo, calendar system (Ethiopian/Gregorian). HMAC secret auto-generated. Takes 5 minutes.</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">3</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-title">Import students via CSV</div><div class="flow-desc">You or the school admin uploads the student list. System validates all rows, shows errors. Only imports after full validation passes.</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">4</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-title">Photo Session</div><div class="flow-desc">Schedule a Photo Session. Either you visit the school with a camera, or school uses the Flutter app Photo Session mode. Takes 2–3 hours for 300 students.</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">5</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-title">First card order auto-created</div><div class="flow-desc">After photos are confirmed, system auto-generates the first card order (included in setup fee). You print on PVC printer, deliver to school within 3 days.</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-left"><div class="flow-dot">6</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-title">Teachers download app + start scanning</div><div class="flow-desc">Teachers download Flutter app, enter school code + credentials. Attendance scanning begins. Everything is digital from day one.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 10: SECURITY -->
+<div class="section" id="security">
+  <div class="section-num">10</div>
+  <h2>Security Specification</h2>
+
+  <h3>Authentication &amp; Authorization</h3>
+  <ul class="checklist">
+    <li><strong>Web panel:</strong> Laravel session-based auth with CSRF tokens on every form. Session lifetime: 2 hours idle, 8 hours absolute.</li>
+    <li><strong>Flutter API:</strong> Laravel Sanctum token auth. Tokens expire after 30 days of inactivity. Device-bound (one token per device name).</li>
+    <li><strong>Super Admin:</strong> Separate login route (<code>/admin/login</code>). Not accessible via school-code login. IP whitelist optional.</li>
+    <li><strong>Password storage:</strong> bcrypt with cost factor 12. No plain-text passwords anywhere, including logs.</li>
+  </ul>
+
+  <h3>Data Protection</h3>
+  <ul class="checklist">
+    <li><strong>CORS:</strong> API allows only <code>app.eduid.et</code> origin + Flutter app (via Sanctum token). No wildcard origins.</li>
+    <li><strong>CSP headers:</strong> <code>default-src 'self'; script-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'</code></li>
+    <li><strong>XSS:</strong> All output escaped via Blade's <code>{{ }}</code> syntax. Raw output (<code>{!! !!}</code>) never used with user data.</li>
+    <li><strong>SQL injection:</strong> All queries via Eloquent ORM. No raw SQL except in migrations.</li>
+    <li><strong>File uploads:</strong> MIME type validation (not just extension). Max 10MB per photo. Only JPEG/PNG/WebP accepted. Files stored outside web root at <code>storage/app/</code>.</li>
+    <li><strong>Photo access:</strong> Served through authenticated controller routes only. Direct URL access to <code>/storage/</code> blocked by Nginx config.</li>
+    <li><strong>Print files:</strong> Stored at <code>storage/app/print_jobs/</code>. Accessible ONLY via Super Admin authenticated route. Never linked publicly.</li>
+  </ul>
+
+  <h3>Monitoring &amp; Health</h3>
+  <div class="schema-block">// Health check endpoint (public, no auth):
+GET /api/v1/health
+// Returns: { status: "ok", db: "ok", storage: "ok", version: "1.0.0" }
+// Used by uptime monitoring (UptimeRobot, free tier)
+
+// Error logging:
+// All errors → storage/logs/laravel-{date}.log
+// Critical errors → notify Super Admin via Telegram bot (optional Phase 1)
+
+// Backup verification:
+// Nightly: mysqldump + rsync photos → /backups/{date}/
+// Keep 7 days of daily backups
+// Restore test: restore to a test database monthly to verify backups work
+// Restore command: mysql eduid_db < /backups/{date}/eduid.sql</div>
+</div>
+
+<!-- SECTION 11: PRICING -->
+<div class="section" id="revenue">
+  <div class="section-num">11</div>
+  <h2>Revenue Model — Setup + Print Service</h2>
+
+  <div class="callout">
+    <div class="callout-title">The Business Model</div>
+    <p>Setup fees get schools in the door (one-time). Card printing generates <strong>recurring annual revenue</strong> because QR tokens expire each year. Year 2 revenue per school exceeds Year 1. The system is the hook. Printing is the revenue.</p>
+  </div>
+
+  <div class="feature-grid">
+    <div class="price-card">
+      <div class="price-tier">Starter</div>
+      <div class="price-amount">12,000</div>
+      <div class="price-unit">ETB — one-time setup</div>
+      <ul class="price-features">
+        <li>Up to 300 students</li>
+        <li>300 PVC cards printed & delivered</li>
+        <li>Student database + QR attendance</li>
+        <li>Flutter app for teachers</li>
+        <li>1 admin + 10 teachers</li>
+        <li>1 year maintenance</li>
+      </ul>
+    </div>
+    <div class="price-card highlight">
+      <div class="price-tier">Standard ⭐</div>
+      <div class="price-amount">22,000</div>
+      <div class="price-unit">ETB — one-time setup</div>
+      <ul class="price-features">
+        <li>Up to 800 students</li>
+        <li>800 PVC cards printed & delivered</li>
+        <li>All Starter features</li>
+        <li>CSV bulk import + Excel export</li>
+        <li>Photo Session Mode</li>
+        <li>1 admin + 30 teachers</li>
+        <li>1 year maintenance + training</li>
+      </ul>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Premium</div>
+      <div class="price-amount">35,000</div>
+      <div class="price-unit">ETB — one-time setup</div>
+      <ul class="price-features">
+        <li>Unlimited students</li>
+        <li>Unlimited PVC cards first batch</li>
+        <li>All Standard features</li>
+        <li>Custom card design</li>
+        <li>2-day on-site training</li>
+        <li>Priority support</li>
+        <li>2 year maintenance</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Recurring Revenue — Card Printing</h3>
+  <table class="data-table">
+    <thead><tr><th>Service</th><th>Price</th><th>Frequency</th></tr></thead>
+    <tbody>
+      <tr><td>Annual card renewal (new academic year)</td><td>50 ETB per card</td><td>Every year (QR tokens expire, cards MUST be renewed)</td></tr>
+      <tr><td>Replacement card (lost/damaged)</td><td>60 ETB per card</td><td>As needed (~10% of students per year)</td></tr>
+      <tr><td>New student mid-year card</td><td>60 ETB per card</td><td>As needed</td></tr>
+      <tr><td>Rush delivery (same day, Addis only)</td><td>+30 ETB per card</td><td>As needed</td></tr>
+      <tr><td>Annual system maintenance</td><td>3,000–5,000 ETB</td><td>Yearly (includes bug fixes, security updates, support)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Revenue Math — One School (500 students)</h3>
+  <table class="data-table">
+    <thead><tr><th>Year</th><th>Setup</th><th>Cards</th><th>Maintenance</th><th>Total</th></tr></thead>
+    <tbody>
+      <tr><td>Year 1</td><td>22,000</td><td>Included</td><td>Included</td><td><strong>22,000 ETB</strong></td></tr>
+      <tr><td>Year 2</td><td>—</td><td>500 × 50 = 25,000</td><td>5,000</td><td><strong>30,000 ETB</strong></td></tr>
+      <tr><td>Year 3+</td><td>—</td><td>500 × 50 = 25,000</td><td>5,000</td><td><strong>30,000 ETB</strong></td></tr>
+    </tbody>
+  </table>
+  <p><strong>Year 2 revenue (30,000) exceeds Year 1 (22,000).</strong> This is the power of the print-as-a-service model. With 20 schools: Year 2 = 600,000 ETB from printing alone.</p>
+</div>
+
+<!-- SECTION 8: VPS REQUIREMENTS -->
+<div class="section" id="vps">
+  <div class="section-num">12</div>
+  <h2>VPS Server Requirements</h2>
+
+  <div class="callout blue">
+    <div class="callout-title">Sizing Principle</div>
+    <p>Start with the smallest tier that fits your current school count. Upgrade as you grow — VPS providers let you scale up without data loss. Don't overspend on infrastructure before you have schools paying. Your current Contabo VPS ($4.95/mo) is enough to start.</p>
+  </div>
+
+  <table class="data-table">
+    <thead><tr><th>Scale</th><th>Students</th><th>Schools</th><th>vCPU</th><th>RAM</th><th>Storage</th><th>Estimated Cost</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="tag green">Launch</span></td>
+        <td>200–500</td>
+        <td>1–3</td>
+        <td>2 vCPU</td>
+        <td>4 GB</td>
+        <td>50 GB SSD</td>
+        <td>$5–7/mo (Contabo VPS S)</td>
+      </tr>
+      <tr>
+        <td><span class="tag green">Growth</span></td>
+        <td>500–2,000</td>
+        <td>3–10</td>
+        <td>4 vCPU</td>
+        <td>8 GB</td>
+        <td>100 GB NVMe</td>
+        <td>$8–12/mo (Contabo VPS M)</td>
+      </tr>
+      <tr>
+        <td><span class="tag gold">Scale</span></td>
+        <td>2,000–5,000</td>
+        <td>10–25</td>
+        <td>6 vCPU</td>
+        <td>16 GB</td>
+        <td>200 GB NVMe</td>
+        <td>$15–25/mo</td>
+      </tr>
+      <tr>
+        <td><span class="tag gold">Serious</span></td>
+        <td>5,000–10,000</td>
+        <td>25–50</td>
+        <td>8 vCPU</td>
+        <td>32 GB</td>
+        <td>400 GB NVMe</td>
+        <td>$30–50/mo</td>
+      </tr>
+      <tr>
+        <td><span class="tag blue">Enterprise</span></td>
+        <td>10,000+</td>
+        <td>50+</td>
+        <td>12+ vCPU</td>
+        <td>64 GB</td>
+        <td>800 GB NVMe</td>
+        <td>$60–100/mo (or separate DB server)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Software Stack on VPS</h3>
+  <ul class="checklist">
+    <li><strong>OS:</strong> Ubuntu 22.04 LTS (or 24.04)</li>
+    <li><strong>Web server:</strong> Nginx (not Apache — lighter, faster for PHP-FPM)</li>
+    <li><strong>PHP:</strong> 8.2+ with FPM. Workers: start with 8, scale to 30 at Enterprise tier.</li>
+    <li><strong>Database:</strong> MySQL 8.0 with InnoDB. Buffer pool: 25% of total RAM.</li>
+    <li><strong>Cache:</strong> Redis for session storage and queue jobs. 256MB–1GB allocation.</li>
+    <li><strong>Queue:</strong> Laravel Queue with Redis driver. For attendance sync processing and PDF generation.</li>
+    <li><strong>SSL:</strong> Let's Encrypt (free). Auto-renewal via certbot.</li>
+    <li><strong>Firewall:</strong> UFW — only ports 22 (SSH), 80 (HTTP), 443 (HTTPS) open.</li>
+    <li><strong>Backup:</strong> Nightly mysqldump + rsync photos to backup directory. Keep 7 days.</li>
+  </ul>
+
+  <h3>Resource Breakdown</h3>
+  <table class="data-table">
+    <thead><tr><th>Component</th><th>RAM Usage</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>OS + Nginx</td><td>~800 MB</td><td>Fixed overhead</td></tr>
+      <tr><td>PHP-FPM (per worker)</td><td>~50 MB × workers</td><td>8 workers = 400MB, 20 workers = 1GB</td></tr>
+      <tr><td>MySQL</td><td>~500MB – 2GB</td><td>Grows with data. Set innodb_buffer_pool_size = 25% RAM</td></tr>
+      <tr><td>Redis</td><td>~128–512 MB</td><td>Sessions + queue</td></tr>
+      <tr><td>Queue workers</td><td>~50 MB each</td><td>2–4 workers for sync processing + PDF generation</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Storage Calculation</h3>
+  <p>Student photos dominate storage. At ~500KB per compressed photo: 1,000 students = 500MB photos. 10,000 students = 5GB photos. Generated print PDFs add ~2MB per batch. With 10,000 students and generous overhead, you need ~20GB for data + photos. The rest is OS + application. <strong>50GB SSD is enough for the first 5,000 students.</strong></p>
+</div>
+
+<!-- SECTION 9: PHASE UPDATES -->
+<div class="section" id="updates">
+  <div class="section-num">13</div>
+  <h2>Phase 2+ Update Model</h2>
+
+  <div class="callout">
+    <div class="callout-title">The Rule</div>
+    <p><strong>Bug fixes and security updates = FREE</strong> (included in annual maintenance). <strong>New feature modules = PAID add-ons.</strong> This is standard SaaS practice worldwide.</p>
+  </div>
+
+  <h3>What's Free (Included in Maintenance)</h3>
+  <ul class="checklist">
+    <li>Bug fixes and error corrections</li>
+    <li>Security patches and vulnerability fixes</li>
+    <li>Performance improvements</li>
+    <li>Minor UI improvements and usability tweaks</li>
+    <li>WhatsApp/phone support during business hours</li>
+    <li>Server monitoring and backup management</li>
+  </ul>
+
+  <h3>What's Paid (Add-On Modules)</h3>
+  <table class="data-table">
+    <thead><tr><th>Module</th><th>One-Time Fee</th><th>Added to Annual</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td>Grades + Report Cards</td><td>10,000 ETB</td><td>+4,000 ETB/yr</td><td>Phase 2</td></tr>
+      <tr><td>Parent Portal</td><td>8,000 ETB</td><td>+3,000 ETB/yr</td><td>Phase 2</td></tr>
+      <tr><td>SMS / Telegram Alerts</td><td>5,000 ETB + per-SMS</td><td>+2,000 ETB/yr</td><td>Phase 2</td></tr>
+      <tr><td>Analytics Dashboard</td><td>6,000 ETB</td><td>+2,000 ETB/yr</td><td>Phase 2</td></tr>
+      <tr><td>Behavior & Conduct</td><td>5,000 ETB</td><td>+2,000 ETB/yr</td><td>Phase 2</td></tr>
+      <tr><td>Full Phase 2 Bundle</td><td>28,000 ETB (save 6,000)</td><td>+10,000 ETB/yr</td><td>Phase 2</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Incentive Structure</h3>
+  <ul class="checklist">
+    <li><strong>Schools on active maintenance:</strong> 20% discount on all new modules</li>
+    <li><strong>Schools who dropped maintenance:</strong> Must pay reconnection fee (2,000 ETB) + full module price + missed maintenance years</li>
+    <li><strong>Early adopter bonus:</strong> First 10 schools get Phase 2 modules at 50% off when released</li>
+  </ul>
+</div>
+
+<!-- SECTION 10: BUILD PLAN -->
+<div class="section" id="build">
+  <div class="section-num">14</div>
+  <h2>Build Plan — 14 Weeks (SaaS Edition)</h2>
+
+  <p>Same 14-week timeline as v2, but adjusted for SaaS architecture: no per-school deployment setup, add multi-tenant middleware, add card order system, add photo session mode.</p>
+
+  <table class="data-table">
+    <thead><tr><th>Weeks</th><th>Focus</th><th>Key Deliverables</th></tr></thead>
+    <tbody>
+      <tr><td>1–2</td><td>Laravel + Multi-Tenant Foundation</td><td>Laravel setup, 13 migrations, BelongsToSchool trait, Sanctum auth, role middleware, school-code login, VPS deployment (Contabo)</td></tr>
+      <tr><td>3–4</td><td>Student Registry + Photo System</td><td>Student CRUD, guardian linking, CSV import, Photo Session Mode, individual photo upload, image compression</td></tr>
+      <tr><td>5–6</td><td>Card Order System (Core Revenue)</td><td>Card preview (low-res), order creation + confirmation code, Super Admin order processing, TCPDF print file generation (server-side only), order status tracking</td></tr>
+      <tr><td>7–9</td><td>Flutter App + Attendance</td><td>Teacher login with school code, QR scanner, offline attendance with SQLite, background sync, manual fallback, Photo Session capture screen, language toggle</td></tr>
+      <tr><td>10–11</td><td>Dashboard + Reports + Export</td><td>Admin dashboard (configurable calendar), attendance reports, Excel export, teacher management, audit logs</td></tr>
+      <tr><td>12</td><td>Academic Year Promotion + Polish</td><td>Year promotion wizard, account lockout, rate limiting, CSRF, photo access control</td></tr>
+      <tr><td>13–14</td><td>Testing + First School Launch</td><td>End-to-end testing with real data, demo video, pilot school deployment, on-site first day support, PVC card printer setup</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 11: ROADMAP -->
+<div class="section" id="phases">
+  <div class="section-num">15</div>
+  <h2>Phase 2–4 Roadmap</h2>
+
+  <p>Phase roadmap unchanged from Architecture Blueprint. Key points: Phase 2 (school operations — grades, parent portal, SMS) at 10+ schools. Phase 3 (self-service signup, payment integration) at 50+ schools. Phase 4 (East Africa expansion) at 200+ schools. Each phase is a paid upgrade for existing schools, funded by printing revenue.</p>
+
+  <div class="callout green">
+    <div class="callout-title">The Long Game</div>
+    <p>Phase 1: ID card print service company (1 developer, 10 schools, 500K ETB/year). Phase 2: school operations platform (50 schools, 2M ETB/year). Phase 3: self-service SaaS (200 schools, 6M ETB/year). Phase 4: East Africa's leading school identity SaaS (1000+ schools, $500K+ ARR). <strong>The PVC card printer you buy today powers every phase of this journey.</strong></p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="text-align:center;padding:60px 0 40px;border-top:1px solid var(--border);">
+  <div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--text);margin-bottom:8px;">EduID — SaaS Phase 1 PRD v3.1</div>
+  <div style="font-family:var(--mono);font-size:12px;color:var(--text-faint);letter-spacing:2px;text-transform:uppercase;">Arkeon Ethiopia · Confidential</div>
+</div>
+
+</div>
+</body>
+</html>

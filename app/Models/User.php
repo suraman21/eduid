@@ -2,47 +2,124 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens, BelongsToSchool;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
+        'school_id',
         'name',
         'email',
         'password',
+        'role',
+        'phone',
+        'is_active',
+        'last_login_at',
+        'failed_login_count',
+        'locked_until',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
+            'is_active'         => 'boolean',
+            'last_login_at'     => 'datetime',
+            'locked_until'      => 'datetime',
+            'failed_login_count' => 'integer',
         ];
+    }
+
+    // ── Role Constants ──────────────────────────────────────────
+
+    const ROLE_SUPER_ADMIN  = 'super_admin';
+    const ROLE_SCHOOL_ADMIN = 'school_admin';
+    const ROLE_TEACHER      = 'teacher';
+
+    // ── Role Helpers ────────────────────────────────────────────
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
+    public function isSchoolAdmin(): bool
+    {
+        return $this->role === self::ROLE_SCHOOL_ADMIN;
+    }
+
+    public function isTeacher(): bool
+    {
+        return $this->role === self::ROLE_TEACHER;
+    }
+
+    // ── Account Lockout ─────────────────────────────────────────
+
+    /**
+     * Check if the account is currently locked.
+     */
+    public function isLocked(): bool
+    {
+        return $this->locked_until && $this->locked_until->isFuture();
+    }
+
+    /**
+     * Increment failed login count and lock if threshold reached.
+     */
+    public function incrementFailedLogins(): void
+    {
+        $this->increment('failed_login_count');
+
+        if ($this->failed_login_count >= 5) {
+            $this->update([
+                'locked_until' => now()->addMinutes(30),
+            ]);
+        }
+    }
+
+    /**
+     * Reset failed login tracking on successful login.
+     */
+    public function resetFailedLogins(): void
+    {
+        $this->update([
+            'failed_login_count' => 0,
+            'locked_until'       => null,
+            'last_login_at'      => now(),
+        ]);
+    }
+
+    // ── Relationships ──────────────────────────────────────────
+
+    public function assignedClasses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(SchoolClass::class, 'teacher_classes', 'user_id', 'class_id');
+    }
+
+    public function attendanceSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AttendanceSession::class, 'teacher_id');
+    }
+
+    public function cardOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CardOrder::class, 'ordered_by');
+    }
+
+    public function auditLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AuditLog::class);
     }
 }

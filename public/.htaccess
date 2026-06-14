@@ -1,3 +1,6 @@
+# Enable CGIPassAuth for Sanctum API token auth on Apache/cPanel
+CGIPassAuth On
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
