@@ -7,16 +7,24 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void {
         Schema::table('students', function (Blueprint $table) {
-            $table->enum('status', ['active','promoted','repeating','graduated','transferred','withdrawn'])->default('active')->after('is_active');
-            $table->date('join_date')->nullable()->after('status');
-            $table->date('end_date')->nullable()->after('join_date');
+            if (!Schema::hasColumn('students', 'status')) {
+                $table->enum('status', ['active','promoted','repeating','graduated','transferred','withdrawn'])->default('active')->after('is_active');
+            }
+            if (!Schema::hasColumn('students', 'join_date')) {
+                $table->date('join_date')->nullable()->after('status');
+            }
+            if (!Schema::hasColumn('students', 'end_date')) {
+                $table->date('end_date')->nullable()->after('join_date');
+            }
         });
-        DB::statement("UPDATE students SET status = 'withdrawn' WHERE is_active = 0");
+        DB::statement("UPDATE students SET status = 'withdrawn' WHERE is_active = 0 AND status = 'active'");
     }
 
     public function down(): void {
         Schema::table('students', function (Blueprint $table) {
-            $table->dropColumn(['status','join_date','end_date']);
+            $cols = ['status','join_date','end_date'];
+            $existing = array_filter($cols, fn($c) => Schema::hasColumn('students', $c));
+            if ($existing) $table->dropColumn(array_values($existing));
         });
     }
 };
