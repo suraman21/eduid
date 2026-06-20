@@ -1,13 +1,13 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/arkeone/arkeoid.arkeonethiopia.com/
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan down --no-interaction
-    - /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction --working-dir=/home/arkeone/arkeoid.arkeonethiopia.com
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan migrate --force
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan db:seed --class=FeatureSeeder --force
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan config:clear
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan cache:clear
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan view:clear
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan route:clear
-    - /usr/local/bin/php /home/arkeone/arkeoid.arkeonethiopia.com/artisan up
+    - export DEPLOYPATH=/home/arkeonet/arkeoid.arkeonethiopia.com/
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan down --no-interaction
+    - /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction --working-dir=/home/arkeonet/arkeoid.arkeonethiopia.com
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan migrate --force
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan db:seed --class=FeatureSeeder --force
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan config:clear
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan cache:clear
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan view:clear
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan route:clear
+    - /usr/local/bin/php /home/arkeonet/arkeoid.arkeonethiopia.com/artisan up
