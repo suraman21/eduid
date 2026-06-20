@@ -14,8 +14,12 @@ Require all denied
 # Enable CGIPassAuth for Sanctum API token auth on Apache/cPanel
 CGIPassAuth On
 
-<IfModule mod_alias.c>
-RedirectMatch 301 ^/$ https://arkeoid.arkeonethiopia.com/public
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve everything through public/ without changing the URL
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ /public/$1 [L]
 </IfModule>
 # php -- BEGIN cPanel-generated handler, do not edit
 # Set the "ea-php84" package as the default "PHP" programming language.
