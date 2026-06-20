@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\BelongsToSchool;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +31,9 @@ class Student extends Model
         'is_active',
         'qr_token',
         'qr_token_year',
+        'status',
+        'join_date',
+        'end_date',
     ];
 
     protected function casts(): array
@@ -38,6 +42,9 @@ class Student extends Model
             'date_of_birth'   => 'date',
             'enrollment_date' => 'date',
             'is_active'       => 'boolean',
+            'status'          => 'string',
+            'join_date'       => 'date',
+            'end_date'        => 'date',
         ];
     }
 
@@ -119,5 +126,22 @@ class Student extends Model
         }
 
         return $this->qr_token_year === $this->school->academic_year;
+    }
+
+    /**
+     * Check if the student's status is active.
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * Check if the student was enrolled on a given date.
+     */
+    public function isEnrolledOn(Carbon $date): bool
+    {
+        return ($this->join_date === null || $date->gte($this->join_date))
+            && ($this->end_date === null || $date->lte($this->end_date));
     }
 }

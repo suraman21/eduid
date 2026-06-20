@@ -22,12 +22,14 @@ class AttendanceSession extends Model
         'synced_from_app',
         'device_id',
         'idempotency_key',
+        'recorded_on_behalf_of',
+        'period_number',
     ];
 
     protected function casts(): array
     {
         return [
-            'session_date'   => 'date',
+            'session_date'    => 'date',
             'synced_from_app' => 'boolean',
         ];
     }
@@ -42,6 +44,11 @@ class AttendanceSession extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    public function coordinator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_on_behalf_of');
     }
 
     public function records(): HasMany

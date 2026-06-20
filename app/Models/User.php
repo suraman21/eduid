@@ -23,6 +23,12 @@ class User extends Authenticatable
         'last_login_at',
         'failed_login_count',
         'locked_until',
+        'employee_id',
+        'job_title',
+        'is_homeroom',
+        'is_coordinator',
+        'can_record_staff_attendance',
+        'can_login',
     ];
 
     protected $hidden = [
@@ -33,12 +39,16 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_active'         => 'boolean',
-            'last_login_at'     => 'datetime',
-            'locked_until'      => 'datetime',
-            'failed_login_count' => 'integer',
+            'email_verified_at'           => 'datetime',
+            'password'                    => 'hashed',
+            'is_active'                   => 'boolean',
+            'last_login_at'               => 'datetime',
+            'locked_until'                => 'datetime',
+            'failed_login_count'          => 'integer',
+            'is_homeroom'                 => 'boolean',
+            'is_coordinator'              => 'boolean',
+            'can_record_staff_attendance' => 'boolean',
+            'can_login'                   => 'boolean',
         ];
     }
 
@@ -63,6 +73,31 @@ class User extends Authenticatable
     public function isTeacher(): bool
     {
         return $this->role === self::ROLE_TEACHER;
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->role === 'staff';
+    }
+
+    public function isHomeroom(): bool
+    {
+        return (bool) $this->is_homeroom;
+    }
+
+    public function isCoordinator(): bool
+    {
+        return (bool) $this->is_coordinator;
+    }
+
+    public function canRecordStaffAttendance(): bool
+    {
+        return (bool) $this->can_record_staff_attendance;
+    }
+
+    public function hasLoginAccess(): bool
+    {
+        return $this->is_active && $this->can_login;
     }
 
     // ── Account Lockout ─────────────────────────────────────────
