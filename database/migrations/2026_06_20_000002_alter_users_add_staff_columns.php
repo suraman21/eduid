@@ -31,9 +31,11 @@ return new class extends Migration {
             }
         });
 
-        // Add unique index only if it doesn't exist
-        $indexes = collect(DB::select("SHOW INDEX FROM users WHERE Key_name = 'users_school_employee_unique'"));
-        if ($indexes->isEmpty()) {
+        // Add unique index only if it doesn't already exist (portable across drivers).
+        $hasIndex = collect(Schema::getIndexes('users'))
+            ->contains(fn ($index) => ($index['name'] ?? null) === 'users_school_employee_unique');
+
+        if (! $hasIndex) {
             Schema::table('users', function (Blueprint $table) {
                 $table->unique(['school_id', 'employee_id'], 'users_school_employee_unique');
             });

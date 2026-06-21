@@ -2,23 +2,15 @@
 
 namespace App\Http\Controllers\School;
 
-use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
-class ClassController extends Controller
+class ClassController extends BaseSchoolController
 {
-    private function schoolId(): int
-    {
-        return Auth::user()->school_id;
-    }
-
     public function index()
     {
-        $classes = SchoolClass::where('school_id', $this->schoolId())
-            ->withCount('students')
+        $classes = SchoolClass::withCount('students')
             ->orderBy('level_order')
             ->orderBy('grade')
             ->orderBy('section')
@@ -29,37 +21,18 @@ class ClassController extends Controller
 
     public function create()
     {
-        $teachers = User::where('school_id', $this->schoolId())
-            ->where('role', 'teacher')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-        return view('school.classes.form', ['class' => new SchoolClass(), 'teachers' => $teachers]);
+        $this->requireAdmin();
+
+        return view('school.classes.form', ['class' => new SchoolClass()]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'grade'        => 'required|string|max:50',
-            'section'      => 'required|string|max:10',
-            'academic_year'=> 'required|string|max:20',
-            'level_order'  => 'nullable|integer|min:0',
-        ]);
+        $this->requireAdmin();
 
-        $validated['school_id'] = $this->schoolId();
+        $validated = $request->validate($this->rules());
         $validated['is_active'] = true;
         $validated['level_order'] = $validated['level_order'] ?? 0;
-
-        // Prevent duplicate grade+section in same academic year
-        $exists = SchoolClass::where('school_id', $this->schoolId())
-            ->where('grade', $validated['grade'])
-            ->where('section', $validated['section'])
-            ->where('academic_year', $validated['academic_year'])
-            ->exists();
-
-        if ($exists) {
-            return back()->withErrors(['grade' => 'This class already exists for this academic year.'])->withInput();
-        }
 
         SchoolClass::create($validated);
 
@@ -68,36 +41,43 @@ class ClassController extends Controller
 
     public function edit(SchoolClass $class)
     {
-        $this->authorizeClass($class);
-        $teachers = User::where('school_id', $this->schoolId())
-            ->where('role', 'teacher')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-        return view('school.classes.form', compact('class', 'teachers'));
+        $this->requireAdmin();
+
+        return view('school.classes.form', compact('class'));
     }
 
     public function update(Request $request, SchoolClass $class)
     {
-        $this->authorizeClass($class);
+        $this->requireAdmin();
 
-        $validated = $request->validate([
-            'grade'         => 'required|string|max:50',
-            'section'       => 'required|string|max:10',
-            'academic_year' => 'required|string|max:20',
-            'level_order'   => 'nullable|integer|min:0',
-            'is_active'     => 'boolean',
+        $validated = $request->validate($this->rules($class->id) + [
+            'is_active' => 'boolean',
         ]);
-
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['level_order'] = $validated['level_order'] ?? 0;
 
         $class->update($validated);
 
         return redirect()->route('school.classes.index')->with('success', 'Class updated.');
     }
 
-    private function authorizeClass(SchoolClass $class): void
+    /**
+     * Validation rules. A class is uniquely identified by grade + section +
+     * academic year within a school, enforced here (scoped to current school).
+     */
+    private function rules(?int $ignoreId = null): array
     {
-        if ($class->school_id !== $this->schoolId()) abort(403);
+        $unique = Rule::unique('classes')
+            ->where('school_id', $this->schoolId())
+            ->where('section', request('section'))
+            ->where('academic_year', request('academic_year'))
+            ->ignore($ignoreId);
+
+        return [
+            'grade'         => ['required', 'string', 'max:50', $unique],
+            'section'       => 'required|string|max:10',
+            'academic_year' => 'required|string|max:20',
+            'level_order'   => 'nullable|integer|min:0',
+        ];
     }
 }

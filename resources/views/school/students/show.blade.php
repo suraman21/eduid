@@ -47,7 +47,7 @@
                 <div>
                     <dt class="text-xs text-gray-400">Status</dt>
                     <dd class="mt-0.5">
-                        @php $statusColors = ['active'=>'bg-green-50 text-green-600','graduated'=>'bg-blue-50 text-blue-600','withdrawn'=>'bg-red-50 text-red-600','transferred'=>'bg-amber-50 text-amber-600']; @endphp
+                        @php $statusColors = ['active'=>'bg-green-50 text-green-600','promoted'=>'bg-emerald-50 text-emerald-600','repeating'=>'bg-orange-50 text-orange-600','graduated'=>'bg-blue-50 text-blue-600','withdrawn'=>'bg-red-50 text-red-600','transferred'=>'bg-amber-50 text-amber-600']; @endphp
                         <span class="text-xs px-2 py-0.5 rounded-full {{ $statusColors[$student->status ?? 'active'] ?? '' }}">{{ ucfirst($student->status ?? 'active') }}</span>
                     </dd>
                 </div>

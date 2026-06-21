@@ -30,8 +30,13 @@
                                 {{ $subject->is_active ? 'Active' : 'Inactive' }}
                             </span>
                             @if(auth()->user()->isSchoolAdmin())
-                            <button onclick="openEdit({{ $subject->id }}, '{{ addslashes($subject->name) }}', '{{ $subject->code }}', '{{ $subject->color }}', {{ $subject->is_active ? 'true' : 'false' }})"
-                                    class="text-gray-400 hover:text-indigo-500 text-xs transition">Edit</button>
+                            <button type="button"
+                                    class="js-edit-subject text-gray-400 hover:text-indigo-500 text-xs transition"
+                                    data-id="{{ $subject->id }}"
+                                    data-name="{{ $subject->name }}"
+                                    data-code="{{ $subject->code }}"
+                                    data-color="{{ $subject->color ?? '#6366f1' }}"
+                                    data-active="{{ $subject->is_active ? '1' : '0' }}">Edit</button>
                             @endif
                         </div>
                     </div>
@@ -59,8 +64,8 @@
                         @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Code</label>
-                        <input type="text" name="code" value="{{ old('code') }}" placeholder="e.g. MATH"
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Code *</label>
+                        <input type="text" name="code" value="{{ old('code') }}" required placeholder="e.g. MATH"
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-800 focus:outline-none focus:border-indigo-400">
                         @error('code') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
@@ -86,8 +91,8 @@
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-indigo-400">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Code</label>
-                        <input type="text" name="code" id="edit-code"
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Code *</label>
+                        <input type="text" name="code" id="edit-code" required
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-800 focus:outline-none focus:border-indigo-400">
                     </div>
                     <div>
@@ -105,7 +110,7 @@
                     </div>
                     <div class="flex gap-2">
                         <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition">Update</button>
-                        <button type="button" onclick="cancelEdit()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm transition">Cancel</button>
+                        <button type="button" id="cancel-edit" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm transition">Cancel</button>
                     </div>
                 </div>
             </form>
@@ -117,21 +122,34 @@
 
 @section('scripts')
 <script>
-const baseUrl = '{{ url('school/subjects') }}';
-function openEdit(id, name, code, color, isActive) {
-    document.getElementById('add-form').classList.add('hidden');
-    document.getElementById('edit-form').classList.remove('hidden');
-    document.getElementById('form-title').textContent = 'Edit Subject';
-    document.getElementById('edit-form').action = baseUrl + '/' + id;
-    document.getElementById('edit-name').value = name;
-    document.getElementById('edit-code').value = code || '';
-    document.getElementById('edit-color').value = color || '#6366f1';
-    document.getElementById('edit-active').checked = isActive;
-}
-function cancelEdit() {
-    document.getElementById('edit-form').classList.add('hidden');
-    document.getElementById('add-form').classList.remove('hidden');
-    document.getElementById('form-title').textContent = 'Add Subject';
-}
+(function () {
+    const baseUrl = @json(url('school/subjects'));
+    const addForm = document.getElementById('add-form');
+    const editForm = document.getElementById('edit-form');
+    const title = document.getElementById('form-title');
+
+    document.querySelectorAll('.js-edit-subject').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const d = btn.dataset;
+            addForm.classList.add('hidden');
+            editForm.classList.remove('hidden');
+            title.textContent = 'Edit Subject';
+            editForm.action = baseUrl + '/' + d.id;
+            document.getElementById('edit-name').value = d.name;
+            document.getElementById('edit-code').value = d.code || '';
+            document.getElementById('edit-color').value = d.color || '#6366f1';
+            document.getElementById('edit-active').checked = d.active === '1';
+        });
+    });
+
+    const cancelBtn = document.getElementById('cancel-edit');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            editForm.classList.add('hidden');
+            addForm.classList.remove('hidden');
+            title.textContent = 'Add Subject';
+        });
+    }
+})();
 </script>
 @endsection

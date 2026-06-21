@@ -2,25 +2,20 @@
 
 namespace App\Http\Controllers\School;
 
-use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\SchoolClass;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class StudentController extends Controller
+class StudentController extends BaseSchoolController
 {
-    private function schoolId(): int
-    {
-        return Auth::user()->school_id;
-    }
+    /** Allowed student lifecycle states (matches the DB enum). */
+    private const STATUSES = ['active', 'promoted', 'repeating', 'graduated', 'transferred', 'withdrawn'];
 
     public function index(Request $request)
     {
-        $query = Student::where('school_id', $this->schoolId())
-            ->with('schoolClass');
+        $query = Student::with('schoolClass');
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
@@ -39,34 +34,36 @@ class StudentController extends Controller
         }
 
         $students = $query->orderBy('first_name')->paginate(20);
-        $classes  = SchoolClass::where('school_id', $this->schoolId())->where('is_active', true)->orderBy('grade')->get();
+        $classes  = $this->activeClasses();
 
         return view('school.students.index', compact('students', 'classes'));
     }
 
     public function create()
     {
-        $classes = SchoolClass::where('school_id', $this->schoolId())->where('is_active', true)->orderBy('grade')->get();
-        return view('school.students.form', ['student' => new Student(), 'classes' => $classes]);
+        $this->requireAdmin();
+
+        return view('school.students.form', [
+            'student' => new Student(),
+            'classes' => $this->activeClasses(),
+        ]);
     }
 
     public function store(Request $request)
     {
-        $school = Auth::user()->school;
+        $this->requireAdmin();
+        $this->requireWritableSubscription();
 
-        if (!$school->canAddNewData()) {
-            return back()->with('error', 'New data entry is restricted. Your subscription has expired.');
-        }
-
+        $school = $this->currentSchool();
         if ($school->hasReachedStudentLimit()) {
-            return back()->with('error', "Student limit ({$school->max_students}) reached. Upgrade your plan.");
+            return back()->with('error', "Student limit ({$school->max_students}) reached. Upgrade your plan.")->withInput();
         }
 
         $validated = $this->validateStudent($request);
-        $validated['school_id'] = $this->schoolId();
-        $validated['uid'] = $this->generateUid();
-        $validated['status'] = $validated['status'] ?? 'active';
-        $validated['join_date'] = $validated['join_date'] ?? today()->toDateString();
+        $validated['uid']             = $this->generateUid();
+        $validated['status']          = $validated['status'] ?? 'active';
+        $validated['join_date']       = $validated['join_date'] ?? today()->toDateString();
+        $validated['enrollment_date'] = $validated['enrollment_date'] ?? today()->toDateString();
 
         if ($request->hasFile('photo')) {
             $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'public');
@@ -79,23 +76,26 @@ class StudentController extends Controller
 
     public function show(Student $student)
     {
-        $this->authorizeStudent($student);
         $student->load('schoolClass', 'guardians');
+
         return view('school.students.show', compact('student'));
     }
 
     public function edit(Student $student)
     {
-        $this->authorizeStudent($student);
-        $classes = SchoolClass::where('school_id', $this->schoolId())->where('is_active', true)->orderBy('grade')->get();
-        return view('school.students.form', compact('student', 'classes'));
+        $this->requireAdmin();
+
+        return view('school.students.form', [
+            'student' => $student,
+            'classes' => $this->activeClasses(),
+        ]);
     }
 
     public function update(Request $request, Student $student)
     {
-        $this->authorizeStudent($student);
+        $this->requireAdmin();
 
-        $validated = $this->validateStudent($request, $student->id);
+        $validated = $this->validateStudent($request);
 
         if ($request->hasFile('photo')) {
             if ($student->photo_path) {
@@ -109,38 +109,47 @@ class StudentController extends Controller
         return redirect()->route('school.students.show', $student)->with('success', 'Student updated.');
     }
 
-    private function validateStudent(Request $request, ?int $ignoreId = null): array
+    /**
+     * Active classes for dropdowns (auto-scoped to the current school).
+     */
+    private function activeClasses()
+    {
+        return SchoolClass::where('is_active', true)->orderBy('grade')->get();
+    }
+
+    private function validateStudent(Request $request): array
     {
         return $request->validate([
-            'first_name'    => 'required|string|max:100',
-            'last_name'     => 'required|string|max:100',
-            'first_name_am' => 'nullable|string|max:100',
-            'last_name_am'  => 'nullable|string|max:100',
-            'gender'        => 'required|in:male,female',
-            'date_of_birth' => 'nullable|date|before:today',
-            'class_id'      => 'nullable|exists:classes,id',
-            'blood_type'    => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
-            'medical_notes' => 'nullable|string|max:500',
+            'first_name'      => 'required|string|max:100',
+            'last_name'       => 'required|string|max:100',
+            'first_name_am'   => 'nullable|string|max:100',
+            'last_name_am'    => 'nullable|string|max:100',
+            'gender'          => 'required|in:male,female',
+            'date_of_birth'   => 'nullable|date|before:today',
+            'class_id'        => 'nullable|exists:classes,id',
+            'blood_type'      => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'medical_notes'   => 'nullable|string|max:500',
             'enrollment_date' => 'nullable|date',
-            'status'        => 'nullable|in:active,graduated,withdrawn,transferred',
-            'join_date'     => 'nullable|date',
-            'end_date'      => 'nullable|date|after_or_equal:join_date',
-            'photo'         => 'nullable|image|max:2048',
+            'status'          => ['nullable', 'in:' . implode(',', self::STATUSES)],
+            'join_date'       => 'nullable|date',
+            'end_date'        => 'nullable|date|after_or_equal:join_date',
+            'photo'           => 'nullable|image|max:2048',
         ]);
     }
 
+    /**
+     * Generate a globally-unique student UID.
+     *
+     * The `uid` column is unique across ALL schools, so the existence check
+     * must bypass the per-school global scope — otherwise a UID already used
+     * by another school would pass and then fail on insert.
+     */
     private function generateUid(): string
     {
         do {
             $uid = strtoupper(Str::random(8));
-        } while (Student::where('uid', $uid)->exists());
-        return $uid;
-    }
+        } while (Student::withoutGlobalScope('school')->where('uid', $uid)->exists());
 
-    private function authorizeStudent(Student $student): void
-    {
-        if ($student->school_id !== $this->schoolId()) {
-            abort(403);
-        }
+        return $uid;
     }
 }

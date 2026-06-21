@@ -95,10 +95,9 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
                         <select name="status" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-indigo-400 bg-white">
-                            <option value="active" {{ old('status', $student->status ?? 'active') === 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="graduated" {{ old('status', $student->status) === 'graduated' ? 'selected' : '' }}>Graduated</option>
-                            <option value="withdrawn" {{ old('status', $student->status) === 'withdrawn' ? 'selected' : '' }}>Withdrawn</option>
-                            <option value="transferred" {{ old('status', $student->status) === 'transferred' ? 'selected' : '' }}>Transferred</option>
+                            @foreach(['active'=>'Active','promoted'=>'Promoted','repeating'=>'Repeating','graduated'=>'Graduated','transferred'=>'Transferred','withdrawn'=>'Withdrawn'] as $val => $label)
+                                <option value="{{ $val }}" {{ old('status', $student->status ?? 'active') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="sm:col-span-2">

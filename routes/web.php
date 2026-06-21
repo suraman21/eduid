@@ -87,33 +87,18 @@ Route::middleware(['auth'])->group(function () {
     // School User Group
     Route::middleware(['role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
         Route::get('/dashboard', [SchoolDashboardController::class, 'index'])->name('school.dashboard');
-        Route::resource('/students', SchoolStudentController::class)->names([
-            'index'   => 'school.students.index',
-            'create'  => 'school.students.create',
-            'store'   => 'school.students.store',
-            'show'    => 'school.students.show',
-            'edit'    => 'school.students.edit',
-            'update'  => 'school.students.update',
-            'destroy' => 'school.students.destroy',
-        ]);
-        Route::resource('/classes', SchoolClassController::class)->names([
-            'index'   => 'school.classes.index',
-            'create'  => 'school.classes.create',
-            'store'   => 'school.classes.store',
-            'edit'    => 'school.classes.edit',
-            'update'  => 'school.classes.update',
-            'destroy' => 'school.classes.destroy',
-        ]);
-        Route::resource('/subjects', SchoolSubjectController::class)->only(['index', 'store', 'update'])->names([
-            'index'  => 'school.subjects.index',
-            'store'  => 'school.subjects.store',
-            'update' => 'school.subjects.update',
-        ]);
+        // Resource routes are registered for the methods the controllers
+        // actually implement. Write actions are additionally guarded
+        // server-side (school_admin only) inside each controller.
+        Route::resource('/students', SchoolStudentController::class)
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
+            ->names('school.students');
+        Route::resource('/classes', SchoolClassController::class)
+            ->only(['index', 'create', 'store', 'edit', 'update'])
+            ->names('school.classes');
+        Route::resource('/subjects', SchoolSubjectController::class)
+            ->only(['index', 'store', 'update'])
+            ->names('school.subjects');
     });
 
-});
-
-Route::get('/migrate-fresh', function () {
-    \Illuminate\Support\Facades\Artisan::call('migrate:fresh --seed --force');
-    return 'Live database migrated and seeded successfully.';
 });

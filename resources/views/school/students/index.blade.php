@@ -18,10 +18,9 @@
         </select>
         <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white focus:outline-none focus:border-indigo-400">
             <option value="">All Status</option>
-            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-            <option value="graduated" {{ request('status') === 'graduated' ? 'selected' : '' }}>Graduated</option>
-            <option value="withdrawn" {{ request('status') === 'withdrawn' ? 'selected' : '' }}>Withdrawn</option>
-            <option value="transferred" {{ request('status') === 'transferred' ? 'selected' : '' }}>Transferred</option>
+            @foreach(['active'=>'Active','promoted'=>'Promoted','repeating'=>'Repeating','graduated'=>'Graduated','transferred'=>'Transferred','withdrawn'=>'Withdrawn'] as $val => $label)
+                <option value="{{ $val }}" {{ request('status') === $val ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
         </select>
         <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition">Filter</button>
         @if(request()->hasAny(['search','class_id','status']))
@@ -78,7 +77,7 @@
                         <td class="px-5 py-3 text-gray-600">{{ $student->schoolClass?->display_name ?? '—' }}</td>
                         <td class="px-5 py-3 text-gray-500 capitalize">{{ $student->gender }}</td>
                         <td class="px-5 py-3">
-                            @php $statusColors = ['active'=>'bg-green-50 text-green-600','graduated'=>'bg-blue-50 text-blue-600','withdrawn'=>'bg-red-50 text-red-600','transferred'=>'bg-amber-50 text-amber-600']; @endphp
+                            @php $statusColors = ['active'=>'bg-green-50 text-green-600','promoted'=>'bg-emerald-50 text-emerald-600','repeating'=>'bg-orange-50 text-orange-600','graduated'=>'bg-blue-50 text-blue-600','withdrawn'=>'bg-red-50 text-red-600','transferred'=>'bg-amber-50 text-amber-600']; @endphp
                             <span class="text-xs px-2 py-0.5 rounded-full {{ $statusColors[$student->status ?? 'active'] ?? 'bg-gray-100 text-gray-500' }}">
                                 {{ ucfirst($student->status ?? 'active') }}
                             </span>
