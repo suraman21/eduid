@@ -62,6 +62,7 @@
                         <label class="block text-xs font-medium text-gray-500 mb-1">Code</label>
                         <input type="text" name="code" value="{{ old('code') }}" placeholder="e.g. MATH"
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-800 focus:outline-none focus:border-indigo-400">
+                        @error('code') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>

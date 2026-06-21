@@ -25,13 +25,18 @@ class SubjectController extends Controller
 
     public function store(Request $request)
     {
+        $schoolId = $this->schoolId();
+
         $validated = $request->validate([
             'name'  => 'required|string|max:100',
-            'code'  => 'nullable|string|max:20',
+            'code'  => [
+                'nullable', 'string', 'max:20',
+                \Illuminate\Validation\Rule::unique('subjects')->where('school_id', $schoolId),
+            ],
             'color' => 'nullable|string|max:7',
         ]);
 
-        $validated['school_id'] = $this->schoolId();
+        $validated['school_id'] = $schoolId;
         $validated['is_active'] = true;
 
         Subject::create($validated);
@@ -45,7 +50,10 @@ class SubjectController extends Controller
 
         $validated = $request->validate([
             'name'      => 'required|string|max:100',
-            'code'      => 'nullable|string|max:20',
+            'code'      => [
+                'nullable', 'string', 'max:20',
+                \Illuminate\Validation\Rule::unique('subjects')->where('school_id', $this->schoolId())->ignore($subject->id),
+            ],
             'color'     => 'nullable|string|max:7',
             'is_active' => 'boolean',
         ]);
