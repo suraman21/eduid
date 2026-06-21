@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\AdminLoginController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -66,9 +68,16 @@ Route::middleware(['auth'])->group(function () {
 
     // Super Admin Group
     Route::middleware(['role:super_admin'])->prefix('admin')->group(function () {
-        Route::get('/dashboard', function () {
-            return '<h1>Arkeon Super Admin Dashboard</h1><p>Welcome, ' . e(Auth::user()->name) . '!</p><form method="POST" action="' . route('logout') . '">' . csrf_field() . '<button type="submit">Logout</button></form>';
-        })->name('admin.dashboard');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+        Route::resource('/schools', AdminSchoolController::class)->names([
+            'index'   => 'admin.schools.index',
+            'create'  => 'admin.schools.create',
+            'store'   => 'admin.schools.store',
+            'show'    => 'admin.schools.show',
+            'edit'    => 'admin.schools.edit',
+            'update'  => 'admin.schools.update',
+            'destroy' => 'admin.schools.destroy',
+        ]);
     });
 
     // School User Group
