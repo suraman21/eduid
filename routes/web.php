@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
+use App\Http\Controllers\School\ClassController as SchoolClassController;
+use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -93,6 +95,19 @@ Route::middleware(['auth'])->group(function () {
             'edit'    => 'school.students.edit',
             'update'  => 'school.students.update',
             'destroy' => 'school.students.destroy',
+        ]);
+        Route::resource('/classes', SchoolClassController::class)->names([
+            'index'   => 'school.classes.index',
+            'create'  => 'school.classes.create',
+            'store'   => 'school.classes.store',
+            'edit'    => 'school.classes.edit',
+            'update'  => 'school.classes.update',
+            'destroy' => 'school.classes.destroy',
+        ]);
+        Route::resource('/subjects', SchoolSubjectController::class)->only(['index', 'store', 'update'])->names([
+            'index'  => 'school.subjects.index',
+            'store'  => 'school.subjects.store',
+            'update' => 'school.subjects.update',
         ]);
     });
 
