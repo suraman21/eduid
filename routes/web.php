@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
+use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -84,6 +85,15 @@ Route::middleware(['auth'])->group(function () {
     // School User Group
     Route::middleware(['role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
         Route::get('/dashboard', [SchoolDashboardController::class, 'index'])->name('school.dashboard');
+        Route::resource('/students', SchoolStudentController::class)->names([
+            'index'   => 'school.students.index',
+            'create'  => 'school.students.create',
+            'store'   => 'school.students.store',
+            'show'    => 'school.students.show',
+            'edit'    => 'school.students.edit',
+            'update'  => 'school.students.update',
+            'destroy' => 'school.students.destroy',
+        ]);
     });
 
 });
