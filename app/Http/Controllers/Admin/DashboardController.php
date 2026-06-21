@@ -22,7 +22,7 @@ class DashboardController extends Controller
             'total_teachers'  => User::where('role', 'teacher')->count(),
             'total_staff'     => User::whereIn('role', ['teacher', 'staff', 'school_admin'])->count(),
             'pending_leads'   => Lead::where('status', 'new')->count(),
-            'total_revenue'   => Payment::where('status', 'paid')->sum('amount'),
+            'total_revenue'   => Payment::where('status', 'paid')->sum('amount_etb'),
             'pending_orders'  => CardOrder::whereIn('status', ['pending', 'processing'])->count(),
         ];
 
