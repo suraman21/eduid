@@ -18,5 +18,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Friendly redirect for login rate-limit hits instead of a bare 429 page.
+        $exceptions->render(function (
+            \Illuminate\Http\Exceptions\ThrottleRequestsException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            if ($request->is('login') || $request->is('admin/login')) {
+                $retryAfter = (int) ceil($e->getHeaders()['Retry-After'] ?? 60);
+                $minutes    = (int) ceil($retryAfter / 60);
+                $msg        = "Too many login attempts. Please wait {$minutes} minute"
+                            . ($minutes === 1 ? '' : 's') . ' before trying again.';
+
+                return back()->withErrors(['email' => $msg])->withInput(
+                    $request->only('school_code', 'email')
+                );
+            }
+        });
     })->create();

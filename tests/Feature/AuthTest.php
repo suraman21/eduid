@@ -188,15 +188,21 @@ class AuthTest extends TestCase
         $this->assertNotNull($this->schoolAdmin->locked_until);
         $this->assertTrue(now()->lessThan($this->schoolAdmin->locked_until));
 
-        // 6th attempt is now stopped by the login rate limiter (PRD §08:
-        // 5 attempts / 15 min per IP+email) before reaching the controller.
+        // 6th attempt hits the rate limiter (PRD §08: 5/15 min per IP+email).
+        // The throttle exception handler redirects back with a friendly error
+        // instead of returning a bare 429 page.
         $response = $this->post('/login', [
             'school_code' => 'AIA',
             'email' => 'admin@abyssinia.com',
             'password' => 'password123', // correct password, but throttled
         ]);
 
-        $response->assertStatus(429);
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors('email');
+        $this->assertStringContainsString(
+            'Too many login attempts',
+            session('errors')->first('email')
+        );
     }
 
     public function test_user_with_can_login_false_is_rejected(): void

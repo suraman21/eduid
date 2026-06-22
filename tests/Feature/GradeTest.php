@@ -63,6 +63,12 @@ class GradeTest extends TestCase
             'subject_id'=> $this->subject->id,
         ]);
 
+        // Assign teacher to the class so teacher-scope checks pass.
+        \DB::table('teacher_classes')->insert([
+            'user_id'  => $this->teacher->id,
+            'class_id' => $this->class->id,
+        ]);
+
         $this->term = Term::withoutGlobalScope('school')->create([
             'school_id' => $this->school->id, 'name' => 'Term 1',
             'academic_year' => '2018 E.C.', 'start_date' => '2026-01-01',
