@@ -76,14 +76,14 @@ class StudentController extends BaseSchoolController
         // Store the photo BEFORE the transaction (filesystem I/O should not
         // hold a DB row lock open). If the transaction later fails we clean up.
         if ($request->hasFile('photo')) {
-            $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'public');
+            $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'local');
         }
 
         try {
             $student = $this->createStudentAtomically($validated);
         } catch (StudentLimitReached $e) {
             if (!empty($validated['photo_path'])) {
-                Storage::disk('public')->delete($validated['photo_path']);
+                Storage::disk('local')->delete($validated['photo_path']);
             }
 
             return back()->with('error', $e->getMessage())->withInput();
@@ -111,6 +111,31 @@ class StudentController extends BaseSchoolController
         return view('school.students.show', compact('student'));
     }
 
+    /**
+     * Stream a student's photo through an authenticated, tenant-scoped route
+     * (PRD §10). Route-model binding + the BelongsToSchool global scope mean a
+     * cross-tenant student id resolves to 404, never another school's photo.
+     *
+     * New uploads live on the private disk; we fall back to the legacy public
+     * disk so photos uploaded before this change keep resolving.
+     */
+    public function photo(Student $student)
+    {
+        if (! $student->photo_path) {
+            abort(404);
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($student->photo_path)) {
+                return Storage::disk($disk)->response($student->photo_path, null, [
+                    'Cache-Control' => 'private, max-age=3600',
+                ]);
+            }
+        }
+
+        abort(404);
+    }
+
     public function edit(Student $student)
     {
         $this->requireAdmin();
@@ -129,9 +154,11 @@ class StudentController extends BaseSchoolController
 
         if ($request->hasFile('photo')) {
             if ($student->photo_path) {
+                // Old photo may live on either disk (legacy public or new private).
+                Storage::disk('local')->delete($student->photo_path);
                 Storage::disk('public')->delete($student->photo_path);
             }
-            $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'public');
+            $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'local');
         }
 
         $old = $student->only(array_keys($validated));

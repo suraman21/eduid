@@ -88,7 +88,9 @@ class Student extends Model
     }
 
     /**
-     * Get photo URL via Storage facade (S3-ready).
+     * Photo URL — points at the authenticated, tenant-scoped serving route
+     * (PRD §10), never a direct /storage URL. The route streams the file from
+     * the private disk (with a legacy public-disk fallback).
      */
     public function getPhotoUrlAttribute(): ?string
     {
@@ -96,16 +98,20 @@ class Student extends Model
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::url($this->photo_path);
+        return route('school.students.photo', $this->id);
     }
 
     /**
-     * Check if student has a photo.
+     * Check if student has a photo on either the private or legacy public disk.
      */
     public function hasPhoto(): bool
     {
-        return !empty($this->photo_path)
-            && \Illuminate\Support\Facades\Storage::exists($this->photo_path);
+        if (empty($this->photo_path)) {
+            return false;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->exists($this->photo_path)
+            || \Illuminate\Support\Facades\Storage::disk('public')->exists($this->photo_path);
     }
 
     /**

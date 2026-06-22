@@ -151,6 +151,11 @@ Route::middleware(['auth'])->group(function () {
         // Resource routes are registered for the methods the controllers
         // actually implement. Write actions are additionally guarded
         // server-side (school_admin only) inside each controller.
+        // PRD §10: student photos are served through this authenticated,
+        // tenant-scoped route — never via direct /storage URLs.
+        Route::get('/students/{student}/photo', [SchoolStudentController::class, 'photo'])
+            ->name('school.students.photo');
+
         Route::resource('/students', SchoolStudentController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.students');
