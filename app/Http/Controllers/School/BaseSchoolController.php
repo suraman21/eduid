@@ -4,6 +4,7 @@ namespace App\Http\Controllers\School;
 
 use App\Http\Controllers\Controller;
 use App\Models\School;
+use App\Models\SchoolClass;
 
 /**
  * Base controller for all school-facing (tenant) controllers.
@@ -55,5 +56,36 @@ abstract class BaseSchoolController extends Controller
         if (! $this->currentSchool()->canAddNewData()) {
             abort(403, 'Your subscription has expired. New data entry is restricted.');
         }
+    }
+
+    /**
+     * Abort 403 when a teacher tries to access a class they are not assigned to.
+     * Admins and staff pass through unconditionally.
+     */
+    protected function requireTeacherCanAccessClass(int $classId): void
+    {
+        $user = auth()->user();
+        if ($user->isTeacher()
+            && ! $user->assignedClasses()->where('classes.id', $classId)->exists()
+        ) {
+            abort(403, 'You are not assigned to this class.');
+        }
+    }
+
+    /**
+     * Active classes scoped to what the current user may see:
+     * - teachers → only their assigned classes
+     * - admins / staff → all active classes
+     */
+    protected function classesForCurrentUser(): \Illuminate\Database\Eloquent\Collection
+    {
+        $user  = auth()->user();
+        $query = SchoolClass::where('is_active', true)->orderBy('grade');
+
+        if ($user->isTeacher()) {
+            $query->whereHas('teachers', fn ($q) => $q->where('user_id', $user->id));
+        }
+
+        return $query->get();
     }
 }

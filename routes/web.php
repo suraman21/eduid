@@ -21,6 +21,7 @@ use App\Http\Controllers\School\GradeController as SchoolGradeController;
 use App\Http\Controllers\School\CardOrderController as SchoolCardOrderController;
 use App\Http\Controllers\School\PhotoSessionController as SchoolPhotoSessionController;
 use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
+use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -176,6 +177,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/terms',     [SchoolGradeController::class, 'terms'])->name('terms');
             Route::post('/terms',    [SchoolGradeController::class, 'termStore'])->name('terms.store');
         });
+
+        // Report Cards (web-viewable, print-friendly — no server-side PDF)
+        Route::get('/report-cards',           [SchoolReportCardController::class, 'index'])->name('school.report-cards.index');
+        Route::get('/report-cards/{student}', [SchoolReportCardController::class, 'show'])->name('school.report-cards.show');
 
         // Guardians (nested under a student)
         Route::get('/guardians/search', [SchoolGuardianController::class, 'search'])->name('school.guardians.search');

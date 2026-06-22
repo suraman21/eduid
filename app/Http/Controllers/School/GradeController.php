@@ -24,7 +24,7 @@ class GradeController extends BaseSchoolController
 
     public function index(Request $request)
     {
-        $classes = $this->activeClasses();
+        $classes = $this->classesForCurrentUser();
         $terms   = Term::orderBy('order')->get();
 
         $class  = null;
@@ -37,6 +37,7 @@ class GradeController extends BaseSchoolController
         ]);
 
         if (!empty($filters['class_id']) && !empty($filters['term_id'])) {
+            $this->requireTeacherCanAccessClass((int) $filters['class_id']);
             $class = SchoolClass::findOrFail($filters['class_id']);
             $term  = Term::findOrFail($filters['term_id']);
 
@@ -108,6 +109,8 @@ class GradeController extends BaseSchoolController
             'assessment_type' => ['required', Rule::in(self::ASSESSMENT_TYPES)],
         ]);
 
+        $this->requireTeacherCanAccessClass((int) $filters['class_id']);
+
         // The subject must actually be taught in this class. Otherwise grades
         // would be orphaned — the gradebook iterates ClassSubject and would
         // never surface them.
@@ -166,6 +169,8 @@ class GradeController extends BaseSchoolController
             'grades.*.score'       => ['required', 'numeric', 'min:0', 'max:100'],
             'grades.*.max_score'   => ['required', 'numeric', 'min:1', 'max:100'],
         ]);
+
+        $this->requireTeacherCanAccessClass((int) $validated['class_id']);
 
         // The subject must be taught in this class (no orphan grades).
         $this->requireSubjectInClass($validated['class_id'], $validated['subject_id']);
@@ -293,6 +298,7 @@ class GradeController extends BaseSchoolController
             'term_id'  => ['required', Rule::exists('terms', 'id')->where('school_id', $this->schoolId())],
         ]);
 
+        $this->requireTeacherCanAccessClass((int) $filters['class_id']);
         $class = SchoolClass::findOrFail($filters['class_id']);
         $term  = Term::findOrFail($filters['term_id']);
 
@@ -426,14 +432,6 @@ class GradeController extends BaseSchoolController
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
-
-    private function activeClasses()
-    {
-        return SchoolClass::where('is_active', true)
-            ->orderBy('level_order')
-            ->orderBy('grade')
-            ->get();
-    }
 
     private function requireCanEnter(): void
     {
