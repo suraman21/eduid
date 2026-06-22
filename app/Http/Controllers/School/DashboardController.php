@@ -20,7 +20,7 @@ class DashboardController extends BaseSchoolController
             'active_students' => Student::where('status', 'active')->count(),
             'total_staff'     => User::whereIn('role', ['school_admin', 'teacher', 'staff'])->count(),
             'total_classes'   => $school->classes()->count(),
-            'pending_orders'  => CardOrder::whereIn('status', ['pending', 'processing'])->count(),
+            'pending_orders'  => CardOrder::whereIn('status', CardOrder::OPEN_STATUSES)->count(),
             'today_sessions'  => AttendanceSession::whereDate('session_date', today())->count(),
         ];
 
