@@ -22,6 +22,7 @@ use App\Http\Controllers\School\CardOrderController as SchoolCardOrderController
 use App\Http\Controllers\School\PhotoSessionController as SchoolPhotoSessionController;
 use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
+use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -155,6 +156,12 @@ Route::middleware(['auth'])->group(function () {
         // tenant-scoped route — never via direct /storage URLs.
         Route::get('/students/{student}/photo', [SchoolStudentController::class, 'photo'])
             ->name('school.students.photo');
+
+        // ID Card preview (single student or batch from card order).
+        Route::get('/students/{student}/id-card', [SchoolIdCardController::class, 'show'])
+            ->name('school.students.id-card');
+        Route::get('/card-orders/{cardOrder}/id-cards', [SchoolIdCardController::class, 'batch'])
+            ->name('school.card-orders.id-cards');
 
         Route::resource('/students', SchoolStudentController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
