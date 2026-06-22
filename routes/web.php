@@ -15,6 +15,7 @@ use App\Http\Controllers\School\AttendanceController as SchoolAttendanceControll
 use App\Http\Controllers\School\GradeController as SchoolGradeController;
 use App\Http\Controllers\School\CardOrderController as SchoolCardOrderController;
 use App\Http\Controllers\School\PhotoSessionController as SchoolPhotoSessionController;
+use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -131,6 +132,13 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/gradebook', [SchoolGradeController::class, 'gradebook'])->name('gradebook');
             Route::get('/terms',     [SchoolGradeController::class, 'terms'])->name('terms');
             Route::post('/terms',    [SchoolGradeController::class, 'termStore'])->name('terms.store');
+        });
+
+        // Guardians (nested under a student)
+        Route::prefix('students/{student}/guardians')->name('school.guardians.')->group(function () {
+            Route::post('/',            [SchoolGuardianController::class, 'store'])->name('store');
+            Route::patch('/{guardian}', [SchoolGuardianController::class, 'update'])->name('update');
+            Route::delete('/{guardian}', [SchoolGuardianController::class, 'destroy'])->name('destroy');
         });
 
         // Photo Sessions

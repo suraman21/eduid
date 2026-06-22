@@ -71,15 +71,66 @@
         {{-- Guardians --}}
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
             <h3 class="text-sm font-semibold text-gray-900 mb-4">Guardians</h3>
+
+            @if(auth()->user()->isSchoolAdmin())
+                {{-- Add form (collapsed via native <details>, no JS needed) --}}
+                <details class="mb-5 group">
+                    <summary class="cursor-pointer list-none text-xs font-medium text-indigo-600 hover:text-indigo-800 mb-3 select-none">
+                        <span class="group-open:hidden">+ Add guardian</span>
+                        <span class="hidden group-open:inline">− Close</span>
+                    </summary>
+                    <form method="POST" action="{{ route('school.guardians.store', $student) }}"
+                          class="bg-gray-50 rounded-lg p-4 space-y-3">
+                    @csrf
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" name="full_name" placeholder="Full name" required
+                               class="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400">
+                        <input type="text" name="phone" placeholder="Phone"
+                               class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400">
+                        <input type="text" name="phone_alt" placeholder="Alt. phone"
+                               class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400">
+                        <input type="email" name="email" placeholder="Email (optional)"
+                               class="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400">
+                        <select name="relationship"
+                                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
+                            @foreach(['father'=>'Father','mother'=>'Mother','guardian'=>'Guardian','sibling'=>'Sibling','other'=>'Other'] as $val => $label)
+                                <option value="{{ $val }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <label class="flex items-center gap-2 text-sm text-gray-600">
+                            <input type="checkbox" name="is_primary" value="1" class="rounded border-gray-300 text-indigo-600">
+                            Primary contact
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition">Save</button>
+                    </div>
+                    @error('full_name')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                    </form>
+                </details>
+            @endif
+
             @forelse($student->guardians as $guardian)
                 <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                     <div>
                         <p class="text-sm font-medium text-gray-800">{{ $guardian->full_name }}</p>
-                        <p class="text-xs text-gray-400">{{ $guardian->phone ?? '—' }} &middot; {{ $guardian->relationship ?? '' }}</p>
+                        <p class="text-xs text-gray-400">{{ $guardian->phone ?? '—' }} &middot; {{ ucfirst($guardian->relationship ?? '') }}</p>
                     </div>
-                    @if($guardian->pivot->is_primary)
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">Primary</span>
-                    @endif
+                    <div class="flex items-center gap-2">
+                        @if($guardian->pivot->is_primary)
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">Primary</span>
+                        @endif
+                        @if(auth()->user()->isSchoolAdmin())
+                            <form method="POST" action="{{ route('school.guardians.destroy', [$student, $guardian]) }}"
+                                  onsubmit="return confirm('Remove {{ $guardian->full_name }} from this student?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-gray-300 hover:text-red-500 transition" title="Remove">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
             @empty
                 <p class="text-sm text-gray-400">No guardians linked</p>
