@@ -35,6 +35,13 @@
     @endif
 </div>
 
+@if(!empty($unassignedCount) && !request('class_id'))
+    <div class="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
+        <span><strong>{{ $unassignedCount }}</strong> student{{ $unassignedCount === 1 ? '' : 's' }} {{ $unassignedCount === 1 ? 'has' : 'have' }} no class assigned — shown first below. Open a student to assign a class.</span>
+    </div>
+@endif
+
 {{-- Count --}}
 <p class="text-xs text-gray-400 mb-3">Showing {{ $students->firstItem() ?? 0 }}–{{ $students->lastItem() ?? 0 }} of {{ $students->total() }} students</p>
 
@@ -74,7 +81,16 @@
                             </div>
                         </td>
                         <td class="px-5 py-3 font-mono text-xs text-gray-500">{{ $student->uid }}</td>
-                        <td class="px-5 py-3 text-gray-600">{{ $student->schoolClass?->display_name ?? '—' }}</td>
+                        <td class="px-5 py-3 text-gray-600">
+                            @if($student->schoolClass)
+                                {{ $student->schoolClass->display_name }}
+                            @else
+                                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
+                                    Unassigned
+                                </span>
+                            @endif
+                        </td>
                         <td class="px-5 py-3 text-gray-500 capitalize">{{ $student->gender }}</td>
                         <td class="px-5 py-3">
                             @php $statusColors = ['active'=>'bg-green-50 text-green-600','promoted'=>'bg-emerald-50 text-emerald-600','repeating'=>'bg-orange-50 text-orange-600','graduated'=>'bg-blue-50 text-blue-600','withdrawn'=>'bg-red-50 text-red-600','transferred'=>'bg-amber-50 text-amber-600']; @endphp

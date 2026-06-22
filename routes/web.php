@@ -60,12 +60,13 @@ Route::post('/contact', [LeadController::class, 'store'])->name('contact.store')
 // ── Auth Routes ───────────────────────────────────────────────
 
 // School User Login (School Code + Email + Password)
+// PRD §08: max 5 login attempts per 15 minutes.
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login']);
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login');
 
 // Super Admin Login (Email + Password only)
 Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
-Route::post('/admin/login', [AdminLoginController::class, 'login']);
+Route::post('/admin/login', [AdminLoginController::class, 'login'])->middleware('throttle:login');
 
 // Redirect /admin to /admin/login (or dashboard if already logged in)
 Route::get('/admin', function () {
@@ -138,10 +139,11 @@ Route::middleware(['auth'])->group(function () {
 
         // CSV Student Import — MUST be registered before the students resource,
         // otherwise GET students/{student} captures "import" as a student id.
+        // PRD §08: CSV import limited to 3 requests/hour.
         Route::prefix('students/import')->name('school.students.import.')->group(function () {
             Route::get('/',         [SchoolStudentImportController::class, 'create'])->name('form');
-            Route::post('/',        [SchoolStudentImportController::class, 'preview'])->name('preview');
-            Route::post('/confirm', [SchoolStudentImportController::class, 'confirm'])->name('confirm');
+            Route::post('/',        [SchoolStudentImportController::class, 'preview'])->name('preview')->middleware('throttle:csv-import');
+            Route::post('/confirm', [SchoolStudentImportController::class, 'confirm'])->name('confirm')->middleware('throttle:csv-import');
             Route::get('/template', [SchoolStudentImportController::class, 'template'])->name('template');
         });
 
@@ -189,9 +191,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/create',                         [SchoolPhotoSessionController::class, 'create'])->name('create');
             Route::post('/',                              [SchoolPhotoSessionController::class, 'store'])->name('store');
             Route::get('/{photoSession}',                 [SchoolPhotoSessionController::class, 'show'])->name('show');
-            Route::post('/{photoSession}/upload-photo',   [SchoolPhotoSessionController::class, 'uploadPhoto'])->name('upload-photo');
+            // PRD §08: photo upload limited to 30 requests/minute.
+            Route::post('/{photoSession}/upload-photo',   [SchoolPhotoSessionController::class, 'uploadPhoto'])->name('upload-photo')->middleware('throttle:photo-upload');
             Route::post('/{photoSession}/skip',           [SchoolPhotoSessionController::class, 'skipStudent'])->name('skip');
-            Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip');
+            Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip')->middleware('throttle:photo-upload');
             Route::post('/{photoSession}/complete',       [SchoolPhotoSessionController::class, 'complete'])->name('complete');
             Route::post('/{photoSession}/cancel',         [SchoolPhotoSessionController::class, 'cancel'])->name('cancel');
         });
@@ -200,7 +203,8 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('card-orders')->name('school.card-orders.')->group(function () {
             Route::get('/',                   [SchoolCardOrderController::class, 'index'])->name('index');
             Route::get('/create',             [SchoolCardOrderController::class, 'create'])->name('create');
-            Route::post('/',                  [SchoolCardOrderController::class, 'store'])->name('store');
+            // PRD §08: card order creation limited to 5 requests/hour.
+            Route::post('/',                  [SchoolCardOrderController::class, 'store'])->name('store')->middleware('throttle:card-order');
             Route::get('/{cardOrder}',        [SchoolCardOrderController::class, 'show'])->name('show');
             Route::post('/{cardOrder}/cancel', [SchoolCardOrderController::class, 'cancel'])->name('cancel');
         });

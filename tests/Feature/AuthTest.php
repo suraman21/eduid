@@ -183,20 +183,20 @@ class AuthTest extends TestCase
             ]);
         }
 
-        // 6th attempt should return a lockout message
-        $response = $this->post('/login', [
-            'school_code' => 'AIA',
-            'email' => 'admin@abyssinia.com',
-            'password' => 'password123', // correct password, but locked
-        ]);
-
-        $response->assertStatus(302);
-        $response->assertSessionHasErrors('email');
-        
-        // Assert the user locked_until is set in database
+        // Account lockout (PRD §08) sets locked_until on the 5th failed attempt.
         $this->schoolAdmin->refresh();
         $this->assertNotNull($this->schoolAdmin->locked_until);
         $this->assertTrue(now()->lessThan($this->schoolAdmin->locked_until));
+
+        // 6th attempt is now stopped by the login rate limiter (PRD §08:
+        // 5 attempts / 15 min per IP+email) before reaching the controller.
+        $response = $this->post('/login', [
+            'school_code' => 'AIA',
+            'email' => 'admin@abyssinia.com',
+            'password' => 'password123', // correct password, but throttled
+        ]);
+
+        $response->assertStatus(429);
     }
 
     public function test_user_with_can_login_false_is_rejected(): void
