@@ -132,6 +132,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{cardOrder}/confirm', [AdminCardOrderController::class, 'confirm'])->name('confirm');
             Route::post('/{cardOrder}/status',  [AdminCardOrderController::class, 'updateStatus'])->name('status');
             Route::post('/{cardOrder}/cancel',  [AdminCardOrderController::class, 'cancel'])->name('cancel');
+            // Print-ready PDF (TCPDF, server-side only, Super Admin only).
+            Route::post('/{cardOrder}/print-file/regenerate', [AdminCardOrderController::class, 'regeneratePrintFile'])->name('print-file.regenerate');
+            Route::get('/{cardOrder}/print-file',  [AdminCardOrderController::class, 'downloadPrintFile'])->name('print-file');
         });
     });
 

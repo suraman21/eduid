@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\CardOrder;
+use App\Services\CardPrintService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -77,19 +79,23 @@ class CardOrderController extends Controller
     }
 
     /**
-     * Confirm a pending order. Note: high-resolution print-file generation
-     * (TCPDF, server-side only) is a separate deliverable; this records the
-     * confirmation and advances the lifecycle.
+     * Confirm a pending order and generate the high-resolution, print-ready PDF
+     * (TCPDF, server-side only, PRD §03). The file lands under
+     * storage/app/print_jobs/{order_code}/ — a private path never exposed via a
+     * web URL. Only the Super Admin can later download it.
      */
-    public function confirm(CardOrder $cardOrder)
+    public function confirm(CardOrder $cardOrder, CardPrintService $printer)
     {
         if (! $cardOrder->isPending()) {
             return back()->with('error', 'Only pending orders can be confirmed.');
         }
 
+        $path = $printer->generate($cardOrder);
+
         $cardOrder->update([
-            'status'       => 'confirmed',
-            'confirmed_at' => now(),
+            'status'          => 'confirmed',
+            'confirmed_at'    => now(),
+            'print_file_path' => $path,
         ]);
 
         AuditLog::createRecord(
@@ -98,7 +104,55 @@ class CardOrderController extends Controller
             ['order_code' => $cardOrder->order_code]
         );
 
-        return back()->with('success', "Order {$cardOrder->order_code} confirmed.");
+        return back()->with('success', "Order {$cardOrder->order_code} confirmed — print file generated.");
+    }
+
+    /**
+     * Re-generate the print-ready PDF (e.g. after photos were added or a
+     * student detail changed). Available once an order is confirmed and before
+     * it ships. Replaces the previous file for the order.
+     */
+    public function regeneratePrintFile(CardOrder $cardOrder, CardPrintService $printer)
+    {
+        if (! in_array($cardOrder->status, ['confirmed', 'printing'], true)) {
+            return back()->with('error', 'Print files can only be regenerated for confirmed or printing orders.');
+        }
+
+        $path = $printer->generate($cardOrder);
+        $cardOrder->update(['print_file_path' => $path]);
+
+        AuditLog::createRecord(
+            $cardOrder->school_id, auth()->id(),
+            'card_order.print_regenerated', 'card_orders', $cardOrder->id, null,
+            ['order_code' => $cardOrder->order_code]
+        );
+
+        return back()->with('success', 'Print file regenerated.');
+    }
+
+    /**
+     * Stream the print-ready PDF to the Super Admin. The file lives on the
+     * private disk and is never reachable by a /storage URL — this authenticated
+     * admin route is the only way to retrieve it.
+     */
+    public function downloadPrintFile(CardOrder $cardOrder)
+    {
+        if (! $cardOrder->print_file_path
+            || ! Storage::disk('local')->exists($cardOrder->print_file_path)
+        ) {
+            abort(404, 'No print file has been generated for this order yet.');
+        }
+
+        AuditLog::createRecord(
+            $cardOrder->school_id, auth()->id(),
+            'card_order.print_downloaded', 'card_orders', $cardOrder->id, null,
+            ['order_code' => $cardOrder->order_code]
+        );
+
+        return Storage::disk('local')->download(
+            $cardOrder->print_file_path,
+            "{$cardOrder->order_code}-cards.pdf"
+        );
     }
 
     /**

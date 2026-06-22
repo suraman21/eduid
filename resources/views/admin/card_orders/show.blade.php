@@ -71,6 +71,38 @@
         @endif
     </div>
 
+    {{-- Print-ready file (Super Admin only). Generated on confirm; never web-accessible. --}}
+    @if(in_array($order->status, ['confirmed','printing','shipped','delivered']))
+        <div class="bg-dark-800 border border-slate-700/50 rounded-xl p-6">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-white font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Print-Ready File
+                    </p>
+                    <p class="text-xs text-slate-500 mt-1">
+                        High-resolution CR80 PDF for the PVC printer. Private — schools never see this.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    @if($order->print_file_path)
+                        <a href="{{ route('admin.card-orders.print-file', $order) }}"
+                           class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Download PDF</a>
+                    @else
+                        <span class="text-xs text-amber-400">Not generated</span>
+                    @endif
+                    @if(in_array($order->status, ['confirmed','printing']))
+                        <form method="POST" action="{{ route('admin.card-orders.print-file.regenerate', $order) }}"
+                              data-confirm="Regenerate the print file from current student data?">
+                            @csrf
+                            <button class="border border-slate-600 hover:border-slate-400 text-slate-300 px-4 py-2 rounded-lg text-sm transition">Regenerate</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Students --}}
     <div class="bg-dark-800 border border-slate-700/50 rounded-xl overflow-hidden">
         <div class="px-5 py-3 border-b border-slate-700/50"><p class="text-white font-medium">Students ({{ $students->count() }})</p></div>

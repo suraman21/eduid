@@ -1,13 +1,20 @@
 @php
-    $accent = $school->accent_color ?? '#6366f1';
+    $accent  = $school->accent_color ?? '#6366f1';
+    // Preview mode (school-facing) overlays a watermark and is not print-optimised.
+    // The Golden Rule (PRD §03): schools only ever see a low-res preview — the
+    // clean, print-ready artwork is generated server-side for the Super Admin only.
+    $preview = $preview ?? true;
 @endphp
 
 {{--
     Physical ID card: 85.6mm × 54mm (CR80 / credit card standard).
-    Screen preview is 2× scale (342px × 216px) via the wrapper class.
-    Print CSS in the parent view shrinks it back to true physical size.
+    On screen the card renders at 2× scale (342px × 216px). This partial is the
+    PREVIEW used on the school side — deliberately watermarked and not laid out
+    for printing. The Super Admin's print pipeline (TCPDF) produces the real
+    print-ready file separately.
 --}}
 <div class="id-card" style="
+    position: relative;
     width: 342px; height: 216px;
     border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,.18);
@@ -18,6 +25,24 @@
     background: white;
     flex-shrink: 0;
 ">
+
+    {{-- PREVIEW watermark — repeating diagonal text the school cannot remove. --}}
+    @if($preview)
+        <div aria-hidden="true" style="
+            position:absolute; inset:0; z-index:5; pointer-events:none;
+            background-image: repeating-linear-gradient(-45deg,
+                rgba(99,102,241,.10) 0, rgba(99,102,241,.10) 2px,
+                transparent 2px, transparent 60px);
+            display:flex; align-items:center; justify-content:center;
+        ">
+            <span style="
+                transform: rotate(-22deg);
+                font-size: 26px; font-weight: 800; letter-spacing: 4px;
+                color: rgba(99,102,241,.28); text-transform: uppercase;
+                white-space: nowrap;
+            ">Preview</span>
+        </div>
+    @endif
 
     {{-- Header stripe --}}
     <div style="
