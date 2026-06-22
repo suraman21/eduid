@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduID PRD v4.1 — Complete System Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e1a;--sidebar:#0d1221;--card:rgba(255,255,255,0.02);--border:rgba(255,255,255,0.05);--text:#94a3b8;--heading:#e2e8f0;--white:#f8fafc;--purple:#a78bfa;--purple-bg:rgba(139,92,246,0.12);--purple-border:rgba(139,92,246,0.2)}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;font-size:13px;line-height:1.6}
+.sidebar{width:280px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;position:fixed;left:0;top:0;z-index:50;transition:transform .3s}
+.sidebar.closed{transform:translateX(-100%)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40}
+.overlay.show{display:block}
+.logo{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px}
+.logo-text{font-size:13px;font-weight:700;color:var(--white)}
+.logo-ver{font-size:9px;color:#475569;font-weight:600;letter-spacing:.5px}
+.search-box{padding:10px 14px;border-bottom:1px solid var(--border)}
+.search-box input{width:100%;padding:7px 10px 7px 32px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--heading);font-size:11px;outline:none;font-family:inherit}
+.search-box input:focus{border-color:rgba(139,92,246,.3)}
+.search-box{position:relative}
+.search-icon{position:absolute;left:24px;top:50%;transform:translateY(-50%);color:#475569;font-size:12px}
+nav{flex:1;overflow-y:auto;padding:10px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+.group-label{font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
+.group-label:hover{color:#64748b}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:500;color:#64748b;cursor:pointer;transition:all .15s;border:1px solid transparent;margin:1px 0}
+.nav-item:hover{color:#cbd5e1;background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--white);background:var(--purple-bg);border-color:var(--purple-border)}
+.nav-item.active .nav-dot{background:var(--purple)}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:#334155;flex-shrink:0}
+.sidebar-footer{padding:10px 16px;border-top:1px solid var(--border);font-size:9px;color:#334155}
+.main{flex:1;display:flex;flex-direction:column;margin-left:280px;min-width:0;height:100vh}
+header{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:rgba(10,14,26,.8);backdrop-filter:blur(16px);flex-shrink:0;position:sticky;top:0;z-index:30}
+.menu-btn{display:none;background:none;border:none;color:#64748b;cursor:pointer;padding:4px;font-size:18px}
+header h1{font-size:15px;font-weight:700;color:var(--white)}
+.phase-tag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:auto}
+.phase-v1{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+.phase-v15{background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2)}
+.phase-v2{background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2)}
+.phase-v25{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.phase-v3{background:rgba(251,113,133,.1);color:#fb7185;border:1px solid rgba(251,113,133,.2)}
+.phase-all{background:rgba(100,116,139,.1);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
+.content{flex:1;overflow-y:auto;padding:20px 24px;scrollbar-width:thin;scrollbar-color:#1e293b transparent}
+.content-inner{max-width:720px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:12px;transition:border-color .2s}
+.card:hover{border-color:rgba(139,92,246,.1)}
+.card h3{font-size:12px;font-weight:700;color:var(--white);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.card h3::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.card-text{font-size:12px;color:#64748b;line-height:1.7;white-space:pre-line;font-weight:400}
+.card-text .mono{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:#475569}
+.nav-footer{display:flex;justify-content:space-between;align-items:center;padding:16px 0;margin-top:8px;border-top:1px solid var(--border)}
+.nav-footer button{background:none;border:none;color:#475569;cursor:pointer;font-size:11px;font-family:inherit}
+.nav-footer button:hover{color:var(--purple)}
+.nav-footer span{font-size:10px;color:#334155}
+.hidden{display:none}
+@media(max-width:1024px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.main{margin-left:0}
+.menu-btn{display:block}
+}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar closed" id="sidebar">
+<div class="logo">
+<div class="logo-icon">E</div>
+<div><div class="logo-text">EduID PRD</div><div class="logo-ver">v4.1 FINAL · 22 SECTIONS</div></div>
+</div>
+<div class="search-box">
+<span class="search-icon">🔍</span>
+<input type="text" id="searchInput" placeholder="Search PRD..." oninput="filterNav()">
+</div>
+<nav id="nav"></nav>
+<div class="sidebar-footer">Arkeon Ethiopia · 57 features · 5 versions · ~40 tables · 4 roles + 3 flags</div>
+</aside>
+
+<div class="main">
+<header>
+<button class="menu-btn" onclick="toggleSidebar()">☰</button>
+<h1 id="pageTitle">Product Vision</h1>
+<span class="phase-tag phase-all" id="phaseTag">ALL</span>
+</header>
+<div class="content" id="contentArea">
+<div class="content-inner" id="contentInner"></div>
+</div>
+</div>
+
+<script>
+const S=[
+{id:"vision",title:"Product Vision",group:"Foundation",phase:"ALL",content:[
+{s:"Identity",t:"EduID is a simple, offline-capable school management SaaS for Ethiopian and African schools (private + government, KG through Preparatory). One platform for student identity cards, QR attendance, gradebook, timetables, report cards, and parent communication."},
+{s:"Competitive Weapon",t:"Simplicity. Fewer features, all bulletproof. Physical PVC ID cards. Offline-first. Ethiopian calendar + Amharic. Local support. Fair pricing."},
+{s:"Engineering Principles",t:"SECURITY — withstand real penetration testing at any time, no shortcuts\nSCALABILITY — seamless hosting migration (shared→VPS→cloud) zero school disruption\nSIMPLICITY — rural school admin productive in 10 minutes, max 3 clicks to any action\nSPEED — every page <2s, sync works on 3G, delta sync <5s"},
+{s:"Development Rules",t:"• Build piece by piece — each verified before the next\n• No batch work, no shortcuts, no hacks — production quality from day one\n• Always check against this PRD before implementing\n• Proactively flag gaps — think in days/weeks AND months/years\n• If anything feels off, flag it and discuss before coding\n• Test every piece for: correctness, speed, security, simplicity, design"}
+]},
+{id:"revenue",title:"Revenue Model",group:"Foundation",phase:"v1.0",content:[
+{s:"Stream 1: Setup Fee",t:"One-time. Covers onboarding, training, first card batch. Amount configurable by Super Admin per plan tier. TBD after market research."},
+{s:"Stream 2: Monthly Subscription",t:"Core recurring revenue. Monthly payment with optional annual (configurable discount %). Prices set by Super Admin — adjustable anytime. Covers: server hosting, updates, security, support."},
+{s:"Stream 3: Per-Card Printing",t:"50-80 ETB/card (configurable). New students, replacements, annual updates. Cards NOT force-expired. QR renewed in software via subscription. Card naturally outdates (class + year printed on it)."},
+{s:"Payment Workflow (v1)",t:"1. School transfers via bank (CBE, Awash, Dashen, etc.)\n2. Notifies Arkeon (phone/Telegram/WhatsApp)\n3. Super Admin records: amount, reference, method, period covered\n4. System auto-extends subscription_expires_at\n5. Overpay → extends by correct period. Underpay → recorded, NOT extended until full\n\nFuture (v2.5): Chapa payment gateway for online payment"},
+{s:"Subscription Lifecycle",t:"ACTIVE → full access\n  ↓ (payment missed)\nGRACE PERIOD (30 days) → view-only\n  ↓ (30 days pass)\nEXPIRED → locked out, data retained\n  ↓ (Super Admin decides)\nREACTIVATION or DATA EXPORT → DELETION"},
+{s:"Upgrade / Downgrade",t:"UPGRADE: Pay → get upgrade within 24 hours.\nDOWNGRADE: Takes effect at END of current paid period. No refund. System BLOCKS if usage > new plan limits."},
+{s:"Payment Notifications",t:"14 days before → notification\n7 days before → second notification\nDay of expiry → 'Expired' notification\nGrace day 15 → 'Will be locked in 15 days'"}
+]},
+{id:"tiers",title:"Package Tiers",group:"Foundation",phase:"v1.0",content:[
+{s:"All Tiers Include",t:"Complete core: student management, attendance (QR + manual), gradebook with auto-calculation, report cards (PDF), timetable, school admin panel, offline-capable Flutter app, student ID cards."},
+{s:"Starter",t:"• Up to 300 students, 10 teachers, 1 school admin\n• Standard card templates (2-3 pre-made)\n• Basic reports, email support, 6 months maintenance\n• Homeroom attendance mode only"},
+{s:"Standard",t:"• Up to 800 students, 30 teachers, 2 school admins\n• Custom card template upload\n• Staff/employee attendance + employee ID cards\n• Per-period attendance, coordinator role\n• CSV import + data export, advanced reports\n• Parent app (basic), phone + email support, 1 year maintenance"},
+{s:"Premium",t:"• Unlimited students, teachers, school admins\n• Card design assistance, on-site training (2 days)\n• Priority 24h support, full parent features\n• API access, 2 years maintenance"},
+{s:"Custom Packages",t:"Super Admin can create CUSTOM packages: cherry-pick features, custom limits, custom pricing. For government contracts and special deals."},
+{s:"Per-School Overrides",t:"Super Admin can enable/disable features for individual schools regardless of their plan. Override > plan > default."}
+]},
+{id:"roles",title:"Roles & Permissions",group:"Roles",phase:"v1.0",content:[
+{s:"4 Roles + 3 Capability Flags",t:"ROLES (who you are):\n• super_admin — Arkeon system administrator\n• school_admin — principal, office manager (logs in, tracked, gets ID)\n• teacher — teaching staff (logs in, teaches, enters grades)\n• staff — non-teaching: guard, receptionist, librarian, janitor, driver, nurse (login optional, tracked, gets ID)\n\nFLAGS (extra capabilities, stackable):\n• is_homeroom — homeroom teacher for a specific class\n• is_coordinator — can cover absent teachers' classes\n• can_record_staff_attendance — can take attendance for ALL employees"},
+{s:"Super Admin",t:"SCHOOLS: Create/edit/activate/deactivate, configure levels, lock code\nCARDS: Upload designs, position fields, preview/save templates\nBILLING: Plan pricing, payments, subscriptions, custom packages\nFEATURES: Toggle per plan, per-school overrides\nSYSTEM: Global dashboard, audit logs, leads, data export, legal docs\n2FA REQUIRED: Email OTP on every login"},
+{s:"School Admin",t:"PROFILE: View info (read-only), edit contact, set accent color\nACADEMIC: Subjects, grading scales, weights, terms, holidays, school days, attendance mode\nUSERS: Add/edit/deactivate teachers AND staff, reset passwords, designate coordinators + attendance takers, set job titles\nSTAFF: Register non-teaching employees (login optional)\nSTUDENTS: Register, edit, assign classes, manage status, year-end promotion\nTIMETABLE: Periods, schedule, conflict detection\nGRADES: Review, publish, generate report cards\nMESSAGING: Message parents, view threads"},
+{s:"Teacher",t:"APP: PIN login, My Classes, My Schedule\nATTENDANCE: Student attendance for assigned classes (QR/manual)\nGRADES: Enter + submit for assigned subjects\nCANNOT: Add/remove students, modify timetable, message parents (unless homeroom)"},
+{s:"Staff (Non-Teaching)",t:"WHO: Guard, receptionist, librarian, janitor, driver, nurse, etc.\nLOGIN: Optional — School Admin sets email+password only if needed\n• WITH login: can use app for capabilities (e.g., receptionist takes attendance)\n• WITHOUT login: registered for attendance tracking + ID card only\nGETS: Employee ID (AIA-E-XXXXX), ID card, attendance tracked\nCANNOT: Teach, enter grades, view student academic data"},
+{s:"Homeroom Teacher (Flag)",t:"One per class, must be role=teacher. Extra abilities:\n• View ALL subjects' grades for homeroom class\n• Add Teacher's Remark to report cards\n• Message parents of homeroom students\n• Review compiled grades before publication"},
+{s:"Coordinator (Flag)",t:"Can be teacher OR staff. Abilities:\n• See 'Unattended Classes' in app\n• Take attendance for ANY class when teacher is absent\n• Record shows coordinator + original teacher"},
+{s:"Staff Attendance Taker (Flag)",t:"Can be teacher, staff, or school_admin. Abilities:\n• Mark ALL employees P/A/L/E or scan QR\n• Entrance time logged, late duration calculated\n• CANNOT mark themselves present"},
+{s:"Parent (Separate App)",t:"Registers via invite code + phone. Sees linked children.\nViews: attendance, grades (when published), report cards, timetable, announcements\nMessages: homeroom teacher + school admin ONLY\nCan pre-report absences (if enabled)\nAll features configurable per school"},
+{s:"Deletion Rules",t:"• No dependencies → fully deletable\n• Has dependencies → warning + deactivation only\n• Edit available for all data by appropriate role\n• Historical integrity always preserved"}
+]},
+{id:"attendance",title:"Attendance System",group:"Modules",phase:"v1.0 / v1.5",content:[
+{s:"Three Components",t:"A: Student Attendance — by teachers or coordinator\nB: Staff/Employee Attendance — by designated taker (covers teachers + admins + non-teaching staff)\nC: Coordinator Override — backup when teacher absent"},
+{s:"Mode 1: Homeroom Only (v1.0)",t:"Only homeroom teacher takes attendance once/day. Subject teachers don't. Best for KG, primary, smaller schools."},
+{s:"Mode 2: Per-Period (v1.5)",t:"Each teacher takes attendance during their period. App auto-detects current period from timetable. Best for secondary schools wanting detailed tracking."},
+{s:"4 Attendance Types",t:"P (Present) — counts as present\nA (Absent) — not present\nL (Late) — present but flagged\nE (Excused) — absent with reason, not penalized\n\n% = (Present + Late) / (School Days - Excused) × 100"},
+{s:"Method Configuration",t:"School Admin sets SEPARATELY for students and staff:\n• 'qr_only' | 'manual_only' | 'both'\nDefault: 'both' — school chooses workflow."},
+{s:"Staff Attendance",t:"Covers ALL employees: teachers + school admins + non-teaching staff.\nExpected arrival time set by admin. Late duration auto-calculated.\nMonthly late report per employee.\nEmployee list shows name, job_title, photo."},
+{s:"App UI (Unified)",t:"My Classes → student list → mark P/A/L/E or QR scan\nStaff Attendance → employee list → mark or QR scan\nUnattended Classes → coordinator covers absent teacher's class"},
+{s:"Constraints",t:"• One session per class per date per period\n• One record per student per session\n• Offline sync: atomic (all-or-nothing)\n• Cannot self-mark for staff attendance\n• Unauthorized scan → error + log"}
+]},
+{id:"gradebook",title:"Gradebook",group:"Modules",phase:"v1.0",content:[
+{s:"Grading Scale",t:"Per-school configurable boundaries and labels.\nKG toggle: numeric OR descriptive (Excellent/Very Good/Good/etc.)\nMax score: default 100, changeable."},
+{s:"Assessment Weights",t:"Default: CA 40% + Mid 20% + Final 40% = 100%\nPer-school, optional per-grade-level overrides.\nMust sum to exactly 100%."},
+{s:"Auto-Calculations",t:"Subject Total = Σ(score × weight/100)\nSubject % = total / max × 100\nLetter Grade = lookup from grading scale\nClass Rank = ORDER BY average DESC (ties: same rank, next skips)\nAll computed on-the-fly — never stored."},
+{s:"Publication Workflow",t:"1. Teachers enter grades → click Submit per subject/class/term\n2. System tracks: '14/18 teachers submitted'\n3. All submitted → homeroom teacher notified\n4. Homeroom reviews + adds Teacher's Remark\n5. School Admin publishes grades\n6. THEN: report cards generate, parents see grades\n\nReport cards BLOCKED until published."},
+{s:"Supplementary Exams",t:"Optional per school. Ethiopian standard: 1-2 F subjects → supplementary ≥50% → promoted."},
+{s:"Test Results for Parents",t:"Teachers submit test/quiz results.\nParents see based on school's grade_view_mode:\n• 'per_term': after publication\n• 'realtime': immediately\n• 'report_card_only': final PDF only"}
+]},
+{id:"reports",title:"Report Cards",group:"Modules",phase:"v1.0",content:[
+{s:"Content",t:"School header (logo, name, contact) · Student info (photo, name EN+AM, UID, class, year, term) · All subjects with per-assessment scores, total, %, grade · Student average, class rank · Attendance summary · Homeroom Teacher's Remark · Principal's Remark (optional) · Signature areas"},
+{s:"Generation",t:"All grades published → homeroom comment added → School Admin generates PDF (TCPDF) → single PDF or ZIP → Excel export option → parents notified.\nLarge batches: background job with progress."},
+{s:"Corrections",t:"Fix grade in gradebook → re-publish → re-generate report card. Report cards are generated documents, not editable."}
+]},
+{id:"students",title:"Student Management",group:"Modules",phase:"v1.0",content:[
+{s:"Student UID",t:"Format: AIA-73921 (school_code + 5 random digits)\nNever reused, never changes. Collision: retry up to 10×, then extend to 6 digits.\n100,000 codes per school (30+ years)."},
+{s:"Employee ID",t:"Format: AIA-E-38291 (school_code + E + 5 random digits)\nFor ALL school employees: teachers, admins, non-teaching staff.\nPermanent, never reused."},
+{s:"Registration",t:"Manual or CSV import (Standard+).\nCSV: validate, duplicate detect, preview errors, confirm.\nLarge imports: background job."},
+{s:"Status Lifecycle",t:"ACTIVE → PROMOTED / REPEATING / GRADUATED / TRANSFERRED / WITHDRAWN\nAny status → ACTIVE via re-enrollment (same UID).\nMid-year: join_date/end_date tracked for partial calculations."},
+{s:"Photos",t:"Client compress <500KB → server resize 800×800 JPEG → strip metadata → auth controller access only."},
+{s:"Promotion Section Assignment",t:"Year-end wizard: keep sections / alphabetical / random / manual."}
+]},
+{id:"timetable",title:"Timetable",group:"Modules",phase:"v1.5",content:[
+{s:"Setup",t:"School Admin defines periods (time slots + breaks). Assigns subject + teacher + room per slot. Manual only. Copy timetable between classes."},
+{s:"Conflict Detection",t:"HARD BLOCK if teacher double-booked. Must resolve before saving."},
+{s:"Timetable-Driven Attendance",t:"In per-period mode: app detects current period → suggests correct class."},
+{s:"Views",t:"Admin: full grid editor. Teacher app: My Schedule Today (current highlighted), My Week. Parent app: child's schedule."}
+]},
+{id:"cards",title:"ID Card System",group:"Modules",phase:"v1.0 / v1.5",content:[
+{s:"Two Card Types",t:"Student Card (v1.0): name, photo, QR, UID, class, section, year\nEmployee Card (v1.5): name, photo, QR, employee ID, job_title, phone, year\nOne employee template covers all staff types."},
+{s:"Template Workflow",t:"Designer creates card externally → Super Admin uploads front+back images (300 DPI) → positions fields (X,Y,size,font,color) → live preview → save."},
+{s:"4 Fonts",t:"Outfit, Roboto, Noto Sans Ethiopic, Inter. No custom upload."},
+{s:"QR & Replacement",t:"HMAC-SHA256 token, offline verification. Card replacement: same UID, new QR optional, fee charged."}
+]},
+{id:"parent",title:"Parent App",group:"Modules",phase:"v2.0",content:[
+{s:"Registration",t:"School gives parent invite code → parent downloads separate app → enters code + phone → links to child(ren) → creates password/PIN. Multi-child support."},
+{s:"Attendance",t:"Calendar view (colored dots), summaries, per-period breakdown.\nNotifications (each toggleable): daily, absence-only, late, weekly summary."},
+{s:"Grades",t:"View modes: per_term / realtime / report_card_only (school chooses).\nTest/quiz results visible per mode. Report card download."},
+{s:"Messaging",t:"Parents can message: homeroom teacher + school admin ONLY.\nHomeroom teacher + admin can message parents (individual or broadcast).\nText only. All logged. Read receipts."},
+{s:"Other",t:"School announcements (always on), child profile, timetable view, absence pre-reporting (configurable). All features toggled per school."},
+{s:"Privacy",t:"Own children only. Rank as 'X out of Y' not full list. All actions logged."}
+]},
+{id:"transition",title:"Year Transition",group:"Modules",phase:"v1.5",content:[
+{s:"8-Step Wizard",t:"1. Verify all grades submitted + published\n2. Review pass/fail results\n3. Supplementary exams (if enabled)\n4. Set student outcomes (promote/repeat/graduate/transfer/withdraw)\n5. Create new academic year + terms\n6. Generate new classes (section assignment options)\n7. Reassign teachers + homeroom\n8. Review + commit (irreversible, old year archived)"},
+{s:"Data Archival",t:"Old year NEVER deleted. Year selector in all views. Student multi-year history always accessible."}
+]},
+{id:"schoolpanel",title:"School Admin Panel",group:"Modules",phase:"v1.0",content:[
+{s:"Design",t:"Light mode + school accent color (CSS custom properties). Fully responsive. Sidebar navigation."},
+{s:"Onboarding",t:"Checklist: attendance mode → classes → subjects → grading scale → terms → students → teachers → homeroom → timetable → parent config. Links to each page. Disappears when done."},
+{s:"Dashboard",t:"Students vs limit, teachers vs limit, today's attendance %, grade submission progress, subscription days, payment due date, alerts."}
+]},
+{id:"features",title:"Feature Management",group:"System",phase:"v1.0",content:[
+{s:"Registry",t:"Every toggleable feature has a unique key. Categories: Core, Attendance, Academic, Cards, Data, Parent, Future.\nSuper Admin toggles ON/OFF per plan."},
+{s:"Code Check",t:"$school->hasFeature('key') checks: school override → plan → default.\nUsed in controllers, views, API, middleware."},
+{s:"Admin UI",t:"Plan page: checklist of all features. Per-school: override panel. Changes immediate."}
+]},
+{id:"security",title:"Security",group:"System",phase:"v1.0",content:[
+{s:"Validation",t:"Every input validated. Files: type whitelist, MIME check, re-process. No raw SQL. All output escaped."},
+{s:"Auth",t:"bcrypt cost 12. Session regeneration. CSRF. Lockout 5→30min. Sanctum tokens 30-day. Super Admin 2FA. PIN bcrypt device-only. 2hr session timeout."},
+{s:"Rate Limiting",t:"Login 5/min/IP. API 60/min/token. Contact 3/hr/IP. Reset 3/hr/email."},
+{s:"Data Isolation",t:"BelongsToSchool global scope. Session school_id validated. URL manipulation blocked."},
+{s:"Files & Network",t:"MIME validated, re-processed, stored outside web root, served via auth. Security headers. Cloudflare + UFW firewall. DB localhost only."},
+{s:"Audit",t:"IMMUTABLE. Every CRUD, login, payment, password reset logged with old+new values. Retained indefinitely."},
+{s:"Soft Deletes",t:"Dependencies → deactivate only. No dependencies → deletable. System warns before destructive actions."}
+]},
+{id:"sync",title:"Sync & API",group:"System",phase:"v1.0",content:[
+{s:"Protocol",t:"Push first (atomic), pull second (delta). Gzip compressed. 3 retries with backoff. Server-wins conflict resolution."},
+{s:"Targets",t:"Initial 300 students: <30s. Daily delta: <5s. 40-student attendance: <2s."},
+{s:"Versioning",t:"/api/v1/... Response includes minimum_app_version. Old version → force update screen."},
+{s:"PIN",t:"4-digit bcrypt on device. 5 fails → locked → full re-auth. Token 30-day expiry → re-auth."}
+]},
+{id:"database",title:"Database",group:"Technical",phase:"ALL",content:[
+{s:"~40 Tables Total",t:"Existing 14 + New ~26\n\nBILLING: subscription_plans, payments\nACADEMIC: subjects, class_subjects, grading_scales, assessment_configs, terms\nGRADES: student_grades\nTIMETABLE: timetable_periods, timetable_entries\nCARDS: card_templates, card_template_fields\nCALENDAR: holidays\nSYSTEM: notifications, feature_registry, plan_features, school_feature_overrides\nPARENT: parent_users, parent_invites, messages, message_threads, announcements, absence_reports"},
+{s:"Key Modifications",t:"schools: +subscription fields, attendance config, offered_levels, accent_color, code_locked, parent_app_config\nusers: role adds 'staff', +employee_id, +job_title, +is_coordinator, +can_record_staff_attendance, +can_login\nattendance: +recorded_on_behalf_of, +method\ncard_templates: +template_type ('student'/'employee')"}
+]},
+{id:"ui",title:"UI / Theme",group:"Technical",phase:"v1.0",content:[
+{s:"Theme",t:"Super Admin: dark mode. School panels + apps: light mode + accent color. One hex color → CSS custom properties."},
+{s:"Responsive",t:"Desktop 1440, Laptop 1024, Tablet 768, Phone 375, Fold 280. No horizontal scroll. Tables→cards on mobile. Sidebar→overlay. Touch ≥44px."}
+]},
+{id:"infra",title:"Infrastructure",group:"Technical",phase:"v1.0",content:[
+{s:"Stack",t:"Laravel 11, MySQL 8, PHP 8.2+, Blade+Tailwind+Alpine, Flutter, Sanctum, VPS (Contabo)."},
+{s:"Migration",t:"All via .env. git pull → copy .env → import DB → copy storage → DNS → SSL → cache → cron. No code changes."},
+{s:"Cron",t:"Daily 00:30: subscription check. Daily 02:00: DB backup (30-day rolling). Weekly Mon: grade reminders."},
+{s:"Monitoring",t:"Telegram on 500 errors. UptimeRobot /up every 5min. In-app bug reporting."}
+]},
+{id:"legal",title:"Legal",group:"Technical",phase:"v1.0",content:[
+{s:"ToS + Privacy",t:"Terms of Service + Privacy Policy. Ethiopian law + GDPR principles. Lawyer review recommended before launch."}
+]},
+{id:"v1",title:"v1.0 — Core MVP",group:"Phases",phase:"v1.0",content:[
+{s:"Launch-Ready",t:"1. Multi-tenant + auth (web+API+PIN+2FA)\n2. Super Admin panel (dark, schools, billing, plans, payments, features, leads, notifications)\n3. School Admin panel (light+accent, onboarding, students, teachers, staff, classes, subjects, grading, terms, attendance config)\n4. Attendance (homeroom mode, QR+manual, 4 types, offline)\n5. Gradebook (entry, auto-calc, submission tracking, publication workflow)\n6. Report cards (PDF, batch, Excel)\n7. Student ID cards (standard templates, QR)\n8. Marketing website + lead capture\n9. Security hardening + legal pages\n10. Deployment pipeline + monitoring\n11. Teacher app (Flutter: login, PIN, attendance, grades, schedule, sync)"}
+]},
+{id:"v15",title:"v1.5 — Enhanced",group:"Phases",phase:"v1.5",content:[
+{s:"After First Schools",t:"• Per-period attendance mode\n• Staff/employee attendance (all roles, late tracking)\n• Employee ID cards (all staff types)\n• Coordinator role\n• Timetable (periods, schedule, conflicts, app)\n• Holiday calendar + school days (Mon-Sat)\n• Year transition wizard (8 steps)\n• Supplementary exams\n• Advanced reports\n• Bulk operations, global search\n• Card replacement, custom templates (Standard+)\n• Data export (CSV/Excel/ZIP)"}
+]},
+{id:"v2",title:"v2.0 — Parent Platform",group:"Phases",phase:"v2.0",content:[
+{s:"Parent-Facing",t:"• Separate parent Flutter app\n• Invite code registration\n• Attendance view + configurable notifications\n• Grade view (3 modes) + report cards\n• Homeroom teacher + admin messaging\n• Announcements, absence reporting\n• Transcripts, calendar events\n• Student medical info, full Amharic\n• Notification preferences"}
+]},
+{id:"v25",title:"v2.5 — Advanced",group:"Phases",phase:"v2.5",content:[
+{s:"Scale",t:"• Custom packages + per-school overrides\n• Student transfer between EduID schools\n• Teacher leave management\n• Data privacy compliance\n• Chapa payment gateway\n• Advanced export/BI"}
+]},
+{id:"v3",title:"v3.0 — Enterprise",group:"Phases",phase:"v3.0",content:[
+{s:"Large Scale",t:"• Multi-campus support\n• SMS notifications\n• Behavior/discipline tracking\n• Homework management\n• Dashboard analytics\n• Third-party API integrations"}
+]}
+];
+
+const groups=["Foundation","Roles","Modules","System","Technical","Phases"];
+const phaseMap={"v1.0":"phase-v1","v1.5":"phase-v15","v2.0":"phase-v2","v2.5":"phase-v25","v3.0":"phase-v3","ALL":"phase-all"};
+let activeId="vision";
+let expandedGroups={};
+groups.forEach(g=>expandedGroups[g]=true);
+
+function render(){
+  const nav=document.getElementById('nav');
+  const searchVal=document.getElementById('searchInput').value.toLowerCase();
+  let html='';
+  groups.forEach(g=>{
+    const items=S.filter(s=>s.group===g&&(!searchVal||s.title.toLowerCase().includes(searchVal)||s.content.some(c=>(c.s+c.t).toLowerCase().includes(searchVal))));
+    if(!items.length)return;
+    const exp=expandedGroups[g];
+    html+=`<div class="group-label" onclick="toggleGroup('${g}')">${exp?'▾':'▸'} ${g}</div>`;
+    if(exp) items.forEach(s=>{
+      html+=`<div class="nav-item ${s.id===activeId?'active':''}" onclick="navigate('${s.id}')"><div class="nav-dot"></div>${s.title}</div>`;
+    });
+  });
+  nav.innerHTML=html;
+  renderContent();
+}
+
+function renderContent(){
+  const s=S.find(x=>x.id===activeId);
+  if(!s)return;
+  document.getElementById('pageTitle').textContent=s.title;
+  const tag=document.getElementById('phaseTag');
+  const phases=s.phase.split(' / ').map(p=>p.trim());
+  tag.innerHTML=phases.map(p=>`<span class="${phaseMap[p]||'phase-all'}" style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:99px">${p}</span>`).join(' ');
+  
+  let html='';
+  s.content.forEach(c=>{
+    let text=c.t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    text=text.split('\n').map(line=>{
+      if(line.includes('→')||line.includes('├')||line.includes('└')||line.includes('↓'))
+        return `<span class="mono">${line}</span>`;
+      return line;
+    }).join('\n');
+    html+=`<div class="card"><h3>${c.s}</h3>${c.t?`<div class="card-text">${text}</div>`:''}</div>`;
+  });
+  
+  const idx=S.findIndex(x=>x.id===activeId);
+  const prev=idx>0?S[idx-1]:null;
+  const next=idx<S.length-1?S[idx+1]:null;
+  html+=`<div class="nav-footer">`;
+  html+=prev?`<button onclick="navigate('${prev.id}')">← ${prev.title}</button>`:`<span></span>`;
+  html+=`<span>${idx+1} / ${S.length}</span>`;
+  html+=next?`<button onclick="navigate('${next.id}')">${next.title} →</button>`:`<span></span>`;
+  html+=`</div>`;
+  
+  document.getElementById('contentInner').innerHTML=html;
+  document.getElementById('contentArea').scrollTop=0;
+}
+
+function navigate(id){activeId=id;render();closeSidebar();}
+function toggleGroup(g){expandedGroups[g]=!expandedGroups[g];render();}
+function filterNav(){render();}
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('overlay');
+  sb.classList.toggle('open');sb.classList.toggle('closed');
+  ov.classList.toggle('show');
+}
+function closeSidebar(){
+  if(window.innerWidth<=1024){
+    document.getElementById('sidebar').classList.add('closed');
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
+}
+window.addEventListener('resize',()=>{
+  if(window.innerWidth>1024){
+    document.getElementById('sidebar').classList.remove('closed');
+    document.getElementById('overlay').classList.remove('show');
+  }
+});
+render();
+if(window.innerWidth>1024)document.getElementById('sidebar').classList.remove('closed');
+</script>
+</body>
+</html>
