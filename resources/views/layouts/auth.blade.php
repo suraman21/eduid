@@ -5,43 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Login') | EduID</title>
 
-    <!-- Google Fonts: Outfit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Tailwind CSS (CDN fallback for instant loading and preview) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Outfit', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#f5f3ff',
-                            100: '#ede9fe',
-                            200: '#ddd6fe',
-                            300: '#c084fc',
-                            400: '#a855f7',
-                            500: '#8b5cf6',
-                            600: '#7c3aed',
-                            700: '#6d28d9',
-                            800: '#5b21b6',
-                            900: '#4c1d95',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         body {
-            font-family: 'Outfit', sans-serif;
             background: linear-gradient(-45deg, #0f172a, #1e1b4b, #111827, #020617);
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;

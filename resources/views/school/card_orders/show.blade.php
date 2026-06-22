@@ -78,7 +78,7 @@
     <div class="flex items-center justify-between">
         <a href="{{ route('school.card-orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back to Orders</a>
         @if(auth()->user()->isSchoolAdmin() && $order->canBeCancelledBy(auth()->user()))
-            <form method="POST" action="{{ route('school.card-orders.cancel', $order) }}" onsubmit="return confirm('Cancel this order?');">
+            <form method="POST" action="{{ route('school.card-orders.cancel', $order) }}" data-confirm="Cancel this order?">
                 @csrf
                 <button type="submit" class="text-sm text-red-500 hover:text-red-700">Cancel Order</button>
             </form>

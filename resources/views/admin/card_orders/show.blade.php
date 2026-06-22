@@ -58,7 +58,7 @@
                 @endif
 
                 @if($order->canBeCancelledBy(auth()->user()))
-                    <form method="POST" action="{{ route('admin.card-orders.cancel', $order) }}" onsubmit="return confirm('Cancel this order?');">
+                    <form method="POST" action="{{ route('admin.card-orders.cancel', $order) }}" data-confirm="Cancel this order?">
                         @csrf
                         <button class="text-red-400 hover:text-red-300 text-sm">Cancel</button>
                     </form>

@@ -121,7 +121,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 (function () {
     const baseUrl = @json(url('school/subjects'));
     const addForm = document.getElementById('add-form');

@@ -57,7 +57,7 @@
             <div class="mb-4">
                 <label class="block text-xs font-medium text-slate-400 mb-1">Payment Method</label>
                 <select name="payment_method" id="payment_method_select"
-                        onchange="document.getElementById('bank_name_row').style.display = this.value === 'bank_transfer' ? 'block' : 'none'"
+                        data-toggle-target="bank_name_row" data-toggle-value="bank_transfer"
                         class="w-full bg-dark-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-primary-500">
                     <option value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
                     <option value="cash" {{ old('payment_method') === 'cash' ? 'selected' : '' }}>Cash</option>
