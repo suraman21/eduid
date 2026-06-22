@@ -88,6 +88,10 @@ class StudentController extends BaseSchoolController
         // left without a token — the scanner/card pipeline depends on it.
         app(QrTokenService::class)->generate($student, $this->currentSchool());
 
+        // Attach any guardians entered inline on the registration form. Done
+        // after creation so the student id exists for the pivot links.
+        $this->attachGuardiansFromRequest($request, $student);
+
         AuditLog::log('student.created', 'students', $student->id, null, ['uid' => $student->uid, 'name' => $student->full_name]);
 
         return redirect()->route('school.students.index')->with('success', 'Student added successfully.');
@@ -126,9 +130,47 @@ class StudentController extends BaseSchoolController
         $old = $student->only(array_keys($validated));
         $student->update($validated);
 
+        // Attach any newly-entered guardians (existing links are untouched;
+        // edits/removals of existing guardians happen on the profile page).
+        $this->attachGuardiansFromRequest($request, $student);
+
         AuditLog::log('student.updated', 'students', $student->id, $old, $validated);
 
         return redirect()->route('school.students.show', $student)->with('success', 'Student updated.');
+    }
+
+    /**
+     * Validate and attach the inline guardian rows from a student form.
+     *
+     * The form submits `guardians[]` rows plus a `primary_guardian` index
+     * naming which row is the primary contact. Blank rows are ignored. The
+     * find-or-create + primary logic lives in GuardianService.
+     */
+    private function attachGuardiansFromRequest(Request $request, Student $student): void
+    {
+        if (! is_array($request->input('guardians'))) {
+            return;
+        }
+
+        $validated = $request->validate([
+            'guardians'                 => 'array',
+            'guardians.*.id'            => 'nullable|integer|exists:guardians,id',
+            'guardians.*.full_name'     => 'nullable|string|max:200',
+            'guardians.*.phone'         => 'nullable|string|max:20',
+            'guardians.*.phone_alt'     => 'nullable|string|max:20',
+            'guardians.*.email'         => 'nullable|email|max:100',
+            'guardians.*.relationship'  => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\GuardianService::RELATIONSHIPS)],
+            'primary_guardian'          => 'nullable|integer',
+        ]);
+
+        $rows = array_map(function ($row) {
+            $row['relationship'] = $row['relationship'] ?? 'guardian';
+            return $row;
+        }, $validated['guardians']);
+
+        $primaryIndex = isset($validated['primary_guardian']) ? (int) $validated['primary_guardian'] : null;
+
+        app(\App\Services\GuardianService::class)->attachMany($student, $rows, $primaryIndex);
     }
 
     /**
