@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ClassController;
+use App\Http\Controllers\Api\V1\AttendanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,5 +52,14 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
 
     // Authentication Logout
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.logout');
+
+    // ── Mobile scanner / attendance (Flutter app) ────────────────
+    // Classes + roster the app caches for offline use.
+    Route::get('/classes', [ClassController::class, 'index'])->name('api.classes.index');
+    Route::get('/classes/{class}/students', [ClassController::class, 'students'])->name('api.classes.students');
+
+    // Online QR verification + offline attendance sync.
+    Route::post('/attendance/verify-qr', [AttendanceController::class, 'verifyQr'])->name('api.attendance.verify');
+    Route::post('/attendance/sync', [AttendanceController::class, 'sync'])->name('api.attendance.sync');
 
 });
