@@ -201,7 +201,7 @@ class StudentController extends BaseSchoolController
                         );
                     }
 
-                    $attributes['uid'] = $this->generateUid();
+                    $attributes['uid'] = $this->generateUid($school);
 
                     return Student::create($attributes);
                 });
@@ -228,10 +228,14 @@ class StudentController extends BaseSchoolController
      * the database unique index is the real source of truth and the caller
      * retries on collision.
      */
-    private function generateUid(): string
+    private function generateUid(School $school): string
     {
+        // Format: {SCHOOL_CODE}-{YEAR}-{5-DIGIT-RANDOM}  e.g. AIA-2026-04731
+        $year = substr($school->academic_year, 0, 4);
+        $prefix = strtoupper($school->code) . '-' . $year . '-';
+
         do {
-            $uid = strtoupper(Str::random(8));
+            $uid = $prefix . str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT);
         } while (Student::withoutGlobalScope('school')->where('uid', $uid)->exists());
 
         return $uid;
