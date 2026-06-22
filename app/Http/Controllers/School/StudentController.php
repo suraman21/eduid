@@ -40,10 +40,17 @@ class StudentController extends BaseSchoolController
             $query->where('status', $status);
         }
 
-        $students = $query->orderBy('first_name')->paginate(20);
-        $classes  = $this->activeClasses();
+        // Surface unassigned students (no class) first so admins notice and
+        // place them. SQLite + MySQL compatible.
+        $students = $query
+            ->orderByRaw('CASE WHEN class_id IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('first_name')
+            ->paginate(20);
 
-        return view('school.students.index', compact('students', 'classes'));
+        $unassignedCount = (clone $query)->whereNull('class_id')->count();
+        $classes         = $this->activeClasses();
+
+        return view('school.students.index', compact('students', 'classes', 'unassignedCount'));
     }
 
     public function create()
