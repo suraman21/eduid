@@ -11,6 +11,7 @@ use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\StaffController as SchoolStaffController;
 use App\Http\Controllers\School\AttendanceController as SchoolAttendanceController;
+use App\Http\Controllers\School\GradeController as SchoolGradeController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -107,6 +108,17 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('/attendance', SchoolAttendanceController::class)
             ->only(['index', 'create', 'store', 'show'])
             ->names('school.attendance');
+
+        // Grades (non-resource: class×subject×term×assessment_type)
+        Route::prefix('grades')->name('school.grades.')->group(function () {
+            Route::get('/',          [SchoolGradeController::class, 'index'])->name('index');
+            Route::get('/enter',     [SchoolGradeController::class, 'enter'])->name('enter');
+            Route::post('/save',     [SchoolGradeController::class, 'save'])->name('save');
+            Route::post('/publish',  [SchoolGradeController::class, 'publish'])->name('publish');
+            Route::get('/gradebook', [SchoolGradeController::class, 'gradebook'])->name('gradebook');
+            Route::get('/terms',     [SchoolGradeController::class, 'terms'])->name('terms');
+            Route::post('/terms',    [SchoolGradeController::class, 'termStore'])->name('terms.store');
+        });
     });
 
 });
