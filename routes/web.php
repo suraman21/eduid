@@ -14,6 +14,7 @@ use App\Http\Controllers\School\StaffController as SchoolStaffController;
 use App\Http\Controllers\School\AttendanceController as SchoolAttendanceController;
 use App\Http\Controllers\School\GradeController as SchoolGradeController;
 use App\Http\Controllers\School\CardOrderController as SchoolCardOrderController;
+use App\Http\Controllers\School\PhotoSessionController as SchoolPhotoSessionController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -130,6 +131,19 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/gradebook', [SchoolGradeController::class, 'gradebook'])->name('gradebook');
             Route::get('/terms',     [SchoolGradeController::class, 'terms'])->name('terms');
             Route::post('/terms',    [SchoolGradeController::class, 'termStore'])->name('terms.store');
+        });
+
+        // Photo Sessions
+        Route::prefix('photo-sessions')->name('school.photo-sessions.')->group(function () {
+            Route::get('/',                               [SchoolPhotoSessionController::class, 'index'])->name('index');
+            Route::get('/create',                         [SchoolPhotoSessionController::class, 'create'])->name('create');
+            Route::post('/',                              [SchoolPhotoSessionController::class, 'store'])->name('store');
+            Route::get('/{photoSession}',                 [SchoolPhotoSessionController::class, 'show'])->name('show');
+            Route::post('/{photoSession}/upload-photo',   [SchoolPhotoSessionController::class, 'uploadPhoto'])->name('upload-photo');
+            Route::post('/{photoSession}/skip',           [SchoolPhotoSessionController::class, 'skipStudent'])->name('skip');
+            Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip');
+            Route::post('/{photoSession}/complete',       [SchoolPhotoSessionController::class, 'complete'])->name('complete');
+            Route::post('/{photoSession}/cancel',         [SchoolPhotoSessionController::class, 'cancel'])->name('cancel');
         });
 
         // Card Orders (school side: select students → confirmation code → track)
