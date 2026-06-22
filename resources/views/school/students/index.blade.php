@@ -2,7 +2,7 @@
 
 @section('title', 'Students')
 @section('heading', 'Students')
-@section('subheading', 'Manage all enrolled students')
+@section('subheading', 'Manage all enrolled students — click a row to view profile, guardians & QR token')
 
 @section('content')
 {{-- Actions Bar --}}
@@ -55,7 +55,7 @@
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @forelse($students as $student)
-                    <tr class="hover:bg-gray-50 transition">
+                    <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="window.location='{{ route('school.students.show', $student) }}'">
                         <td class="px-5 py-3">
                             <div class="flex items-center gap-3">
                                 @if($student->photo_url)
@@ -66,7 +66,7 @@
                                     </div>
                                 @endif
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $student->full_name }}</p>
+                                    <p class="font-medium text-gray-900 hover:text-indigo-600 transition">{{ $student->full_name }}</p>
                                     @if($student->first_name_am)
                                         <p class="text-xs text-gray-400">{{ $student->full_name_am }}</p>
                                     @endif
