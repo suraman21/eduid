@@ -230,9 +230,8 @@ class StudentController extends BaseSchoolController
      */
     private function generateUid(School $school): string
     {
-        // Format: {SCHOOL_CODE}-{YEAR}-{5-DIGIT-RANDOM}  e.g. AIA-2026-04731
-        $year = substr($school->academic_year, 0, 4);
-        $prefix = strtoupper($school->code) . '-' . $year . '-';
+        // Format: {SCHOOL_CODE}-{5-DIGIT-RANDOM}  e.g. AIA-65289
+        $prefix = strtoupper($school->code) . '-';
 
         do {
             $uid = $prefix . str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT);

@@ -13,8 +13,7 @@ return new class extends Migration
         $service = new QrTokenService();
 
         School::with('students')->each(function (School $school) use ($service) {
-            $year = substr($school->academic_year, 0, 4);
-            $prefix = strtoupper($school->code) . '-' . $year . '-';
+            $prefix = strtoupper($school->code) . '-';
 
             $school->students()->each(function (Student $student) use ($school, $prefix, $service) {
                 // Skip students already in the correct format
