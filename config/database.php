@@ -56,7 +56,10 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+            // Pin InnoDB explicitly: required for foreign keys, transactions,
+            // and row-level locking (SELECT ... FOR UPDATE). Never rely on the
+            // server default, which may be MyISAM on shared hosting.
+            'engine' => 'InnoDB',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

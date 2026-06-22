@@ -149,4 +149,55 @@ class SchoolManagementTest extends TestCase
     {
         $this->get('/migrate-fresh')->assertNotFound();
     }
+
+    public function test_student_creation_is_blocked_at_plan_limit(): void
+    {
+        // Cap school A at exactly one student and fill it.
+        $this->schoolA->update(['max_students' => 1]);
+        $this->makeStudent($this->schoolA, 'First');
+
+        $response = $this->actingAs($this->adminA)->post('/school/students', [
+            'first_name' => 'Overflow',
+            'last_name'  => 'Student',
+            'gender'     => 'male',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertDatabaseMissing('students', ['first_name' => 'Overflow']);
+        $this->assertSame(1, Student::withoutGlobalScope('school')
+            ->where('school_id', $this->schoolA->id)->count());
+    }
+
+    public function test_teacher_creation_is_blocked_at_plan_limit(): void
+    {
+        // setUp already created one active teacher for school A.
+        $this->schoolA->update(['max_teachers' => 1]);
+
+        $response = $this->actingAs($this->adminA)->post('/school/staff', [
+            'name'     => 'Extra Teacher',
+            'email'    => 'extra-teacher@test.com',
+            'password' => 'password123',
+            'role'     => 'teacher',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertDatabaseMissing('users', ['email' => 'extra-teacher@test.com']);
+    }
+
+    public function test_non_teacher_staff_is_not_limited_by_teacher_cap(): void
+    {
+        $this->schoolA->update(['max_teachers' => 0]);
+
+        $response = $this->actingAs($this->adminA)->post('/school/staff', [
+            'name'     => 'Registrar',
+            'email'    => 'registrar@test.com',
+            'password' => 'password123',
+            'role'     => 'staff',
+        ]);
+
+        $response->assertRedirect(route('school.staff.index'));
+        $this->assertDatabaseHas('users', ['email' => 'registrar@test.com', 'role' => 'staff']);
+    }
 }

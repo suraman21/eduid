@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers\School;
 
+use App\Exceptions\StudentLimitReached;
+use App\Models\School;
 use App\Models\Student;
 use App\Models\SchoolClass;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class StudentController extends BaseSchoolController
 {
@@ -54,22 +59,26 @@ class StudentController extends BaseSchoolController
         $this->requireAdmin();
         $this->requireWritableSubscription();
 
-        $school = $this->currentSchool();
-        if ($school->hasReachedStudentLimit()) {
-            return back()->with('error', "Student limit ({$school->max_students}) reached. Upgrade your plan.")->withInput();
-        }
-
         $validated = $this->validateStudent($request);
-        $validated['uid']             = $this->generateUid();
         $validated['status']          = $validated['status'] ?? 'active';
         $validated['join_date']       = $validated['join_date'] ?? today()->toDateString();
         $validated['enrollment_date'] = $validated['enrollment_date'] ?? today()->toDateString();
 
+        // Store the photo BEFORE the transaction (filesystem I/O should not
+        // hold a DB row lock open). If the transaction later fails we clean up.
         if ($request->hasFile('photo')) {
             $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'public');
         }
 
-        Student::create($validated);
+        try {
+            $this->createStudentAtomically($validated);
+        } catch (StudentLimitReached $e) {
+            if (!empty($validated['photo_path'])) {
+                Storage::disk('public')->delete($validated['photo_path']);
+            }
+
+            return back()->with('error', $e->getMessage())->withInput();
+        }
 
         return redirect()->route('school.students.index')->with('success', 'Student added successfully.');
     }
@@ -138,11 +147,70 @@ class StudentController extends BaseSchoolController
     }
 
     /**
-     * Generate a globally-unique student UID.
+     * Create a student atomically, enforcing the plan's student limit under a
+     * row lock and tolerating UID collisions.
      *
-     * The `uid` column is unique across ALL schools, so the existence check
-     * must bypass the per-school global scope — otherwise a UID already used
-     * by another school would pass and then fail on insert.
+     * Concurrency design:
+     *  - The whole operation runs in a transaction.
+     *  - We lock the school row (SELECT ... FOR UPDATE) so that simultaneous
+     *    enrollments for the SAME school serialize on the limit check. This
+     *    prevents the "oversell" race where many concurrent requests all read
+     *    count < max and then all insert, blowing past the paid limit.
+     *    Enrollments for DIFFERENT schools lock different rows and stay fully
+     *    parallel — no global contention.
+     *  - The globally-unique `uid` is generated and inserted; if two requests
+     *    ever pick the same random UID, the unique index rejects the loser and
+     *    we retry with a fresh UID instead of surfacing a 500.
+     *
+     * @throws StudentLimitReached
+     */
+    private function createStudentAtomically(array $attributes): Student
+    {
+        $schoolId = $this->schoolId();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            try {
+                return DB::transaction(function () use ($attributes, $schoolId) {
+                    // Lock the school row for the duration of the limit check.
+                    $school = School::whereKey($schoolId)->lockForUpdate()->firstOrFail();
+
+                    $activeCount = Student::withoutGlobalScope('school')
+                        ->where('school_id', $schoolId)
+                        ->where('is_active', true)
+                        ->count();
+
+                    if ($activeCount >= $school->max_students) {
+                        throw new StudentLimitReached(
+                            "Student limit ({$school->max_students}) reached. Upgrade your plan."
+                        );
+                    }
+
+                    $attributes['uid'] = $this->generateUid();
+
+                    return Student::create($attributes);
+                });
+            } catch (QueryException $e) {
+                // Retry only on a duplicate-UID collision; rethrow anything else.
+                if ($this->isDuplicateUid($e) && $attempt < 4) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        // Exhausted retries — astronomically unlikely, but fail loudly.
+        throw ValidationException::withMessages([
+            'uid' => 'Could not allocate a unique student ID. Please try again.',
+        ]);
+    }
+
+    /**
+     * Generate a candidate globally-unique student UID.
+     *
+     * The `uid` column is unique across ALL schools, so the pre-check bypasses
+     * the per-school global scope. The check is a best-effort fast path only —
+     * the database unique index is the real source of truth and the caller
+     * retries on collision.
      */
     private function generateUid(): string
     {
@@ -151,5 +219,15 @@ class StudentController extends BaseSchoolController
         } while (Student::withoutGlobalScope('school')->where('uid', $uid)->exists());
 
         return $uid;
+    }
+
+    /**
+     * Detect a unique-constraint violation on the students.uid index.
+     */
+    private function isDuplicateUid(QueryException $e): bool
+    {
+        // SQLSTATE 23000 = integrity constraint violation (MySQL & SQLite).
+        return $e->getCode() === '23000'
+            && str_contains($e->getMessage(), 'uid');
     }
 }

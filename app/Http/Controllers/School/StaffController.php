@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\School;
 
+use App\Exceptions\StaffLimitReached;
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -52,7 +55,11 @@ class StaffController extends BaseSchoolController
         $validated['is_coordinator'] = $request->boolean('is_coordinator');
         $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
 
-        User::create($validated);
+        try {
+            $this->createStaffAtomically($validated);
+        } catch (StaffLimitReached $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
 
         return redirect()->route('school.staff.index')->with('success', 'Staff member added.');
     }
@@ -90,6 +97,40 @@ class StaffController extends BaseSchoolController
         $staff->update($validated);
 
         return redirect()->route('school.staff.show', $staff)->with('success', 'Staff member updated.');
+    }
+
+    /**
+     * Create a staff account atomically, enforcing the teacher cap under a row
+     * lock. Only the 'teacher' role counts against max_teachers; admins and
+     * support staff are unlimited. Locking the school row serializes
+     * simultaneous hires for the same school so the cap can't be oversold,
+     * while different schools stay fully parallel.
+     *
+     * @throws StaffLimitReached
+     */
+    private function createStaffAtomically(array $attributes): User
+    {
+        $schoolId = $this->schoolId();
+
+        return DB::transaction(function () use ($attributes, $schoolId) {
+            if (($attributes['role'] ?? null) === 'teacher') {
+                $school = School::whereKey($schoolId)->lockForUpdate()->firstOrFail();
+
+                $teacherCount = User::withoutGlobalScope('school')
+                    ->where('school_id', $schoolId)
+                    ->where('role', 'teacher')
+                    ->where('is_active', true)
+                    ->count();
+
+                if ($teacherCount >= $school->max_teachers) {
+                    throw new StaffLimitReached(
+                        "Teacher limit ({$school->max_teachers}) reached. Upgrade your plan."
+                    );
+                }
+            }
+
+            return User::create($attributes);
+        });
     }
 
     private function validateStaff(Request $request, ?int $ignoreId = null): array
