@@ -54,7 +54,8 @@
                 <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Column Reference</p>
                 <div class="space-y-1">
                     <p class="text-xs text-slate-400"><span class="font-medium text-slate-300">Required:</span> first_name, last_name, gender</p>
-                    <p class="text-xs text-slate-400"><span class="font-medium text-slate-300">Optional:</span> middle_name, date_of_birth, class_name, phone, parent_name, parent_phone</p>
+                    <p class="text-xs text-slate-400"><span class="font-medium text-slate-300">Optional:</span> first_name_am, last_name_am, date_of_birth, grade, section, blood_type, status, medical_notes, guardian_name, guardian_phone, guardian_relationship</p>
+                    <p class="text-xs text-slate-500">grade + section must match an existing active class (e.g. grade <code>Grade 5</code>, section <code>A</code>).</p>
                 </div>
             </div>
         </div>
@@ -105,7 +106,7 @@
                             <td class="px-4 py-3 text-white">{{ $row['data']['first_name'] ?? '—' }}</td>
                             <td class="px-4 py-3 text-white">{{ $row['data']['last_name'] ?? '—' }}</td>
                             <td class="px-4 py-3 text-slate-400">{{ $row['data']['gender'] ?? '—' }}</td>
-                            <td class="px-4 py-3 text-slate-400">{{ $row['data']['class_name'] ?? '—' }}</td>
+                            <td class="px-4 py-3 text-slate-400">{{ trim(($row['data']['grade'] ?? '') . ' ' . ($row['data']['section'] ?? '')) ?: '—' }}</td>
                             <td class="px-4 py-3">
                                 @if($row['valid'])
                                     <span class="text-xs text-green-400 font-medium">&#10003; Valid</span>

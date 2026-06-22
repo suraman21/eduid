@@ -51,7 +51,18 @@
                         <td class="px-5 py-3 text-slate-400 text-xs">{{ $log->school->name ?? '—' }}</td>
                         <td class="px-5 py-3 text-slate-400 text-xs">{{ $log->user->name ?? '—' }}</td>
                         <td class="px-5 py-3">
-                            <pre class="text-xs text-slate-500 max-w-xs truncate">{{ json_encode($log->context ?? [], JSON_PRETTY_PRINT) }}</pre>
+                            @php
+                                $details = array_filter([
+                                    'target' => $log->target_type ? $log->target_type . ($log->target_id ? " #{$log->target_id}" : '') : null,
+                                    'old'    => $log->old_values,
+                                    'new'    => $log->new_values,
+                                ]);
+                            @endphp
+                            @if(!empty($details))
+                                <pre class="text-xs text-slate-500 max-w-xs whitespace-pre-wrap break-words">{{ json_encode($details, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
+                            @else
+                                <span class="text-xs text-slate-600">—</span>
+                            @endif
                         </td>
                     </tr>
                 @empty

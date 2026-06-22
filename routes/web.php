@@ -135,6 +135,16 @@ Route::middleware(['auth'])->group(function () {
     // School User Group
     Route::middleware(['role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
         Route::get('/dashboard', [SchoolDashboardController::class, 'index'])->name('school.dashboard');
+
+        // CSV Student Import — MUST be registered before the students resource,
+        // otherwise GET students/{student} captures "import" as a student id.
+        Route::prefix('students/import')->name('school.students.import.')->group(function () {
+            Route::get('/',         [SchoolStudentImportController::class, 'create'])->name('form');
+            Route::post('/',        [SchoolStudentImportController::class, 'preview'])->name('preview');
+            Route::post('/confirm', [SchoolStudentImportController::class, 'confirm'])->name('confirm');
+            Route::get('/template', [SchoolStudentImportController::class, 'template'])->name('template');
+        });
+
         // Resource routes are registered for the methods the controllers
         // actually implement. Write actions are additionally guarded
         // server-side (school_admin only) inside each controller.
@@ -184,14 +194,6 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip');
             Route::post('/{photoSession}/complete',       [SchoolPhotoSessionController::class, 'complete'])->name('complete');
             Route::post('/{photoSession}/cancel',         [SchoolPhotoSessionController::class, 'cancel'])->name('cancel');
-        });
-
-        // CSV Student Import
-        Route::prefix('students/import')->name('school.students.import.')->group(function () {
-            Route::get('/',           [SchoolStudentImportController::class, 'create'])->name('form');
-            Route::post('/',          [SchoolStudentImportController::class, 'preview'])->name('preview');
-            Route::post('/confirm',   [SchoolStudentImportController::class, 'confirm'])->name('confirm');
-            Route::get('/template',   [SchoolStudentImportController::class, 'template'])->name('template');
         });
 
         // Card Orders (school side: select students → confirmation code → track)

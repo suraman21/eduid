@@ -6,6 +6,11 @@
 
 @section('content')
 
+<a href="{{ route('admin.card-orders.index') }}" class="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-primary-300 transition mb-5">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+    Back to Card Orders
+</a>
+
 <div class="max-w-2xl">
     <form method="GET" action="{{ route('admin.card-orders.process') }}" class="bg-dark-800 border border-slate-700/50 rounded-xl p-5 mb-6">
         <label class="block text-sm font-medium text-slate-300 mb-2">Confirmation Code</label>
