@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\SchoolClass;
+use App\Services\QrTokenService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,12 @@ class StudentController extends BaseSchoolController
 
             return back()->with('error', $e->getMessage())->withInput();
         }
+
+        // Issue the QR token for the current academic year. Done outside the
+        // creation transaction (it's a single self-contained update) so the
+        // school-row lock is released as early as possible. A student is never
+        // left without a token — the scanner/card pipeline depends on it.
+        app(QrTokenService::class)->generate($student, $this->currentSchool());
 
         AuditLog::log('student.created', 'students', $student->id, null, ['uid' => $student->uid, 'name' => $student->full_name]);
 

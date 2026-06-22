@@ -43,6 +43,28 @@ class CardOrder extends Model
         ];
     }
 
+    /** Per-card price in ETB by order type (PRD §11). first_batch is included. */
+    public const PRICING = [
+        'first_batch'    => 0,
+        'annual_renewal' => 50,
+        'replacement'    => 60,
+        'new_student'    => 60,
+    ];
+
+    /** Order types a school may place itself (first_batch is system-generated). */
+    public const SCHOOL_ORDER_TYPES = ['annual_renewal', 'replacement', 'new_student'];
+
+    /** Statuses that still occupy a student in an "open" order (for dup checks). */
+    public const OPEN_STATUSES = ['pending', 'confirmed', 'printing', 'shipped'];
+
+    /**
+     * Per-card price in ETB for a given order type.
+     */
+    public static function unitPrice(string $orderType): int
+    {
+        return self::PRICING[$orderType] ?? 0;
+    }
+
     // ── Relationships ──────────────────────────────────────────
 
     public function orderedBy(): BelongsTo

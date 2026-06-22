@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
+use App\Http\Controllers\Admin\CardOrderController as AdminCardOrderController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\StaffController as SchoolStaffController;
 use App\Http\Controllers\School\AttendanceController as SchoolAttendanceController;
 use App\Http\Controllers\School\GradeController as SchoolGradeController;
+use App\Http\Controllers\School\CardOrderController as SchoolCardOrderController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -85,6 +87,16 @@ Route::middleware(['auth'])->group(function () {
             'update'  => 'admin.schools.update',
             'destroy' => 'admin.schools.destroy',
         ]);
+
+        // Card order fulfilment (enter code → confirm → printing → shipped → delivered)
+        Route::prefix('card-orders')->name('admin.card-orders.')->group(function () {
+            Route::get('/',                  [AdminCardOrderController::class, 'index'])->name('index');
+            Route::get('/process',           [AdminCardOrderController::class, 'process'])->name('process');
+            Route::get('/{cardOrder}',       [AdminCardOrderController::class, 'show'])->name('show');
+            Route::post('/{cardOrder}/confirm', [AdminCardOrderController::class, 'confirm'])->name('confirm');
+            Route::post('/{cardOrder}/status',  [AdminCardOrderController::class, 'updateStatus'])->name('status');
+            Route::post('/{cardOrder}/cancel',  [AdminCardOrderController::class, 'cancel'])->name('cancel');
+        });
     });
 
     // School User Group
@@ -118,6 +130,15 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/gradebook', [SchoolGradeController::class, 'gradebook'])->name('gradebook');
             Route::get('/terms',     [SchoolGradeController::class, 'terms'])->name('terms');
             Route::post('/terms',    [SchoolGradeController::class, 'termStore'])->name('terms.store');
+        });
+
+        // Card Orders (school side: select students → confirmation code → track)
+        Route::prefix('card-orders')->name('school.card-orders.')->group(function () {
+            Route::get('/',                   [SchoolCardOrderController::class, 'index'])->name('index');
+            Route::get('/create',             [SchoolCardOrderController::class, 'create'])->name('create');
+            Route::post('/',                  [SchoolCardOrderController::class, 'store'])->name('store');
+            Route::get('/{cardOrder}',        [SchoolCardOrderController::class, 'show'])->name('show');
+            Route::post('/{cardOrder}/cancel', [SchoolCardOrderController::class, 'cancel'])->name('cancel');
         });
     });
 
