@@ -69,6 +69,14 @@ class LoginController extends Controller
             ]);
         }
 
+        // Respect the can_login flag (admin can revoke portal access without
+        // deactivating the user account entirely).
+        if (!$user->can_login) {
+            throw ValidationException::withMessages([
+                'email' => ['Your portal access has been disabled. Please contact your administrator.'],
+            ]);
+        }
+
         // Check for account lockout (uses model method)
         if ($user->isLocked()) {
             $diffInMinutes = ceil(now()->diffInMinutes($user->locked_until));

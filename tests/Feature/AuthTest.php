@@ -198,4 +198,18 @@ class AuthTest extends TestCase
         $this->assertNotNull($this->schoolAdmin->locked_until);
         $this->assertTrue(now()->lessThan($this->schoolAdmin->locked_until));
     }
+
+    public function test_user_with_can_login_false_is_rejected(): void
+    {
+        $this->schoolAdmin->update(['can_login' => false]);
+
+        $response = $this->post('/login', [
+            'school_code' => 'AIA',
+            'email'       => 'admin@abyssinia.com',
+            'password'    => 'password123',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
 }

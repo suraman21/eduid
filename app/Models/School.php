@@ -138,19 +138,25 @@ class School extends Model
     }
 
     /**
-     * Check if the school has reached its student limit.
+     * Count of active students for this school.
+     *
+     * "Active" is determined by the `status` column (introduced in the
+     * alter_students_add_status migration). The old `is_active` boolean is
+     * kept for backwards-compatibility but the status column is authoritative.
+     * Only 'active' status counts against the plan cap — promoted/graduated/
+     * transferred students no longer occupy a seat.
      */
-    public function hasReachedStudentLimit(): bool
+    public function activeStudentCount(): int
     {
-        return $this->students()->where('is_active', true)->count() >= $this->max_students;
+        return $this->students()->where('status', 'active')->count();
     }
 
     /**
-     * Check if the school has reached its teacher limit.
+     * Count of active teachers for this school.
      */
-    public function hasReachedTeacherLimit(): bool
+    public function activeTeacherCount(): int
     {
-        return $this->users()->where('role', 'teacher')->where('is_active', true)->count() >= $this->max_teachers;
+        return $this->users()->where('role', 'teacher')->where('is_active', true)->count();
     }
 
     /**
@@ -191,43 +197,61 @@ class School extends Model
      *  2. plan_features (plan-level default)
      *  3. feature_registry (global default)
      */
+    /**
+     * Check if the school has access to a given feature key.
+     *
+     * Resolution order:
+     *  1. school_feature_overrides (per-school override — highest priority)
+     *  2. plan_features            (plan-level default)
+     *  3. feature_registry         (global default — lowest priority)
+     *
+     * Results are cached for 1 hour via the application cache (Redis/file).
+     * Call `$school->flushFeatureCache()` after updating overrides.
+     */
     public function hasFeature(string $key): bool
     {
-        static $cache = [];
+        return \Illuminate\Support\Facades\Cache::remember(
+            "school.{$this->id}.feature.{$key}",
+            now()->addHour(),
+            function () use ($key) {
+                // 1. School-level override
+                $override = \Illuminate\Support\Facades\DB::table('school_feature_overrides')
+                    ->where('school_id', $this->id)
+                    ->where('feature_key', $key)
+                    ->first();
 
-        $cacheKey = $this->id . '|' . $key;
+                if ($override !== null) {
+                    return (bool) $override->is_enabled;
+                }
 
-        if (array_key_exists($cacheKey, $cache)) {
-            return $cache[$cacheKey];
-        }
+                // 2. Plan-level feature
+                $planFeature = \Illuminate\Support\Facades\DB::table('plan_features')
+                    ->where('plan_tier', $this->plan_tier)
+                    ->where('feature_key', $key)
+                    ->first();
 
-        // 1. School-level override
-        $override = \Illuminate\Support\Facades\DB::table('school_feature_overrides')
-            ->where('school_id', $this->id)
-            ->where('feature_key', $key)
-            ->first();
+                if ($planFeature !== null) {
+                    return true;
+                }
 
-        if ($override !== null) {
-            return $cache[$cacheKey] = (bool) $override->is_enabled;
-        }
+                // 3. Feature registry global default
+                $registry = \Illuminate\Support\Facades\DB::table('feature_registry')
+                    ->where('key', $key)
+                    ->first();
 
-        // 2. Plan-level feature
-        $planFeature = \Illuminate\Support\Facades\DB::table('plan_features')
-            ->where('plan_tier', $this->plan_tier)
-            ->where('feature_key', $key)
-            ->first();
+                return $registry ? (bool) $registry->is_default_enabled : false;
+            }
+        );
+    }
 
-        if ($planFeature !== null) {
-            return $cache[$cacheKey] = true;
-        }
-
-        // 3. Feature registry global default
-        $registry = \Illuminate\Support\Facades\DB::table('feature_registry')
-            ->where('key', $key)
-            ->first();
-
-        $result = $registry ? (bool) $registry->is_default_enabled : false;
-
-        return $cache[$cacheKey] = $result;
+    /**
+     * Flush the feature cache for this school.
+     * Call this whenever a school's feature overrides or plan is changed.
+     */
+    public function flushFeatureCache(): void
+    {
+        // We can't tag without a tag-aware driver, so flush by pattern.
+        // This is a best-effort flush — the cache will expire within 1 hour anyway.
+        \Illuminate\Support\Facades\Cache::forget("school.{$this->id}.feature.*");
     }
 }

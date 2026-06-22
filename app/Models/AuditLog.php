@@ -54,6 +54,14 @@ class AuditLog extends Model
         ?array  $oldValues = null,
         ?array  $newValues = null
     ): self {
+        try {
+            $ip        = request()->ip();
+            $userAgent = request()->userAgent();
+        } catch (\Throwable) {
+            $ip        = null;
+            $userAgent = 'cli';
+        }
+
         return static::create([
             'school_id'   => auth()->check() ? auth()->user()->school_id : null,
             'user_id'     => auth()->id(),
@@ -62,8 +70,8 @@ class AuditLog extends Model
             'target_id'   => $targetId,
             'old_values'  => $oldValues,
             'new_values'  => $newValues,
-            'ip_address'  => request()->ip(),
-            'user_agent'  => request()->userAgent(),
+            'ip_address'  => $ip,
+            'user_agent'  => $userAgent,
         ]);
     }
 
@@ -79,6 +87,15 @@ class AuditLog extends Model
         ?array  $oldValues = null,
         ?array  $newValues = null
     ): self {
+        // request() throws outside an HTTP context (queue jobs, artisan commands).
+        try {
+            $ip        = request()->ip();
+            $userAgent = request()->userAgent();
+        } catch (\Throwable) {
+            $ip        = null;
+            $userAgent = 'cli';
+        }
+
         return static::create([
             'school_id'   => $schoolId,
             'user_id'     => $userId,
@@ -87,8 +104,8 @@ class AuditLog extends Model
             'target_id'   => $targetId,
             'old_values'  => $oldValues,
             'new_values'  => $newValues,
-            'ip_address'  => request()->ip(),
-            'user_agent'  => request()->userAgent(),
+            'ip_address'  => $ip,
+            'user_agent'  => $userAgent,
         ]);
     }
 

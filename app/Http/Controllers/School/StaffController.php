@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\School;
 
 use App\Exceptions\StaffLimitReached;
+use App\Models\AuditLog;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -56,10 +57,12 @@ class StaffController extends BaseSchoolController
         $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
 
         try {
-            $this->createStaffAtomically($validated);
+            $member = $this->createStaffAtomically($validated);
         } catch (StaffLimitReached $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
+
+        AuditLog::log('staff.created', 'users', $member->id, null, ['name' => $member->name, 'role' => $member->role]);
 
         return redirect()->route('school.staff.index')->with('success', 'Staff member added.');
     }
@@ -94,7 +97,10 @@ class StaffController extends BaseSchoolController
         $validated['is_coordinator'] = $request->boolean('is_coordinator');
         $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
 
+        $old = $staff->only(array_keys(array_diff_key($validated, ['password' => ''])));
         $staff->update($validated);
+
+        AuditLog::log('staff.updated', 'users', $staff->id, $old, array_diff_key($validated, ['password' => '']));
 
         return redirect()->route('school.staff.show', $staff)->with('success', 'Staff member updated.');
     }

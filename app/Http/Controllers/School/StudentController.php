@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\School;
 
 use App\Exceptions\StudentLimitReached;
+use App\Models\AuditLog;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\SchoolClass;
@@ -71,7 +72,7 @@ class StudentController extends BaseSchoolController
         }
 
         try {
-            $this->createStudentAtomically($validated);
+            $student = $this->createStudentAtomically($validated);
         } catch (StudentLimitReached $e) {
             if (!empty($validated['photo_path'])) {
                 Storage::disk('public')->delete($validated['photo_path']);
@@ -79,6 +80,8 @@ class StudentController extends BaseSchoolController
 
             return back()->with('error', $e->getMessage())->withInput();
         }
+
+        AuditLog::log('student.created', 'students', $student->id, null, ['uid' => $student->uid, 'name' => $student->full_name]);
 
         return redirect()->route('school.students.index')->with('success', 'Student added successfully.');
     }
@@ -113,7 +116,10 @@ class StudentController extends BaseSchoolController
             $validated['photo_path'] = $request->file('photo')->store("schools/{$this->schoolId()}/students", 'public');
         }
 
+        $old = $student->only(array_keys($validated));
         $student->update($validated);
+
+        AuditLog::log('student.updated', 'students', $student->id, $old, $validated);
 
         return redirect()->route('school.students.show', $student)->with('success', 'Student updated.');
     }
@@ -174,9 +180,12 @@ class StudentController extends BaseSchoolController
                     // Lock the school row for the duration of the limit check.
                     $school = School::whereKey($schoolId)->lockForUpdate()->firstOrFail();
 
+                    // Count by `status` (authoritative column). The legacy
+                    // `is_active` boolean is kept for compatibility but is no
+                    // longer the seat-allocation signal.
                     $activeCount = Student::withoutGlobalScope('school')
                         ->where('school_id', $schoolId)
-                        ->where('is_active', true)
+                        ->where('status', 'active')
                         ->count();
 
                     if ($activeCount >= $school->max_students) {

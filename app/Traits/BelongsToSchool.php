@@ -19,15 +19,19 @@ trait BelongsToSchool
     {
         // Auto-scope all queries by school_id
         static::addGlobalScope('school', function (Builder $query) {
-            // Avoid infinite recursion when authenticating / retrieving the user
-            if (static::class === \App\Models\User::class && !auth()->hasUser()) {
+            // Guard against unauthenticated contexts (queue jobs, CLI artisan
+            // commands, scheduled tasks). In those cases apply NO scope so
+            // background processes can read across tenants as needed.
+            if (!auth()->check()) {
                 return;
             }
 
-            if (auth()->check() && auth()->user()->role !== 'super_admin') {
+            $user = auth()->user();
+
+            if ($user->role !== 'super_admin') {
                 $query->where(
                     $query->getModel()->getTable() . '.school_id',
-                    auth()->user()->school_id
+                    $user->school_id
                 );
             }
         });
