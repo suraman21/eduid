@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role'         => \App\Http\Middleware\RoleMiddleware::class,
             'school.scope' => \App\Http\Middleware\SchoolScope::class,
         ]);
+
+        // PRD §10: strict CSP + security headers on all web responses.
+        $middleware->web(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Friendly redirect for login rate-limit hits instead of a bare 429 page.

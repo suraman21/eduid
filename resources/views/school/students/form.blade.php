@@ -28,7 +28,7 @@
                     <div>
                         <label class="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition inline-block">
                             Choose Photo
-                            <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+                            <input type="file" name="photo" accept="image/*" class="hidden" data-photo-input>
                         </label>
                         <p class="text-xs text-gray-400 mt-1">JPG, PNG up to 2MB</p>
                         @error('photo') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
@@ -221,17 +221,22 @@
     </div>
 </template>
 
-<script>
-function previewPhoto(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            const preview = document.getElementById('photo-preview');
-            preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
-        };
-        reader.readAsDataURL(input.files[0]);
+<script nonce="{{ $cspNonce }}">
+(function () {
+    const photoInput = document.querySelector('[data-photo-input]');
+    if (photoInput) {
+        photoInput.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const preview = document.getElementById('photo-preview');
+                    if (preview) preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
     }
-}
+})();
 
 (function () {
     const SEARCH_URL = '{{ route('school.guardians.search') }}';

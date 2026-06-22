@@ -100,7 +100,7 @@
         </form>
 
         {{-- Bulk "mark all" without inline handlers (CSP-safe). --}}
-        <script>
+        <script nonce="{{ $cspNonce }}">
             document.querySelectorAll('.markall').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var status = btn.getAttribute('data-markall');

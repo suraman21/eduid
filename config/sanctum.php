@@ -50,7 +50,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    // PRD §10: Flutter API tokens expire after 30 days (43,200 minutes).
+    'expiration' => 43200,
 
     /*
     |--------------------------------------------------------------------------

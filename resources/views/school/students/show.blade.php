@@ -122,7 +122,7 @@
                         @endif
                         @if(auth()->user()->isSchoolAdmin())
                             <form method="POST" action="{{ route('school.guardians.destroy', [$student, $guardian]) }}"
-                                  onsubmit="return confirm('Remove {{ $guardian->full_name }} from this student?')">
+                                  data-confirm="Remove {{ $guardian->full_name }} from this student?">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-gray-300 hover:text-red-500 transition" title="Remove">

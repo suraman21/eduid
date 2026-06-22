@@ -6,30 +6,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') | {{ $currentSchool->name ?? 'EduID' }}</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
-                    colors: {
-                        accent: {
-                            50: '#f0f5ff', 100: '#e0eaff', 200: '#c1d5ff', 300: '#92b5ff',
-                            400: '#5a8eff', 500: '{{ $currentSchool->accent_color ?? "#6366f1" }}',
-                            600: '#4338ca', 700: '#3730a3', 800: '#312e81', 900: '#1e1b4b',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
-        body { font-family: 'Outfit', sans-serif; }
-        .sidebar-link { transition: all 0.15s ease; }
+        /* Per-school accent colour — applied as an inline style (allowed by the
+           CSP's style-src 'unsafe-inline'); the base styles live in app.css. */
         .sidebar-link:hover, .sidebar-link.active { background: rgba(99, 102, 241, 0.08); color: {{ $currentSchool->accent_color ?? '#6366f1' }}; }
         .sidebar-link.active { border-right: 3px solid {{ $currentSchool->accent_color ?? '#6366f1' }}; }
     </style>

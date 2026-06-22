@@ -117,11 +117,12 @@ class PhotoSessionController extends BaseSchoolController
 
         $path = $request->file('photo')->store(
             "schools/{$this->schoolId()}/students",
-            'public'
+            'local'
         );
 
-        // Delete old photo if present
+        // Delete old photo if present (either disk: legacy public or new private)
         if ($student->photo_path) {
+            Storage::disk('local')->delete($student->photo_path);
             Storage::disk('public')->delete($student->photo_path);
         }
 
@@ -230,9 +231,10 @@ class PhotoSessionController extends BaseSchoolController
 
             $ext  = strtolower(pathinfo($entry['name'], PATHINFO_EXTENSION));
             $dest = "schools/{$this->schoolId()}/students/{$student->uid}.{$ext}";
-            Storage::disk('public')->put($dest, $contents);
+            Storage::disk('local')->put($dest, $contents);
 
             if ($student->photo_path) {
+                Storage::disk('local')->delete($student->photo_path);
                 Storage::disk('public')->delete($student->photo_path);
             }
 

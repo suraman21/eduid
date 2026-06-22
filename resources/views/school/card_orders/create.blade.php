@@ -16,7 +16,7 @@
 {{-- Class filter --}}
 <form method="GET" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap items-center gap-3">
     <label class="text-sm text-gray-600">Filter by class:</label>
-    <select name="class_id" onchange="this.form.submit()" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
+    <select name="class_id" data-autosubmit class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
         <option value="">All classes</option>
         @foreach($classes as $c)
             <option value="{{ $c->id }}" {{ (string)$classId === (string)$c->id ? 'selected' : '' }}>{{ $c->display_name }}</option>
@@ -93,7 +93,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ $cspNonce }}">
     (function () {
         var selectAll = document.getElementById('select-all');
         var boxes     = Array.prototype.slice.call(document.querySelectorAll('.student-cb'));

@@ -62,7 +62,7 @@
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @forelse($students as $student)
-                    <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="window.location='{{ route('school.students.show', $student) }}'">
+                    <tr class="hover:bg-gray-50 transition cursor-pointer" data-href="{{ route('school.students.show', $student) }}">
                         <td class="px-5 py-3">
                             <div class="flex items-center gap-3">
                                 @if($student->photo_url)

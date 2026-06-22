@@ -140,7 +140,7 @@
                     <button type="submit" class="text-sm text-green-600 hover:text-green-800 font-medium">Mark complete</button>
                 </form>
                 <form method="POST" action="{{ route('school.photo-sessions.cancel', $session) }}"
-                      onsubmit="return confirm('Cancel this session? Progress is kept but the session will close.')">
+                      data-confirm="Cancel this session? Progress is kept but the session will close.">
                     @csrf
                     <button type="submit" class="text-sm text-red-400 hover:text-red-600">Cancel session</button>
                 </form>
