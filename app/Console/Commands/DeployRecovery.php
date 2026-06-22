@@ -57,9 +57,84 @@ class DeployRecovery extends Command
         Artisan::call('migrate:status');
         $this->line(Artisan::output());
 
+        $this->diagnostics();
+
         $this->line('=== DONE ===');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Capture hard evidence about WHY requests time out: active drivers,
+     * DB round-trip latency, table bloat, and the tail of the error log.
+     */
+    private function diagnostics(): void
+    {
+        $this->line('');
+        $this->line('=== DIAGNOSTICS ===');
+
+        // 1. Which drivers are actually live (after config:clear reads .env)
+        $this->line('session.driver = ' . config('session.driver'));
+        $this->line('cache.default  = ' . config('cache.default'));
+        $this->line('db.default     = ' . config('database.default'));
+        $this->line('db.host        = ' . config('database.connections.' . config('database.default') . '.host'));
+
+        // 2. DB round-trip latency — a slow "SELECT 1" means connection trouble
+        try {
+            $t = microtime(true);
+            DB::select('SELECT 1');
+            $ms = round((microtime(true) - $t) * 1000, 1);
+            $this->line("db.ping        = {$ms} ms");
+        } catch (\Throwable $e) {
+            $this->line('db.ping        = FAILED: ' . $e->getMessage());
+        }
+
+        // 3. MySQL connection ceiling vs current usage (shared-hosting killer)
+        try {
+            $maxUser = DB::select("SHOW VARIABLES LIKE 'max_user_connections'");
+            $maxConn = DB::select("SHOW VARIABLES LIKE 'max_connections'");
+            $threads = DB::select("SHOW STATUS LIKE 'Threads_connected'");
+            $this->line('max_user_connections = ' . ($maxUser[0]->Value ?? '?'));
+            $this->line('max_connections      = ' . ($maxConn[0]->Value ?? '?'));
+            $this->line('Threads_connected    = ' . ($threads[0]->Value ?? '?'));
+        } catch (\Throwable $e) {
+            $this->line('connection stats = FAILED: ' . $e->getMessage());
+        }
+
+        // 4. Table bloat — a giant sessions/cache table slows every request
+        foreach (['sessions', 'cache', 'cache_locks'] as $tbl) {
+            try {
+                $count = DB::table($tbl)->count();
+                $this->line("rows.{$tbl} = {$count}");
+            } catch (\Throwable $e) {
+                $this->line("rows.{$tbl} = n/a (" . $e->getMessage() . ')');
+            }
+        }
+
+        // 5. Stuck cache locks (a held lock blocks requests until it expires)
+        try {
+            if (Schema::hasTable('cache_locks')) {
+                $locks = DB::table('cache_locks')->get();
+                foreach ($locks as $lock) {
+                    $this->line("LOCK key={$lock->key} expires_at={$lock->expiration}");
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->line('cache_locks read = FAILED: ' . $e->getMessage());
+        }
+
+        // 6. Tail of the Laravel error log — the actual 500 lives here
+        $this->line('');
+        $this->line('=== LARAVEL LOG (last 60 lines) ===');
+        $logPath = storage_path('logs/laravel.log');
+        if (is_file($logPath)) {
+            $lines = @file($logPath, FILE_IGNORE_NEW_LINES) ?: [];
+            foreach (array_slice($lines, -60) as $l) {
+                $this->line($l);
+            }
+        } else {
+            $this->line('(no laravel.log found at ' . $logPath . ')');
+        }
     }
 
     private function step(string $name, callable $fn): void

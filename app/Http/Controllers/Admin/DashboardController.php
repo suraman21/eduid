@@ -23,7 +23,7 @@ class DashboardController extends Controller
             'total_staff'     => User::whereIn('role', ['teacher', 'staff', 'school_admin'])->count(),
             'pending_leads'   => Lead::where('status', 'new')->count(),
             'total_revenue'   => Payment::where('status', 'paid')->sum('amount_etb'),
-            'pending_orders'  => CardOrder::whereIn('status', ['pending', 'processing'])->count(),
+            'pending_orders'  => CardOrder::whereIn('status', CardOrder::OPEN_STATUSES)->count(),
         ];
 
         $recentSchools = School::latest()->take(5)->get();
