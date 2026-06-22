@@ -5,22 +5,59 @@ namespace App\Http\Controllers\School;
 use App\Models\AuditLog;
 use App\Models\Guardian;
 use App\Models\Student;
+use App\Services\GuardianService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
  * Guardian management, scoped to a student. Guardians are a many-to-many
- * resource (a parent may have several children at the same school), so we
- * reuse an existing guardian row when the phone number matches, otherwise
- * create a new one. The pivot carries the per-student `is_primary` flag.
+ * resource (a parent may have several children at the same school). The
+ * find-or-create + primary logic lives in GuardianService so the inline
+ * student-form flow and this profile-panel flow stay identical.
  */
 class GuardianController extends BaseSchoolController
 {
-    private const RELATIONSHIPS = ['father', 'mother', 'guardian', 'sibling', 'other'];
+    public function __construct(private readonly GuardianService $guardians)
+    {
+    }
 
     /**
-     * Attach a guardian to a student (creating the guardian if new).
+     * Typeahead search for existing guardians (sibling reuse). Matches on name
+     * or phone, scoped to the current school by the global scope. Returns a
+     * small JSON list for the form's autocomplete.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->get('q', ''));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $matches = Guardian::query()
+            ->where(fn ($w) => $w
+                ->where('full_name', 'like', "%{$q}%")
+                ->orWhere('phone', 'like', "%{$q}%"))
+            ->withCount('students')
+            ->orderBy('full_name')
+            ->limit(8)
+            ->get(['id', 'full_name', 'phone', 'phone_alt', 'email', 'relationship']);
+
+        return response()->json($matches->map(fn (Guardian $g) => [
+            'id'             => $g->id,
+            'full_name'      => $g->full_name,
+            'phone'          => $g->phone,
+            'phone_alt'      => $g->phone_alt,
+            'email'          => $g->email,
+            'relationship'   => $g->relationship,
+            'students_count' => $g->students_count,
+        ]));
+    }
+
+    /**
+     * Attach a guardian to a student (creating or reusing as appropriate).
      */
     public function store(Request $request, Student $student)
     {
@@ -28,58 +65,19 @@ class GuardianController extends BaseSchoolController
         $this->requireWritableSubscription();
 
         $validated = $request->validate([
+            'id'           => 'nullable|integer|exists:guardians,id',
             'full_name'    => 'required|string|max:200',
             'phone'        => 'nullable|string|max:20',
             'phone_alt'    => 'nullable|string|max:20',
             'email'        => 'nullable|email|max:100',
-            'relationship' => ['required', Rule::in(self::RELATIONSHIPS)],
+            'relationship' => ['required', Rule::in(GuardianService::RELATIONSHIPS)],
             'is_primary'   => 'nullable|boolean',
         ]);
 
-        $isPrimary = (bool) ($validated['is_primary'] ?? false);
-
-        DB::transaction(function () use ($validated, $student, $isPrimary) {
-            // Reuse an existing guardian within this school if the phone matches
-            // (same parent, multiple children). Otherwise create a new record.
-            $guardian = null;
-            if (! empty($validated['phone'])) {
-                $guardian = Guardian::where('phone', $validated['phone'])->first();
-            }
-
-            if ($guardian) {
-                $guardian->update([
-                    'full_name'    => $validated['full_name'],
-                    'phone_alt'    => $validated['phone_alt'] ?? $guardian->phone_alt,
-                    'email'        => $validated['email'] ?? $guardian->email,
-                    'relationship' => $validated['relationship'],
-                ]);
-            } else {
-                $guardian = Guardian::create([
-                    'full_name'    => $validated['full_name'],
-                    'phone'        => $validated['phone'] ?? null,
-                    'phone_alt'    => $validated['phone_alt'] ?? null,
-                    'email'        => $validated['email'] ?? null,
-                    'relationship' => $validated['relationship'],
-                ]);
-            }
-
-            // If this is the new primary, demote any existing primary first.
-            if ($isPrimary) {
-                $student->guardians()->updateExistingPivot(
-                    $student->guardians()->pluck('guardians.id')->all(),
-                    ['is_primary' => false]
-                );
-            }
-
-            // syncWithoutDetaching keeps other guardian links intact.
-            $student->guardians()->syncWithoutDetaching([
-                $guardian->id => ['is_primary' => $isPrimary],
-            ]);
-        });
+        $this->guardians->attach($student, $validated, (bool) ($validated['is_primary'] ?? false));
 
         AuditLog::log('guardian.linked', 'students', $student->id, null, [
-            'guardian'   => $validated['full_name'],
-            'is_primary' => $isPrimary,
+            'guardian' => $validated['full_name'],
         ]);
 
         return back()->with('success', 'Guardian added.');
@@ -92,7 +90,6 @@ class GuardianController extends BaseSchoolController
     {
         $this->requireAdmin();
 
-        // Ensure the guardian is actually linked to this student.
         abort_unless($student->guardians()->where('guardians.id', $guardian->id)->exists(), 404);
 
         $validated = $request->validate([
@@ -100,30 +97,16 @@ class GuardianController extends BaseSchoolController
             'phone'        => 'nullable|string|max:20',
             'phone_alt'    => 'nullable|string|max:20',
             'email'        => 'nullable|email|max:100',
-            'relationship' => ['required', Rule::in(self::RELATIONSHIPS)],
+            'relationship' => ['required', Rule::in(GuardianService::RELATIONSHIPS)],
             'is_primary'   => 'nullable|boolean',
         ]);
 
-        $isPrimary = (bool) ($validated['is_primary'] ?? false);
-
-        DB::transaction(function () use ($validated, $student, $guardian, $isPrimary) {
-            $guardian->update([
-                'full_name'    => $validated['full_name'],
-                'phone'        => $validated['phone'] ?? null,
-                'phone_alt'    => $validated['phone_alt'] ?? null,
-                'email'        => $validated['email'] ?? null,
-                'relationship' => $validated['relationship'],
-            ]);
-
-            if ($isPrimary) {
-                $student->guardians()->updateExistingPivot(
-                    $student->guardians()->pluck('guardians.id')->all(),
-                    ['is_primary' => false]
-                );
-            }
-
-            $student->guardians()->updateExistingPivot($guardian->id, ['is_primary' => $isPrimary]);
-        });
+        // Reuse the service's resolve+primary logic by passing the known id.
+        $this->guardians->attach(
+            $student,
+            array_merge($validated, ['id' => $guardian->id]),
+            (bool) ($validated['is_primary'] ?? false)
+        );
 
         AuditLog::log('guardian.updated', 'students', $student->id, null, [
             'guardian' => $guardian->full_name,
@@ -145,7 +128,6 @@ class GuardianController extends BaseSchoolController
         DB::transaction(function () use ($student, $guardian) {
             $student->guardians()->detach($guardian->id);
 
-            // Orphan cleanup: remove the guardian if no students reference it.
             if ($guardian->students()->count() === 0) {
                 $guardian->delete();
             }

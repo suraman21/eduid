@@ -135,6 +135,7 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Guardians (nested under a student)
+        Route::get('/guardians/search', [SchoolGuardianController::class, 'search'])->name('school.guardians.search');
         Route::prefix('students/{student}/guardians')->name('school.guardians.')->group(function () {
             Route::post('/',            [SchoolGuardianController::class, 'store'])->name('store');
             Route::patch('/{guardian}', [SchoolGuardianController::class, 'update'])->name('update');

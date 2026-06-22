@@ -105,6 +105,79 @@ class GuardianTest extends TestCase
         $this->assertSame(2, $guardian->students()->count());
     }
 
+    public function test_student_can_be_registered_with_guardians_inline(): void
+    {
+        $this->actingAs($this->admin)->post('/school/students', [
+            'first_name' => 'Sara',
+            'last_name'  => 'Kebede',
+            'gender'     => 'female',
+            'guardians'  => [
+                ['full_name' => 'Mr Kebede', 'phone' => '0922000001', 'relationship' => 'father'],
+                ['full_name' => 'Mrs Kebede', 'phone' => '0922000002', 'relationship' => 'mother'],
+            ],
+            'primary_guardian' => 0,
+        ])->assertRedirect();
+
+        $student = Student::withoutGlobalScope('school')->where('first_name', 'Sara')->firstOrFail();
+        $this->assertSame(2, $student->guardians()->count());
+
+        $primary = $student->guardians()->wherePivot('is_primary', true)->get();
+        $this->assertCount(1, $primary);
+        $this->assertSame('Mr Kebede', $primary->first()->full_name);
+    }
+
+    public function test_blank_guardian_rows_are_ignored(): void
+    {
+        $this->actingAs($this->admin)->post('/school/students', [
+            'first_name' => 'Solo',
+            'last_name'  => 'Student',
+            'gender'     => 'male',
+            'guardians'  => [
+                ['full_name' => '', 'phone' => '', 'relationship' => 'guardian'],
+            ],
+        ])->assertRedirect();
+
+        $student = Student::withoutGlobalScope('school')->where('first_name', 'Solo')->firstOrFail();
+        $this->assertSame(0, $student->guardians()->count());
+    }
+
+    public function test_sibling_registration_reuses_existing_guardian_by_id(): void
+    {
+        // First child registered with a new parent.
+        $this->actingAs($this->admin)->post('/school/students', [
+            'first_name' => 'First', 'last_name' => 'Child', 'gender' => 'male',
+            'guardians' => [['full_name' => 'Shared Dad', 'phone' => '0933000000', 'relationship' => 'father']],
+            'primary_guardian' => 0,
+        ]);
+
+        $guardian = Guardian::withoutGlobalScope('school')->where('phone', '0933000000')->firstOrFail();
+
+        // Second child: the form sends the picked guardian's id (typeahead reuse).
+        $this->actingAs($this->admin)->post('/school/students', [
+            'first_name' => 'Second', 'last_name' => 'Child', 'gender' => 'female',
+            'guardians' => [['id' => $guardian->id, 'full_name' => 'Shared Dad', 'phone' => '0933000000', 'relationship' => 'father']],
+            'primary_guardian' => 0,
+        ]);
+
+        // Still a single guardian row, now linked to both children.
+        $this->assertSame(1, Guardian::withoutGlobalScope('school')->count());
+        $this->assertSame(2, $guardian->students()->count());
+    }
+
+    public function test_guardian_search_returns_scoped_matches(): void
+    {
+        Guardian::create(['school_id' => $this->school->id, 'full_name' => 'Almaz Tesfaye', 'phone' => '0944000000', 'relationship' => 'mother']);
+
+        $this->actingAs($this->admin)->getJson('/school/guardians/search?q=Almaz')
+            ->assertOk()
+            ->assertJsonFragment(['full_name' => 'Almaz Tesfaye']);
+
+        // Too-short query returns empty.
+        $this->actingAs($this->admin)->getJson('/school/guardians/search?q=A')
+            ->assertOk()
+            ->assertExactJson([]);
+    }
+
     public function test_detaching_orphan_guardian_deletes_it(): void
     {
         $this->actingAs($this->admin)->post("/school/students/{$this->student->id}/guardians", [
