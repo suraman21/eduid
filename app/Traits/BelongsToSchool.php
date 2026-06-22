@@ -19,10 +19,18 @@ trait BelongsToSchool
     {
         // Auto-scope all queries by school_id
         static::addGlobalScope('school', function (Builder $query) {
-            // Guard against unauthenticated contexts (queue jobs, CLI artisan
-            // commands, scheduled tasks). In those cases apply NO scope so
-            // background processes can read across tenants as needed.
-            if (!auth()->check()) {
+            // Use hasUser() instead of check() to avoid infinite recursion.
+            //
+            // auth()->check() resolves the user by querying the User model.
+            // If User itself has this trait, that query triggers the scope again,
+            // which calls check() again — infinite loop until PHP's execution
+            // time limit kills the request (observed as a 300s timeout).
+            //
+            // hasUser() only inspects the already-resolved guard property; it
+            // never hits the DB. Unauthenticated requests and CLI/queue contexts
+            // both return false here, so no scope is applied — same behaviour as
+            // before but without the recursive query.
+            if (!auth()->hasUser()) {
                 return;
             }
 
@@ -38,7 +46,7 @@ trait BelongsToSchool
 
         // Auto-set school_id on create when not explicitly provided
         static::creating(function ($model) {
-            if (auth()->check() && !$model->school_id && auth()->user()->role !== 'super_admin') {
+            if (auth()->hasUser() && !$model->school_id && auth()->user()->role !== 'super_admin') {
                 $model->school_id = auth()->user()->school_id;
             }
         });
