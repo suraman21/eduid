@@ -178,6 +178,47 @@ class GradeTest extends TestCase
         $this->assertDatabaseMissing('student_grades', ['student_id' => $s1->id, 'score' => '60.00']);
     }
 
+    public function test_score_cannot_exceed_max_score(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+
+        $this->actingAs($this->teacher)->post('/school/grades/save', $this->gradePayload([
+            ['student_id' => $s1->id, 'score' => 90, 'max_score' => 50],
+        ]))->assertSessionHasErrors('grades.0.score');
+
+        $this->assertDatabaseMissing('student_grades', ['student_id' => $s1->id]);
+    }
+
+    public function test_cannot_save_grade_for_subject_not_in_class(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $other = Subject::withoutGlobalScope('school')->create([
+            'school_id' => $this->school->id, 'name' => 'Biology', 'code' => 'BIO', 'is_active' => true,
+        ]);
+
+        $this->actingAs($this->teacher)->post('/school/grades/save', [
+            'class_id'        => $this->class->id,
+            'subject_id'      => $other->id,
+            'term_id'         => $this->term->id,
+            'assessment_type' => 'ca',
+            'grades'          => [['student_id' => $s1->id, 'score' => 80, 'max_score' => 100]],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('student_grades', ['student_id' => $s1->id]);
+    }
+
+    public function test_publishing_with_no_drafts_is_rejected(): void
+    {
+        $this->actingAs($this->admin)->post('/school/grades/publish', [
+            'class_id'        => $this->class->id,
+            'subject_id'      => $this->subject->id,
+            'term_id'         => $this->term->id,
+            'assessment_type' => 'ca',
+        ])->assertSessionHasErrors('publish');
+
+        $this->assertDatabaseCount('grade_submissions', 0);
+    }
+
     public function test_cannot_save_grade_for_another_schools_student(): void
     {
         $otherSchool = School::create([

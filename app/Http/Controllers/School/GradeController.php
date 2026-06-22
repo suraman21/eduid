@@ -108,6 +108,11 @@ class GradeController extends BaseSchoolController
             'assessment_type' => ['required', Rule::in(self::ASSESSMENT_TYPES)],
         ]);
 
+        // The subject must actually be taught in this class. Otherwise grades
+        // would be orphaned — the gradebook iterates ClassSubject and would
+        // never surface them.
+        $this->requireSubjectInClass($filters['class_id'], $filters['subject_id']);
+
         $class   = SchoolClass::findOrFail($filters['class_id']);
         $subject = Subject::findOrFail($filters['subject_id']);
         $term    = Term::findOrFail($filters['term_id']);
@@ -149,6 +154,7 @@ class GradeController extends BaseSchoolController
     public function save(Request $request)
     {
         $this->requireCanEnter();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate([
             'class_id'             => ['required', Rule::exists('classes', 'id')->where('school_id', $this->schoolId())],
@@ -160,6 +166,19 @@ class GradeController extends BaseSchoolController
             'grades.*.score'       => ['required', 'numeric', 'min:0', 'max:100'],
             'grades.*.max_score'   => ['required', 'numeric', 'min:1', 'max:100'],
         ]);
+
+        // The subject must be taught in this class (no orphan grades).
+        $this->requireSubjectInClass($validated['class_id'], $validated['subject_id']);
+
+        // A score can never exceed its own max — otherwise the weighted
+        // percentage exceeds 100% and silently corrupts every average/rank.
+        foreach ($validated['grades'] as $i => $item) {
+            if ((float) $item['score'] > (float) $item['max_score']) {
+                return back()
+                    ->withInput()
+                    ->withErrors(["grades.$i.score" => 'Score cannot exceed its maximum.']);
+            }
+        }
 
         // Do not overwrite published grades
         if (StudentGrade::where('class_id', $validated['class_id'])
@@ -220,6 +239,18 @@ class GradeController extends BaseSchoolController
             'term_id'         => ['required', Rule::exists('terms', 'id')->where('school_id', $this->schoolId())],
             'assessment_type' => ['required', Rule::in(self::ASSESSMENT_TYPES)],
         ]);
+
+        // Nothing to publish — refuse rather than stamp an empty submission.
+        $draftCount = StudentGrade::where('class_id', $validated['class_id'])
+            ->where('subject_id', $validated['subject_id'])
+            ->where('term_id', $validated['term_id'])
+            ->where('assessment_type', $validated['assessment_type'])
+            ->where('status', 'draft')
+            ->count();
+
+        if ($draftCount === 0) {
+            return back()->withErrors(['publish' => 'There are no draft grades to publish for this assessment.']);
+        }
 
         DB::transaction(function () use ($validated) {
             StudentGrade::where('class_id', $validated['class_id'])
@@ -369,6 +400,7 @@ class GradeController extends BaseSchoolController
     public function termStore(Request $request)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate([
             'name'          => ['required', 'string', 'max:50'],
@@ -408,6 +440,22 @@ class GradeController extends BaseSchoolController
         $user = auth()->user();
         if (! $user->isSchoolAdmin() && ! $user->isTeacher()) {
             abort(403, 'Only administrators and teachers can enter grades.');
+        }
+    }
+
+    /**
+     * Ensure the subject is actually assigned to the class. Grades recorded for
+     * a subject not on the class roster would be invisible in the gradebook
+     * (which iterates ClassSubject) and skew nothing visibly — a silent orphan.
+     */
+    private function requireSubjectInClass(int $classId, int $subjectId): void
+    {
+        $exists = ClassSubject::where('class_id', $classId)
+            ->where('subject_id', $subjectId)
+            ->exists();
+
+        if (! $exists) {
+            abort(422, 'This subject is not assigned to the selected class.');
         }
     }
 }
