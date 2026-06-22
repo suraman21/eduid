@@ -28,9 +28,11 @@ use Illuminate\Support\Str;
 class StudentImportController extends BaseSchoolController
 {
     // Accepted CSV column headers (case-insensitive, trimmed).
+    // grade + section identify the class (PRD §08). The app keys classes by
+    // grade+section ("Grade 9" + "A"), not a single combined name.
     private const COLUMNS = [
         'first_name', 'last_name', 'first_name_am', 'last_name_am',
-        'gender', 'date_of_birth', 'class', 'blood_type', 'status',
+        'gender', 'date_of_birth', 'grade', 'section', 'blood_type', 'status',
         'medical_notes', 'guardian_name', 'guardian_phone', 'guardian_relationship',
     ];
 
@@ -75,7 +77,7 @@ class StudentImportController extends BaseSchoolController
 
         // Validate every row, collecting errors per row.
         $school  = $this->currentSchool();
-        $classes = SchoolClass::where('is_active', true)->get()->keyBy(fn ($c) => strtolower($c->display_name));
+        $classes = SchoolClass::where('is_active', true)->get()->keyBy(fn ($c) => $this->classKey($c->grade, $c->section));
         $results = [];
 
         foreach ($rows as $i => $row) {
@@ -132,7 +134,7 @@ class StudentImportController extends BaseSchoolController
 
         $rows    = $this->parseCSV(Storage::path($tmpPath));
         $school  = $this->currentSchool();
-        $classes = SchoolClass::where('is_active', true)->get()->keyBy(fn ($c) => strtolower($c->display_name));
+        $classes = SchoolClass::where('is_active', true)->get()->keyBy(fn ($c) => $this->classKey($c->grade, $c->section));
         $imported = 0;
         $skipped  = 0;
 
@@ -144,8 +146,8 @@ class StudentImportController extends BaseSchoolController
 
             DB::transaction(function () use ($row, $school, $classes, &$imported) {
                 $classId = null;
-                if (! empty($row['class'])) {
-                    $classId = $classes[strtolower($row['class'])]?->id;
+                if (filled($row['grade'] ?? null) && filled($row['section'] ?? null)) {
+                    $classId = $classes[$this->classKey($row['grade'], $row['section'])]?->id;
                 }
 
                 $student = Student::create([
@@ -156,7 +158,7 @@ class StudentImportController extends BaseSchoolController
                     'first_name_am'  => filled($row['first_name_am'] ?? null) ? trim($row['first_name_am']) : null,
                     'last_name_am'   => filled($row['last_name_am'] ?? null) ? trim($row['last_name_am']) : null,
                     'gender'         => strtolower(trim($row['gender'])),
-                    'date_of_birth'  => filled($row['date_of_birth'] ?? null) ? $row['date_of_birth'] : null,
+                    'date_of_birth'  => $this->parseDate($row['date_of_birth'] ?? null),
                     'class_id'       => $classId,
                     'blood_type'     => filled($row['blood_type'] ?? null) ? trim($row['blood_type']) : null,
                     'status'         => filled($row['status'] ?? null) ? strtolower(trim($row['status'])) : 'active',
@@ -207,7 +209,7 @@ class StudentImportController extends BaseSchoolController
             fputcsv($out, self::COLUMNS);
             fputcsv($out, [
                 'Abebe', 'Kebede', 'አበበ', 'ከበደ', 'male',
-                '2010-03-15', 'Grade 5', 'A+', 'active', '',
+                '2010-03-15', 'Grade 5', 'A', 'A+', 'active', '',
                 'Kedir Kebede', '0911000001', 'father',
             ]);
             fclose($out);
@@ -285,8 +287,8 @@ class StudentImportController extends BaseSchoolController
         }
 
         $dob = trim($row['date_of_birth'] ?? '');
-        if (! empty($dob) && ! strtotime($dob)) {
-            $errors[] = "date_of_birth must be a valid date (YYYY-MM-DD)";
+        if (! empty($dob) && $this->parseDate($dob) === null) {
+            $errors[] = "date_of_birth must be a valid date (YYYY-MM-DD, DD/MM/YYYY, or DD-MM-YYYY)";
         }
 
         $bt = trim($row['blood_type'] ?? '');
@@ -294,9 +296,22 @@ class StudentImportController extends BaseSchoolController
             $errors[] = "blood_type must be one of: " . implode(', ', self::BLOOD_TYPES);
         }
 
-        $class = strtolower(trim($row['class'] ?? ''));
-        if (! empty($class) && ! $classes->has($class)) {
-            $errors[] = "class '{$row['class']}' not found — check active classes";
+        // grade + section together identify the class. If either is given, both
+        // must be present and resolve to an active class.
+        $grade   = trim($row['grade'] ?? '');
+        $section = trim($row['section'] ?? '');
+        if ($grade !== '' || $section !== '') {
+            if ($grade === '' || $section === '') {
+                $errors[] = "grade and section must both be provided to assign a class";
+            } elseif (! $classes->has($this->classKey($grade, $section))) {
+                $errors[] = "class '{$grade} - {$section}' not found — check active classes";
+            }
+        }
+
+        // Ethiopian phone format (PRD §08): 09XXXXXXXX / 07XXXXXXXX or +2519.. / +2517..
+        $phone = trim($row['guardian_phone'] ?? '');
+        if ($phone !== '' && ! $this->isValidEthiopianPhone($phone)) {
+            $errors[] = "guardian_phone must be a valid Ethiopian number (e.g. 0911000001 or +251911000001)";
         }
 
         $rel = strtolower(trim($row['guardian_relationship'] ?? ''));
@@ -305,6 +320,46 @@ class StudentImportController extends BaseSchoolController
         }
 
         return $errors;
+    }
+
+    /**
+     * Build a stable lookup key for a class from grade + section,
+     * e.g. ("Grade 9", "A") → "grade 9|a".
+     */
+    private function classKey(string $grade, string $section): string
+    {
+        return strtolower(trim($grade)) . '|' . strtolower(trim($section));
+    }
+
+    /**
+     * Parse a date accepting YYYY-MM-DD, DD/MM/YYYY, or DD-MM-YYYY.
+     * Returns a Y-m-d string, or null if blank/invalid.
+     */
+    private function parseDate(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'Y/m/d'] as $format) {
+            $dt = \DateTime::createFromFormat($format, $value);
+            if ($dt !== false && $dt->format($format) === $value) {
+                return $dt->format('Y-m-d');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Validate an Ethiopian mobile number: 09/07 + 8 digits, or +251/251 + 9/7 + 8 digits.
+     */
+    private function isValidEthiopianPhone(string $phone): bool
+    {
+        $normalized = preg_replace('/[\s\-]/', '', $phone);
+
+        return (bool) preg_match('/^(?:\+?251|0)(9|7)\d{8}$/', $normalized);
     }
 
     private function generateUid(School $school): string

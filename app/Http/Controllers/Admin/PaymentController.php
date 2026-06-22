@@ -24,7 +24,7 @@ class PaymentController extends Controller
         }
 
         $payments = $query->paginate(25);
-        $schools  = School::orderBy('name')->pluck('name', 'id');
+        $schools  = School::orderBy('name')->get(['id', 'name']);
 
         $totalConfirmed = Payment::where('status', 'confirmed')->sum('amount_etb');
         $pendingCount   = Payment::where('status', 'pending')->count();
