@@ -6,6 +6,11 @@ use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\Admin\CardOrderController as AdminCardOrderController;
+use App\Http\Controllers\Admin\LeadController as AdminLeadController;
+use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
+use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\School\StudentImportController as SchoolStudentImportController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
@@ -90,6 +95,32 @@ Route::middleware(['auth'])->group(function () {
             'destroy' => 'admin.schools.destroy',
         ]);
 
+        // Leads
+        Route::prefix('leads')->name('admin.leads.')->group(function () {
+            Route::get('/',         [AdminLeadController::class, 'index'])->name('index');
+            Route::get('/{lead}',   [AdminLeadController::class, 'show'])->name('show');
+            Route::patch('/{lead}', [AdminLeadController::class, 'update'])->name('update');
+        });
+
+        // Audit Log
+        Route::get('/audit-log', [AdminAuditLogController::class, 'index'])->name('admin.audit-log.index');
+
+        // Features
+        Route::prefix('features')->name('admin.features.')->group(function () {
+            Route::get('/',                                          [AdminFeatureController::class, 'index'])->name('index');
+            Route::post('/schools/{school}/overrides',               [AdminFeatureController::class, 'setOverride'])->name('override');
+            Route::delete('/schools/{school}/overrides/{key}',       [AdminFeatureController::class, 'removeOverride'])->name('override.remove');
+        });
+
+        // Payments
+        Route::prefix('payments')->name('admin.payments.')->group(function () {
+            Route::get('/',                       [AdminPaymentController::class, 'index'])->name('index');
+            Route::get('/create',                 [AdminPaymentController::class, 'create'])->name('create');
+            Route::post('/',                      [AdminPaymentController::class, 'store'])->name('store');
+            Route::get('/{payment}',              [AdminPaymentController::class, 'show'])->name('show');
+            Route::post('/{payment}/confirm',     [AdminPaymentController::class, 'confirm'])->name('confirm');
+        });
+
         // Card order fulfilment (enter code → confirm → printing → shipped → delivered)
         Route::prefix('card-orders')->name('admin.card-orders.')->group(function () {
             Route::get('/',                  [AdminCardOrderController::class, 'index'])->name('index');
@@ -153,6 +184,14 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip');
             Route::post('/{photoSession}/complete',       [SchoolPhotoSessionController::class, 'complete'])->name('complete');
             Route::post('/{photoSession}/cancel',         [SchoolPhotoSessionController::class, 'cancel'])->name('cancel');
+        });
+
+        // CSV Student Import
+        Route::prefix('students/import')->name('school.students.import.')->group(function () {
+            Route::get('/',           [SchoolStudentImportController::class, 'create'])->name('form');
+            Route::post('/',          [SchoolStudentImportController::class, 'preview'])->name('preview');
+            Route::post('/confirm',   [SchoolStudentImportController::class, 'confirm'])->name('confirm');
+            Route::get('/template',   [SchoolStudentImportController::class, 'template'])->name('template');
         });
 
         // Card Orders (school side: select students → confirmation code → track)
