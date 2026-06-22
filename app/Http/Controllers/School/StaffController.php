@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Http\Controllers\School;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+
+class StaffController extends BaseSchoolController
+{
+    private const ROLES = ['school_admin', 'teacher', 'staff'];
+
+    public function index(Request $request)
+    {
+        $query = User::whereIn('role', self::ROLES);
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('employee_id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($role = $request->get('role')) {
+            $query->where('role', $role);
+        }
+
+        $staff = $query->orderBy('name')->paginate(20);
+
+        return view('school.staff.index', compact('staff'));
+    }
+
+    public function create()
+    {
+        $this->requireAdmin();
+
+        return view('school.staff.form', ['member' => new User()]);
+    }
+
+    public function store(Request $request)
+    {
+        $this->requireAdmin();
+        $this->requireWritableSubscription();
+
+        $validated = $this->validateStaff($request);
+        $validated['password'] = Hash::make($validated['password']);
+        $validated['is_active'] = true;
+        $validated['can_login'] = $request->boolean('can_login', true);
+        $validated['is_homeroom'] = $request->boolean('is_homeroom');
+        $validated['is_coordinator'] = $request->boolean('is_coordinator');
+        $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
+
+        User::create($validated);
+
+        return redirect()->route('school.staff.index')->with('success', 'Staff member added.');
+    }
+
+    public function show(User $staff)
+    {
+        return view('school.staff.show', ['member' => $staff]);
+    }
+
+    public function edit(User $staff)
+    {
+        $this->requireAdmin();
+
+        return view('school.staff.form', ['member' => $staff]);
+    }
+
+    public function update(Request $request, User $staff)
+    {
+        $this->requireAdmin();
+
+        $validated = $this->validateStaff($request, $staff->id);
+
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
+
+        $validated['is_active'] = $request->boolean('is_active');
+        $validated['can_login'] = $request->boolean('can_login');
+        $validated['is_homeroom'] = $request->boolean('is_homeroom');
+        $validated['is_coordinator'] = $request->boolean('is_coordinator');
+        $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
+
+        $staff->update($validated);
+
+        return redirect()->route('school.staff.show', $staff)->with('success', 'Staff member updated.');
+    }
+
+    private function validateStaff(Request $request, ?int $ignoreId = null): array
+    {
+        $passwordRule = $ignoreId ? 'nullable|string|min:8' : 'required|string|min:8';
+
+        return $request->validate([
+            'name'        => 'required|string|max:255',
+            'email'       => [
+                'required', 'email', 'max:255',
+                Rule::unique('users')->where('school_id', $this->schoolId())->ignore($ignoreId),
+            ],
+            'password'    => $passwordRule,
+            'role'        => ['required', Rule::in(self::ROLES)],
+            'phone'       => 'nullable|string|max:20',
+            'employee_id' => [
+                'nullable', 'string', 'max:30',
+                Rule::unique('users')->where('school_id', $this->schoolId())->ignore($ignoreId),
+            ],
+            'job_title'   => 'nullable|string|max:100',
+        ]);
+    }
+}

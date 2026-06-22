@@ -9,6 +9,7 @@ use App\Http\Controllers\School\DashboardController as SchoolDashboardController
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
+use App\Http\Controllers\School\StaffController as SchoolStaffController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
 
@@ -99,6 +100,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('/subjects', SchoolSubjectController::class)
             ->only(['index', 'store', 'update'])
             ->names('school.subjects');
+        Route::resource('/staff', SchoolStaffController::class)
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
+            ->names('school.staff');
     });
 
 });
