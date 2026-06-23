@@ -17,10 +17,10 @@ use Illuminate\Support\Facades\Storage;
  * Super-Admin management of per-school ID card templates.
  *
  * Flow (PRD §ID-Card-Template-Spec):
- *   1. Admin uploads a designer-made background PNG/JPG (1012×638 px, 300 DPI)
+ *   1. Admin uploads a designer-made background PNG/JPG (any size, any orientation)
  *   2. Admin positions data fields on the canvas (pixel coordinates)
  *   3. System saves fields as mm values (px / 300 * 25.4)
- *   4. On card order confirmation the template drives TCPDF generation
+ *   4. On card order confirmation the template drives TCPDF/GD generation
  */
 class CardTemplateController extends Controller
 {
@@ -69,54 +69,87 @@ class CardTemplateController extends Controller
             'template'    => $template,
             'fieldLabels' => self::FIELD_LABELS,
             'savedFields' => $savedFields,
+            'canvasW'     => $template?->canvasW() ?? CardTemplate::DEFAULT_W,
+            'canvasH'     => $template?->canvasH() ?? CardTemplate::DEFAULT_H,
         ]);
     }
 
     /**
-     * Upload and re-process the front or back card background image.
-     * Called via fetch() from the template editor — returns JSON.
+     * Upload the front or back card background image.
+     * Preserves the original image dimensions — the image size defines the template canvas.
+     * Returns JSON so the editor JS can update the live preview immediately.
      */
     public function uploadImage(Request $request, School $school)
     {
         $request->validate([
             'side'  => ['required', 'in:front,back'],
-            'image' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
+            'image' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:10240'],
         ]);
 
         $side = $request->input('side');
         $file = $request->file('image');
 
-        // Re-encode via GD: strips EXIF and normalises to PNG at CR80 size.
-        $src = match ($file->getMimeType()) {
-            'image/jpeg' => imagecreatefromjpeg($file->getRealPath()),
-            default      => imagecreatefrompng($file->getRealPath()),
+        // Detect actual pixel dimensions before any processing.
+        $info = @getimagesize($file->getRealPath());
+        if (! $info) {
+            return response()->json(['success' => false, 'error' => 'Could not read image dimensions.'], 422);
+        }
+        [$origW, $origH] = $info;
+
+        // Load via GD — handles JPEG and PNG; re-encodes to PNG to strip EXIF metadata.
+        // We do NOT resize: the designer's image dimensions define the canvas.
+        $mime = $file->getMimeType();
+        $src  = match (true) {
+            in_array($mime, ['image/jpeg', 'image/jpg']) => @imagecreatefromjpeg($file->getRealPath()),
+            default                                       => @imagecreatefrompng($file->getRealPath()),
         };
 
-        $canvas = imagecreatetruecolor(CardTemplate::CANVAS_W, CardTemplate::CANVAS_H);
-        imagecopyresampled($canvas, $src, 0, 0, 0, 0,
-            CardTemplate::CANVAS_W, CardTemplate::CANVAS_H,
-            imagesx($src), imagesy($src)
+        if ($src) {
+            // Re-encode as PNG at the original dimensions (EXIF-stripped, format-normalised).
+            $canvas = imagecreatetruecolor($origW, $origH);
+            imagealphablending($canvas, false);
+            imagesavealpha($canvas, true);
+            imagecopy($canvas, $src, 0, 0, 0, 0, $origW, $origH);
+            imagedestroy($src);
+
+            ob_start();
+            imagepng($canvas, null, 6);
+            $pngData = ob_get_clean();
+            imagedestroy($canvas);
+
+            $stored = Storage::disk('local')->put("cards/{$school->id}/{$side}.png", $pngData);
+        } else {
+            // GD failed (unusual format / non-RGB) — store the raw file as-is.
+            $stored = Storage::disk('local')->put("cards/{$school->id}/{$side}.png", file_get_contents($file->getRealPath()));
+        }
+
+        if (! $stored) {
+            return response()->json(['success' => false, 'error' => 'Storage write failed.'], 500);
+        }
+
+        // Persist canvas dimensions so CardImageService and CardPrintService can use them.
+        if ($side === 'front') {
+            CardTemplate::where('school_id', $school->id)
+                ->where('template_type', 'student')
+                ->update(['canvas_w' => $origW, 'canvas_h' => $origH]);
+        }
+
+        AuditLog::createRecord(
+            $school->id, auth()->id(),
+            'card_template.image_uploaded', 'card_templates', null, null,
+            ['side' => $side, 'width' => $origW, 'height' => $origH]
         );
-        imagedestroy($src);
-
-        ob_start();
-        imagepng($canvas, null, 6);
-        $pngData = ob_get_clean();
-        imagedestroy($canvas);
-
-        $path = "cards/{$school->id}/{$side}.png";
-        Storage::disk('local')->put($path, $pngData);
-
-        AuditLog::createRecord($school->id, auth()->id(), 'card_template.image_uploaded', 'card_templates', null, null, ['side' => $side]);
 
         return response()->json([
             'success' => true,
             'url'     => route('admin.card-template.image', [$school, $side]),
+            'width'   => $origW,
+            'height'  => $origH,
         ]);
     }
 
     /**
-     * Serve the front or back template image (private disk, auth-gated).
+     * Serve the front or back template image from the private disk (auth-gated).
      */
     public function serveImage(School $school, string $side)
     {
@@ -126,43 +159,46 @@ class CardTemplateController extends Controller
         abort_unless(Storage::disk('local')->exists($path), 404);
 
         return Storage::disk('local')->response($path, null, [
-            'Cache-Control' => 'private, max-age=300',
+            'Cache-Control' => 'private, max-age=60',
             'Content-Type'  => 'image/png',
         ]);
     }
 
     /**
      * Save all field positions for the school's student template.
-     * Accepts a JSON-encoded `fields` array in the request body.
      */
     public function saveFields(Request $request, School $school)
     {
         $request->validate([
-            'fields'              => ['required', 'json'],
-            'name'                => ['nullable', 'string', 'max:100'],
+            'fields'   => ['required', 'json'],
+            'name'     => ['nullable', 'string', 'max:100'],
+            'canvas_w' => ['nullable', 'integer', 'min:100', 'max:10000'],
+            'canvas_h' => ['nullable', 'integer', 'min:100', 'max:10000'],
         ]);
 
-        $fields = json_decode($request->input('fields'), true);
+        $fields  = json_decode($request->input('fields'), true);
+        $canvasW = (int) ($request->input('canvas_w') ?: CardTemplate::DEFAULT_W);
+        $canvasH = (int) ($request->input('canvas_h') ?: CardTemplate::DEFAULT_H);
 
         $template = CardTemplate::updateOrCreate(
             ['school_id' => $school->id, 'template_type' => 'student'],
             [
-                'name'            => $request->input('name') ?: ($school->name . ' Student Card'),
+                'name'             => $request->input('name') ?: ($school->name . ' Student Card'),
                 'front_image_path' => "cards/{$school->id}/front.png",
                 'back_image_path'  => Storage::disk('local')->exists("cards/{$school->id}/back.png")
                     ? "cards/{$school->id}/back.png" : null,
-                'is_active'       => true,
-                'created_by'      => auth()->id(),
-                'version'         => 1,
+                'canvas_w'         => $canvasW,
+                'canvas_h'         => $canvasH,
+                'is_active'        => true,
+                'created_by'       => auth()->id(),
+                'version'          => 1,
             ]
         );
 
-        // Bump version on subsequent saves (updateOrCreate sets 1 on create; increment on update).
         if (! $template->wasRecentlyCreated) {
             $template->increment('version');
         }
 
-        // Replace all fields.
         CardTemplateField::where('template_id', $template->id)->delete();
 
         foreach ($fields as $i => $f) {
@@ -192,14 +228,18 @@ class CardTemplateController extends Controller
             ]);
         }
 
-        AuditLog::createRecord($school->id, auth()->id(), 'card_template.saved', 'card_templates', $template->id, null, ['fields' => count($fields)]);
+        AuditLog::createRecord(
+            $school->id, auth()->id(),
+            'card_template.saved', 'card_templates', $template->id, null,
+            ['fields' => count($fields), 'canvas' => "{$canvasW}×{$canvasH}"]
+        );
 
         return redirect()->route('admin.card-template.edit', $school)
-            ->with('success', 'Template saved — ' . count($fields) . ' field(s) configured.');
+            ->with('success', 'Template saved — ' . count($fields) . ' field(s), canvas ' . $canvasW . '×' . $canvasH . ' px.');
     }
 
     /**
-     * Generate cards for a confirmed order in PDF or high-quality PNG ZIP format.
+     * Generate cards for a confirmed order in PDF or high-quality PNG ZIP.
      */
     public function generateCards(Request $request, CardOrder $cardOrder, CardPrintService $pdf, CardImageService $img)
     {
@@ -221,7 +261,6 @@ class CardTemplateController extends Controller
             return Storage::disk('local')->download($path, "{$cardOrder->order_code}-cards-hq.zip");
         }
 
-        // PDF via existing service (template-aware if template exists).
         $path = $pdf->generate($cardOrder);
         $cardOrder->update(['print_file_path' => $path]);
         AuditLog::createRecord($school->id, auth()->id(), 'card_order.pdf_generated', 'card_orders', $cardOrder->id);

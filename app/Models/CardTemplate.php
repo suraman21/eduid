@@ -20,6 +20,8 @@ class CardTemplate extends Model
         'scope',
         'front_image_path',
         'back_image_path',
+        'canvas_w',
+        'canvas_h',
         'card_width_mm',
         'card_height_mm',
         'is_active',
@@ -32,14 +34,24 @@ class CardTemplate extends Model
         return [
             'is_active'      => 'boolean',
             'version'        => 'integer',
+            'canvas_w'       => 'integer',
+            'canvas_h'       => 'integer',
             'card_width_mm'  => 'float',
             'card_height_mm' => 'float',
         ];
     }
 
-    /** Card pixel dimensions at 300 DPI (CR80 standard). */
-    public const CANVAS_W = 1012;
-    public const CANVAS_H = 638;
+    /** Fallback CR80 @ 300 DPI dimensions (used when no image has been uploaded yet). */
+    public const DEFAULT_W = 1012;
+    public const DEFAULT_H = 638;
+
+    /** Actual canvas width in pixels — uploaded image dimensions or CR80 fallback. */
+    public function canvasW(): int { return $this->canvas_w ?? self::DEFAULT_W; }
+    public function canvasH(): int { return $this->canvas_h ?? self::DEFAULT_H; }
+
+    /** Canvas width/height in mm at 300 DPI. */
+    public function cardWMm(): float { return self::pxToMm($this->canvasW()); }
+    public function cardHMm(): float { return self::pxToMm($this->canvasH()); }
 
     /** px / 300 * 25.4 — convert storage pixels to TCPDF mm. */
     public static function pxToMm(float $px): float

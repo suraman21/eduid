@@ -15,13 +15,15 @@ use TCPDF;
  *
  * The Golden Rule: schools NEVER receive a print-ready file — they only see a
  * low-res, watermarked on-screen preview. This service produces the real
- * artwork: one CR80 (85.6 × 54 mm) card per page at full quality, arranged for
- * the PVC card printer, written to a private path under storage/app that is
- * never exposed via a web URL.
+ * artwork — one card per page, sized to match the template canvas — written to
+ * a private path under storage/app that is never exposed via a web URL.
+ *
+ * Card dimensions come from the template's canvas_w / canvas_h (stored px at
+ * 300 DPI → converted to mm). Falls back to CR80 when no template exists.
  */
 class CardPrintService
 {
-    /** CR80 card dimensions in millimetres (ISO/IEC 7810 ID-1). */
+    /** CR80 fallback dimensions in mm (ISO/IEC 7810 ID-1). */
     private const CARD_W = 85.6;
     private const CARD_H = 54.0;
 
@@ -51,7 +53,12 @@ class CardPrintService
             ->orderBy('first_name')
             ->get();
 
-        $pdf = new TCPDF('L', 'mm', [self::CARD_W, self::CARD_H], true, 'UTF-8', false);
+        // Derive page size from the template canvas (px → mm at 300 DPI).
+        $cardW  = $template ? $template->cardWMm() : self::CARD_W;
+        $cardH  = $template ? $template->cardHMm() : self::CARD_H;
+        $orient = $cardW >= $cardH ? 'L' : 'P';
+
+        $pdf = new TCPDF($orient, 'mm', [$cardW, $cardH], true, 'UTF-8', false);
         $pdf->SetCreator('EduID');
         $pdf->SetTitle("ID Cards — {$order->order_code}");
         $pdf->SetMargins(0, 0, 0);
@@ -253,10 +260,13 @@ class CardPrintService
      */
     private function drawCardFromTemplate(TCPDF $pdf, Student $student, School $school, CardTemplate $template): void
     {
+        $cardW = $template->cardWMm();
+        $cardH = $template->cardHMm();
+
         // Background image (full page bleed).
         $bgPath = $this->diskPathFor($template->front_image_path);
         if ($bgPath) {
-            $pdf->Image($bgPath, 0, 0, self::CARD_W, self::CARD_H, '', '', '', true, 300, '', false, false, 0);
+            $pdf->Image($bgPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
         }
 
         foreach ($template->fields as $field) {
@@ -272,7 +282,7 @@ class CardPrintService
         $backPath = $template->back_image_path ? $this->diskPathFor($template->back_image_path) : null;
         if ($backPath) {
             $pdf->AddPage();
-            $pdf->Image($backPath, 0, 0, self::CARD_W, self::CARD_H, '', '', '', true, 300, '', false, false, 0);
+            $pdf->Image($backPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
         }
     }
 
