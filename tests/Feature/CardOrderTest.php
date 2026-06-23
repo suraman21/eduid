@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CardOrderTest extends TestCase
@@ -22,6 +23,10 @@ class CardOrderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Confirming an order now writes a print-ready PDF to the private disk;
+        // keep that out of real storage during tests.
+        Storage::fake('local');
 
         $this->school = School::create([
             'name' => 'Alpha', 'code' => 'ALPHA', 'is_active' => true,
@@ -136,6 +141,85 @@ class CardOrderTest extends TestCase
         $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/status", ['status' => 'printing'])->assertRedirect();
         $this->assertSame('printing', $order->fresh()->status);
         $this->assertNotNull($order->fresh()->printed_at);
+    }
+
+    public function test_confirming_generates_a_private_print_file(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+
+        $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/confirm")->assertRedirect();
+
+        $order->refresh();
+        $this->assertNotNull($order->print_file_path);
+        $this->assertStringStartsWith("print_jobs/{$order->order_code}/", $order->print_file_path);
+        Storage::disk('local')->assertExists($order->print_file_path);
+    }
+
+    public function test_confirming_mints_qr_token_for_card(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->assertNull($s1->qr_token);
+
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+        $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/confirm");
+
+        $s1->refresh();
+        $this->assertNotNull($s1->qr_token);
+        $this->assertSame($this->school->academic_year, $s1->qr_token_year);
+    }
+
+    public function test_super_admin_can_download_print_file(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+        $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/confirm");
+
+        $response = $this->actingAs($this->superAdmin)->get("/admin/card-orders/{$order->id}/print-file");
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_school_admin_cannot_reach_admin_print_file_route(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+        $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/confirm");
+
+        // The admin route group is gated to super_admin — a school admin is blocked.
+        $this->actingAs($this->admin)->get("/admin/card-orders/{$order->id}/print-file")
+            ->assertForbidden();
+    }
+
+    public function test_download_404_when_no_print_file(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+
+        // Order is still pending — no print file generated yet.
+        $this->actingAs($this->superAdmin)->get("/admin/card-orders/{$order->id}/print-file")
+            ->assertNotFound();
+    }
+
+    public function test_super_admin_can_regenerate_print_file(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+        $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/confirm");
+        $first = $order->fresh()->print_file_path;
+
+        $this->actingAs($this->superAdmin)->post("/admin/card-orders/{$order->id}/print-file/regenerate")
+            ->assertRedirect();
+
+        $order->refresh();
+        $this->assertNotNull($order->print_file_path);
+        Storage::disk('local')->assertExists($order->print_file_path);
     }
 
     public function test_status_transitions_cannot_skip_steps(): void
