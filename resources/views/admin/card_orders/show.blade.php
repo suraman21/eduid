@@ -103,6 +103,26 @@
         </div>
     @endif
 
+    {{-- Generate Cards (template-based, Super Admin only) --}}
+    @if(in_array($order->status, ['confirmed','printing','shipped','delivered']))
+        <div class="bg-dark-800 border border-slate-700/50 rounded-xl p-6">
+            <p class="text-white font-medium mb-1">Generate Cards</p>
+            <p class="text-xs text-slate-500 mb-4">Render all cards using the school's configured template. High-quality files for the PVC printer — never shared with the school.</p>
+            <div class="flex items-center gap-3">
+                <form method="POST" action="{{ route('admin.card-orders.generate', $order) }}">
+                    @csrf
+                    <input type="hidden" name="format" value="pdf">
+                    <button class="bg-primary-600 hover:bg-primary-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition">Download PDF</button>
+                </form>
+                <form method="POST" action="{{ route('admin.card-orders.generate', $order) }}">
+                    @csrf
+                    <input type="hidden" name="format" value="png">
+                    <button class="border border-slate-600 hover:border-slate-400 text-slate-300 text-sm px-4 py-2 rounded-lg transition">Download PNG ZIP</button>
+                </form>
+            </div>
+        </div>
+    @endif
+
     {{-- Students --}}
     <div class="bg-dark-800 border border-slate-700/50 rounded-xl overflow-hidden">
         <div class="px-5 py-3 border-b border-slate-700/50"><p class="text-white font-medium">Students ({{ $students->count() }})</p></div>

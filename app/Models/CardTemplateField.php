@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CardTemplateField extends Model
 {
-    use HasFactory;
-
     protected $table = 'card_template_fields';
 
     protected $fillable = [
         'template_id',
+        'field_type',
         'field_key',
         'label',
         'x_mm',
@@ -28,16 +27,25 @@ class CardTemplateField extends Model
         'custom_value',
     ];
 
-    protected $casts = [
-        'x_mm' => 'decimal:2',
-        'y_mm' => 'decimal:2',
-        'width_mm' => 'decimal:2',
-        'height_mm' => 'decimal:2',
-        'font_size' => 'integer',
-        'z_index' => 'integer',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'x_mm'      => 'float',
+            'y_mm'      => 'float',
+            'width_mm'  => 'float',
+            'height_mm' => 'float',
+            'font_size' => 'integer',
+            'z_index'   => 'integer',
+        ];
+    }
 
-    public function template()
+    /** Preview pixel coordinates (mm → px at 300 DPI). */
+    public function getPxXAttribute(): int { return (int) round(CardTemplate::mmToPx($this->x_mm)); }
+    public function getPxYAttribute(): int { return (int) round(CardTemplate::mmToPx($this->y_mm)); }
+    public function getPxWAttribute(): ?int { return $this->width_mm  ? (int) round(CardTemplate::mmToPx($this->width_mm))  : null; }
+    public function getPxHAttribute(): ?int { return $this->height_mm ? (int) round(CardTemplate::mmToPx($this->height_mm)) : null; }
+
+    public function template(): BelongsTo
     {
         return $this->belongsTo(CardTemplate::class, 'template_id');
     }

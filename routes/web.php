@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\Admin\CardOrderController as AdminCardOrderController;
+use App\Http\Controllers\Admin\CardTemplateController as AdminCardTemplateController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
@@ -123,6 +124,16 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{payment}',              [AdminPaymentController::class, 'show'])->name('show');
             Route::post('/{payment}/confirm',     [AdminPaymentController::class, 'confirm'])->name('confirm');
         });
+
+        // Card template editor (per-school designer background + field positions)
+        Route::prefix('schools/{school}/card-template')->name('admin.card-template.')->group(function () {
+            Route::get('/',             [AdminCardTemplateController::class, 'edit'])->name('edit');
+            Route::post('/upload',      [AdminCardTemplateController::class, 'uploadImage'])->name('upload');
+            Route::post('/save',        [AdminCardTemplateController::class, 'saveFields'])->name('save');
+            Route::get('/image/{side}', [AdminCardTemplateController::class, 'serveImage'])->name('image');
+        });
+        // Generate print-ready cards (PDF or PNG ZIP) from a confirmed order + template
+        Route::post('/card-orders/{cardOrder}/generate', [AdminCardTemplateController::class, 'generateCards'])->name('admin.card-orders.generate');
 
         // Card order fulfilment (enter code → confirm → printing → shipped → delivered)
         Route::prefix('card-orders')->name('admin.card-orders.')->group(function () {
