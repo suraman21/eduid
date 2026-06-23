@@ -15,18 +15,16 @@ use ZipArchive;
 /**
  * High-quality PNG card generation using PHP GD + FreeType.
  *
- * Outputs 1012×638 px images (CR80 at 300 DPI) suitable for professional
- * PVC card printing. Each student's card is a full-colour composite:
- *   1. Designer's background image (PNG/JPG)
- *   2. Data overlay at template-configured pixel positions
+ * Outputs one PNG per student at the template's actual canvas dimensions
+ * (stored as canvas_w × canvas_h). Supports any size and orientation.
  *
  * This is Super-Admin-only. Schools never receive these files.
  */
 class CardImageService
 {
-    /** CR80 at 300 DPI. */
-    private const W = 1012;
-    private const H = 638;
+    /** Fallback when template has no stored canvas dimensions. */
+    private const DEFAULT_W = 1012;
+    private const DEFAULT_H = 638;
 
     public function __construct(private QrTokenService $qr)
     {
@@ -74,7 +72,7 @@ class CardImageService
     }
 
     /**
-     * Render one student card as a 1012×638 PNG file, placed in $tmpDir.
+     * Render one student card PNG at the template's canvas dimensions, placed in $tmpDir.
      * Returns the file path on success, null on failure.
      */
     private function renderPng(Student $student, School $school, CardTemplate $template, string $tmpDir): ?string
@@ -101,7 +99,7 @@ class CardImageService
         return $outPath;
     }
 
-    /** Load the front background image as a GD resource. */
+    /** Load the front background image as a GD resource at the template's canvas size. */
     private function loadBackground(CardTemplate $template): mixed
     {
         $path = $this->diskPath($template->front_image_path);
@@ -109,22 +107,29 @@ class CardImageService
             return null;
         }
 
-        $ext    = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $canvas = match ($ext) {
-            'jpg', 'jpeg' => imagecreatefromjpeg($path),
-            default        => imagecreatefrompng($path),
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $src = match ($ext) {
+            'jpg', 'jpeg' => @imagecreatefromjpeg($path),
+            default        => @imagecreatefrompng($path),
         };
-        if (! $canvas) {
+        if (! $src) {
             return null;
         }
 
-        // Ensure exact CR80 dimensions.
-        if (imagesx($canvas) !== self::W || imagesy($canvas) !== self::H) {
-            $resized = imagecreatetruecolor(self::W, self::H);
-            imagecopyresampled($resized, $canvas, 0, 0, 0, 0, self::W, self::H, imagesx($canvas), imagesy($canvas));
-            imagedestroy($canvas);
-            $canvas = $resized;
+        $targetW = $template->canvasW();
+        $targetH = $template->canvasH();
+
+        // If stored dimensions already match, use as-is.
+        if (imagesx($src) === $targetW && imagesy($src) === $targetH) {
+            return $src;
         }
+
+        // Otherwise scale to the stored canvas size (in case the file was re-uploaded at different dims).
+        $canvas = imagecreatetruecolor($targetW, $targetH);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        imagecopyresampled($canvas, $src, 0, 0, 0, 0, $targetW, $targetH, imagesx($src), imagesy($src));
+        imagedestroy($src);
 
         return $canvas;
     }
