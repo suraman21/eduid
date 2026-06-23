@@ -79,7 +79,7 @@
         </div>
         <p class="text-xs text-gray-400">Attendance Sessions Today</p>
     </div>
-    <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+    <a href="{{ route('school.card-orders.index') }}" class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm hover:border-orange-200 hover:shadow-md transition block">
         <div class="flex items-center gap-3 mb-1">
             <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
                 <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1"/></svg>
@@ -87,7 +87,7 @@
             <p class="text-xl font-bold text-gray-900">{{ $stats['pending_orders'] }}</p>
         </div>
         <p class="text-xs text-gray-400">Pending Card Orders</p>
-    </div>
+    </a>
 </div>
 
 {{-- Recent Students --}}
@@ -111,7 +111,10 @@
                         <p class="text-xs text-gray-400">{{ $student->student_id ?? 'No ID' }}</p>
                     </div>
                 </div>
-                <span class="text-xs text-gray-400">{{ $student->created_at->diffForHumans() }}</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-400">{{ $student->created_at->diffForHumans() }}</span>
+                    <a href="{{ route('school.students.id-card', $student) }}" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">ID Card</a>
+                </div>
             </div>
         @empty
             <div class="px-5 py-8 text-center text-sm text-gray-400">No students registered yet</div>
