@@ -25,7 +25,7 @@
     <div class="flex items-center gap-3">
         <label class="text-xs text-slate-400 uppercase tracking-wide">Front Image</label>
         <input type="file" id="uploadFront" accept=".png,.jpg,.jpeg" class="hidden">
-        <button onclick="document.getElementById('uploadFront').click()"
+        <button type="button" id="btnUploadFront"
                 class="border border-slate-600 hover:border-primary-500 text-slate-300 text-sm px-3 py-1.5 rounded-lg transition">
             Upload Front PNG/JPG
         </button>
@@ -34,7 +34,7 @@
     <div class="flex items-center gap-3">
         <label class="text-xs text-slate-400 uppercase tracking-wide">Back Image</label>
         <input type="file" id="uploadBack" accept=".png,.jpg,.jpeg" class="hidden">
-        <button onclick="document.getElementById('uploadBack').click()"
+        <button type="button" id="btnUploadBack"
                 class="border border-slate-600 hover:border-primary-500 text-slate-300 text-sm px-3 py-1.5 rounded-lg transition">
             Upload Back PNG/JPG
         </button>
@@ -78,7 +78,7 @@
                         <option value="{{ $key }}">{{ $label }}</option>
                     @endforeach
                 </select>
-                <button onclick="addField()"
+                <button type="button" id="btnAddField"
                         class="bg-primary-600 hover:bg-primary-700 text-white text-sm px-4 py-2 rounded-lg whitespace-nowrap transition">
                     + Add
                 </button>
@@ -96,7 +96,7 @@
                 <input type="text" name="name" placeholder="Template name (optional)"
                        value="{{ $template?->name }}"
                        class="flex-1 bg-dark-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary-500">
-                <button type="submit" onclick="collectFields()"
+                <button type="submit" id="btnSave"
                         class="bg-green-600 hover:bg-green-700 text-white text-sm px-5 py-2 rounded-lg font-medium transition">
                     Save
                 </button>
@@ -139,56 +139,83 @@ function addFieldObject(f) {
     renderOverlay(f);
 }
 
-// ── Render one field config card ──────────────────────────────────────────
+// ── Render one field config card (no inline handlers — CSP blocks them) ───
+function mk(tag, cls, attrs = {}) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    Object.entries(attrs).forEach(([k, v]) => { el[k] = v; });
+    return el;
+}
+function mkLabel(text) {
+    const l = mk('label', 'text-slate-500'); l.textContent = text; return l;
+}
+function mkInput(type, value, cls) {
+    const i = mk('input', cls ?? 'w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500');
+    i.type = type; i.value = value; return i;
+}
+function mkSelect(options, selected, cls) {
+    const s = mk('select', cls ?? 'w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500');
+    options.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; if (o === selected) opt.selected = true; s.appendChild(opt); });
+    return s;
+}
+function mkWrap(children) {
+    const d = mk('div', null); children.forEach(c => d.appendChild(c)); return d;
+}
+
 function renderFieldCard(f) {
     const list = document.getElementById('fieldList');
-    const el = document.createElement('div');
+    const el   = mk('div', 'bg-dark-900 border border-slate-700/60 rounded-lg p-3');
     el.id = 'fc-' + f.id;
-    el.className = 'bg-dark-900 border border-slate-700/60 rounded-lg p-3';
-    const isText = f.field_key !== 'photo' && f.field_key !== 'qr_code';
-    el.innerHTML = `
-<div class="flex items-center justify-between mb-2">
-    <span class="text-xs font-semibold text-slate-200">${FIELD_LABELS[f.field_key] ?? f.field_key}</span>
-    <button class="text-xs text-red-400 hover:text-red-300" onclick="removeField(${f.id})">Remove</button>
-</div>
-<div class="grid grid-cols-4 gap-1.5 text-xs mb-1.5">
-    <div><label class="text-slate-500">X px</label><input type="number" value="${f.x}" oninput="updateField(${f.id},'x',+this.value)"
-        class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500"></div>
-    <div><label class="text-slate-500">Y px</label><input type="number" value="${f.y}" oninput="updateField(${f.id},'y',+this.value)"
-        class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500"></div>
-    <div><label class="text-slate-500">W px</label><input type="number" value="${f.w}" oninput="updateField(${f.id},'w',+this.value)"
-        class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500"></div>
-    <div><label class="text-slate-500">H px</label><input type="number" value="${f.h}" oninput="updateField(${f.id},'h',+this.value)"
-        class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500"></div>
-</div>
-${isText ? `
-<div class="grid grid-cols-2 gap-1.5 text-xs mb-1.5">
-    <div><label class="text-slate-500">Font</label>
-        <select oninput="updateField(${f.id},'font_family',this.value)"
-            class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500">
-            <option ${f.font_family==='Inter'?'selected':''}>Inter</option>
-            <option ${f.font_family==='NotoSansEthiopic'?'selected':''}>NotoSansEthiopic</option>
-            <option ${f.font_family==='Roboto'?'selected':''}>Roboto</option>
-        </select>
-    </div>
-    <div><label class="text-slate-500">Size</label><input type="number" value="${f.font_size}" oninput="updateField(${f.id},'font_size',+this.value)"
-        class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500"></div>
-    <div><label class="text-slate-500">Color</label><input type="color" value="${f.font_color}" oninput="updateField(${f.id},'font_color',this.value)"
-        class="w-full h-8 rounded cursor-pointer bg-dark-800 border border-slate-700"></div>
-    <div><label class="text-slate-500">Align</label>
-        <select oninput="updateField(${f.id},'text_align',this.value)"
-            class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500">
-            <option ${f.text_align==='left'?'selected':''}>left</option>
-            <option ${f.text_align==='center'?'selected':''}>center</option>
-            <option ${f.text_align==='right'?'selected':''}>right</option>
-        </select>
-    </div>
-</div>` : ''}
-${f.field_key.startsWith('custom_') ? `
-<div class="text-xs"><label class="text-slate-500">Custom text</label>
-<input type="text" value="${f.custom_value ?? ''}" oninput="updateField(${f.id},'custom_value',this.value)"
-    class="w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500 mt-0.5"></div>` : ''}
-`;
+    const isText   = f.field_key !== 'photo' && f.field_key !== 'qr_code';
+    const isCustom = f.field_key.startsWith('custom_');
+
+    // Header row
+    const header = mk('div', 'flex items-center justify-between mb-2');
+    const title  = mk('span', 'text-xs font-semibold text-slate-200'); title.textContent = FIELD_LABELS[f.field_key] ?? f.field_key;
+    const rmBtn  = mk('button', 'text-xs text-red-400 hover:text-red-300'); rmBtn.type = 'button'; rmBtn.textContent = 'Remove';
+    rmBtn.addEventListener('click', () => removeField(f.id));
+    header.appendChild(title); header.appendChild(rmBtn);
+    el.appendChild(header);
+
+    // X / Y / W / H row
+    const xywh = mk('div', 'grid grid-cols-4 gap-1.5 text-xs mb-1.5');
+    [['X px', 'x', f.x], ['Y px', 'y', f.y], ['W px', 'w', f.w], ['H px', 'h', f.h]].forEach(([lbl, key, val]) => {
+        const inp = mkInput('number', val);
+        inp.addEventListener('input', () => updateField(f.id, key, +inp.value));
+        el['_inp_' + key] = inp;
+        xywh.appendChild(mkWrap([mkLabel(lbl), inp]));
+    });
+    el.appendChild(xywh);
+
+    if (isText) {
+        const row2 = mk('div', 'grid grid-cols-2 gap-1.5 text-xs mb-1.5');
+
+        const fontSel = mkSelect(['Inter','NotoSansEthiopic','Roboto'], f.font_family);
+        fontSel.addEventListener('input', () => updateField(f.id, 'font_family', fontSel.value));
+        row2.appendChild(mkWrap([mkLabel('Font'), fontSel]));
+
+        const sizeInp = mkInput('number', f.font_size);
+        sizeInp.addEventListener('input', () => updateField(f.id, 'font_size', +sizeInp.value));
+        row2.appendChild(mkWrap([mkLabel('Size'), sizeInp]));
+
+        const colorInp = mkInput('color', f.font_color, 'w-full h-8 rounded cursor-pointer bg-dark-800 border border-slate-700');
+        colorInp.addEventListener('input', () => updateField(f.id, 'font_color', colorInp.value));
+        row2.appendChild(mkWrap([mkLabel('Color'), colorInp]));
+
+        const alignSel = mkSelect(['left','center','right'], f.text_align);
+        alignSel.addEventListener('input', () => updateField(f.id, 'text_align', alignSel.value));
+        row2.appendChild(mkWrap([mkLabel('Align'), alignSel]));
+
+        el.appendChild(row2);
+    }
+
+    if (isCustom) {
+        const customInp = mkInput('text', f.custom_value ?? '', 'w-full bg-dark-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary-500 mt-0.5');
+        customInp.addEventListener('input', () => updateField(f.id, 'custom_value', customInp.value));
+        const wrap = mk('div', 'text-xs'); wrap.appendChild(mkLabel('Custom text')); wrap.appendChild(customInp);
+        el.appendChild(wrap);
+    }
+
     list.appendChild(el);
 }
 
@@ -302,11 +329,12 @@ function uploadImage(side, file) {
         .catch(() => { status.textContent = 'Upload failed'; });
 }
 
-document.getElementById('uploadFront').addEventListener('change', e => {
-    if (e.target.files[0]) uploadImage('front', e.target.files[0]);
-});
-document.getElementById('uploadBack').addEventListener('change', e => {
-    if (e.target.files[0]) uploadImage('back', e.target.files[0]);
-});
+// ── Wire up all button listeners ──────────────────────────────────────────
+document.getElementById('btnUploadFront').addEventListener('click', () => document.getElementById('uploadFront').click());
+document.getElementById('btnUploadBack').addEventListener('click',  () => document.getElementById('uploadBack').click());
+document.getElementById('uploadFront').addEventListener('change', e => { if (e.target.files[0]) uploadImage('front', e.target.files[0]); });
+document.getElementById('uploadBack').addEventListener('change',  e => { if (e.target.files[0]) uploadImage('back',  e.target.files[0]); });
+document.getElementById('btnAddField').addEventListener('click', () => addField());
+document.getElementById('btnSave').addEventListener('click', () => collectFields());
 </script>
 @endsection
