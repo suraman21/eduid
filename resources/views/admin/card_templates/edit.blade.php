@@ -57,11 +57,20 @@
     <div class="flex-[3] min-w-0">
         <div class="bg-dark-800 border border-slate-700/50 rounded-xl p-4">
             <div class="flex items-center justify-between mb-3">
-                <p class="text-xs text-slate-500 uppercase tracking-wide">Live Preview — Front</p>
+                <div class="flex items-center gap-1">
+                    <button type="button" id="tabFront"
+                            class="text-xs px-3 py-1 rounded-md font-medium transition bg-primary-600 text-white">
+                        Front
+                    </button>
+                    <button type="button" id="tabBack"
+                            class="text-xs px-3 py-1 rounded-md font-medium transition text-slate-400 hover:text-slate-200">
+                        Back
+                    </button>
+                </div>
                 <span id="canvasDims" class="text-xs text-slate-600">{{ $canvasW }}&times;{{ $canvasH }} px</span>
             </div>
 
-            {{-- Outer scaler — width fixed at 500px; height adjusts to canvas aspect ratio --}}
+            {{-- FRONT — outer scaler; width fixed at 500px; height adjusts to canvas aspect ratio --}}
             <div id="preview-wrapper" class="overflow-hidden rounded-lg bg-slate-950 relative"
                  style="width:500px;height:{{ round(500 / $canvasW * $canvasH) }}px;">
                 <div id="card-preview" style="position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;
@@ -69,12 +78,34 @@
                     <img id="previewBg" alt=""
                          src="{{ $template && Storage::disk('local')->exists("cards/{$school->id}/front.png") ? route('admin.card-template.image', [$school, 'front']) . '?v=' . time() : '' }}"
                          style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;{{ ($template && Storage::disk('local')->exists('cards/' . $school->id . '/front.png')) ? '' : 'display:none;' }}">
-                    {{-- Placeholder when no image --}}
                     <div id="previewPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2);font-size:14px;
                          {{ ($template && Storage::disk('local')->exists('cards/' . $school->id . '/front.png')) ? 'display:none;' : '' }}">
                         Upload a front image to begin
                     </div>
-                    {{-- Field overlays injected by JS --}}
+                </div>
+            </div>
+
+            {{-- BACK — static scaled preview (no field overlays; back is image-only) --}}
+            <div id="back-wrapper" class="overflow-hidden rounded-lg bg-slate-950 relative hidden"
+                 style="width:500px;">
+                @php
+                    $backExists  = $template && Storage::disk('local')->exists("cards/{$school->id}/back.png");
+                    $backImgPath = $backExists ? "cards/{$school->id}/back.png" : null;
+                    $backInfo    = $backImgPath ? @getimagesize(Storage::disk('local')->path($backImgPath)) : null;
+                    $backW       = $backInfo ? $backInfo[0] : $canvasW;
+                    $backH       = $backInfo ? $backInfo[1] : $canvasH;
+                    $backScale   = round(500 / $backW, 4);
+                    $backDispH   = round($backH * $backScale);
+                @endphp
+                <div id="back-canvas" style="position:relative;transform-origin:top left;overflow:hidden;
+                     width:{{ $backW }}px;height:{{ $backH }}px;transform:scale({{ $backScale }});">
+                    <img id="previewBackBg" alt=""
+                         src="{{ $backExists ? route('admin.card-template.image', [$school, 'back']) . '?v=' . time() : '' }}"
+                         style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;{{ $backExists ? '' : 'display:none;' }}">
+                    <div id="backPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2);font-size:14px;
+                         {{ $backExists ? 'display:none;' : '' }}">
+                        Upload a back image to preview
+                    </div>
                 </div>
             </div>
         </div>
@@ -352,7 +383,7 @@ function collectFields() {
     );
 }
 
-// ── Image upload ───────────────────────────────────────────────────────────
+// ── Message bar ───────────────────────────────────────────────────────────
 function showMsg(text, type) {
     const el = document.getElementById('uploadMsg');
     el.className = 'mt-3 px-3 py-2 rounded-lg text-sm ' +
@@ -363,6 +394,28 @@ function showMsg(text, type) {
     el.classList.remove('hidden');
 }
 
+// ── Front/Back tab toggle ──────────────────────────────────────────────────
+let activeTab = 'front';
+function switchTab(tab) {
+    activeTab = tab;
+    const frontWrapper = document.getElementById('preview-wrapper');
+    const backWrapper  = document.getElementById('back-wrapper');
+    const tabFront     = document.getElementById('tabFront');
+    const tabBack      = document.getElementById('tabBack');
+    if (tab === 'front') {
+        frontWrapper.classList.remove('hidden');
+        backWrapper.classList.add('hidden');
+        tabFront.className = 'text-xs px-3 py-1 rounded-md font-medium transition bg-primary-600 text-white';
+        tabBack.className  = 'text-xs px-3 py-1 rounded-md font-medium transition text-slate-400 hover:text-slate-200';
+    } else {
+        frontWrapper.classList.add('hidden');
+        backWrapper.classList.remove('hidden');
+        tabBack.className  = 'text-xs px-3 py-1 rounded-md font-medium transition bg-primary-600 text-white';
+        tabFront.className = 'text-xs px-3 py-1 rounded-md font-medium transition text-slate-400 hover:text-slate-200';
+    }
+}
+
+// ── Image upload ───────────────────────────────────────────────────────────
 function uploadImage(side, file) {
     const statusId = side === 'front' ? 'frontStatus' : 'backStatus';
     const status   = document.getElementById(statusId);
@@ -390,18 +443,36 @@ function uploadImage(side, file) {
             status.textContent = data.width + '×' + data.height + ' px';
 
             if (side === 'front') {
-                // Update preview background
                 const img  = document.getElementById('previewBg');
                 const ph   = document.getElementById('previewPlaceholder');
                 img.style.display = '';
                 if (ph) ph.style.display = 'none';
-                // Resize canvas to match new image dims
                 updatePreviewSize(data.width, data.height);
-                // Force-reload the image (cache-bust)
                 img.src = data.url + '?t=' + Date.now();
                 showMsg('Front image uploaded (' + data.width + '×' + data.height + ' px). Canvas updated.', 'success');
             } else {
+                // Update back preview dimensions and image
+                const backW   = data.width;
+                const backH   = data.height;
+                const backScl = 500 / backW;
+                const backDispH = Math.round(backH * backScl);
+
+                const wrapper = document.getElementById('back-wrapper');
+                const canvas  = document.getElementById('back-canvas');
+                wrapper.style.height  = backDispH + 'px';
+                canvas.style.width    = backW + 'px';
+                canvas.style.height   = backH + 'px';
+                canvas.style.transform = 'scale(' + backScl.toFixed(4) + ')';
+
+                const img = document.getElementById('previewBackBg');
+                const ph  = document.getElementById('backPlaceholder');
+                img.src = data.url + '?t=' + Date.now();
+                img.style.display = '';
+                if (ph) ph.style.display = 'none';
+
                 showMsg('Back image uploaded (' + data.width + '×' + data.height + ' px).', 'success');
+                // Switch to back tab so the user immediately sees the result
+                switchTab('back');
             }
         })
         .catch(err => {
@@ -417,5 +488,15 @@ document.getElementById('uploadFront').addEventListener('change', e => { if (e.t
 document.getElementById('uploadBack').addEventListener('change',  e => { if (e.target.files[0]) uploadImage('back',  e.target.files[0]); e.target.value = ''; });
 document.getElementById('btnAddField').addEventListener('click', () => addField());
 document.getElementById('saveForm').addEventListener('submit', () => collectFields());
+document.getElementById('tabFront').addEventListener('click', () => switchTab('front'));
+document.getElementById('tabBack').addEventListener('click',  () => switchTab('back'));
+
+// Init back wrapper height if back image already stored
+@if($backExists ?? false)
+(function() {
+    const wrapper = document.getElementById('back-wrapper');
+    wrapper.style.height = '{{ $backDispH ?? round(500 / $canvasW * $canvasH) }}px';
+})();
+@endif
 </script>
 @endsection

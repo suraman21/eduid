@@ -128,10 +128,16 @@ class CardTemplateController extends Controller
         }
 
         // Persist canvas dimensions so CardImageService and CardPrintService can use them.
+        // Wrapped in try/catch: if migration hasn't run on this environment the upload
+        // still succeeds — canvas dims will be committed when the template is saved.
         if ($side === 'front') {
-            CardTemplate::where('school_id', $school->id)
-                ->where('template_type', 'student')
-                ->update(['canvas_w' => $origW, 'canvas_h' => $origH]);
+            try {
+                CardTemplate::where('school_id', $school->id)
+                    ->where('template_type', 'student')
+                    ->update(['canvas_w' => $origW, 'canvas_h' => $origH]);
+            } catch (\Throwable $e) {
+                // Non-fatal — canvas_w/h columns may be pending migration.
+            }
         }
 
         AuditLog::createRecord(
