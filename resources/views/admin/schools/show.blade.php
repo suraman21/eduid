@@ -124,7 +124,11 @@
     </div>
 </div>
 
-<div class="mt-6">
+<div class="mt-6 flex items-center gap-4">
     <a href="{{ route('admin.schools.index') }}" class="text-sm text-slate-400 hover:text-white transition">&larr; Back to Schools</a>
+    <a href="{{ route('admin.card-template.edit', $school) }}"
+       class="text-sm bg-dark-800 border border-slate-700 hover:border-primary-500 text-slate-300 px-4 py-2 rounded-lg transition">
+        ID Card Template
+    </a>
 </div>
 @endsection

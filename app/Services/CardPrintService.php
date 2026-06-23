@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\CardOrder;
+use App\Models\CardTemplate;
+use App\Models\CardTemplateField;
 use App\Models\School;
 use App\Models\Student;
 use Illuminate\Support\Facades\Storage;
@@ -31,10 +33,19 @@ class CardPrintService
      * Build the print-ready PDF for an order and return its storage-relative
      * path (under the 'local' private disk). Each card is one page sized to the
      * exact card so the printer drops them straight onto blank PVC stock.
+     *
+     * If the school has a CardTemplate, its background image + field layout are
+     * used. Otherwise the built-in branded layout is rendered as a fallback.
      */
     public function generate(CardOrder $order): string
     {
         $school   = $order->school;
+        $template = CardTemplate::where('school_id', $school->id)
+            ->where('template_type', 'student')
+            ->where('is_active', true)
+            ->with('fields')
+            ->first();
+
         $students = Student::whereIn('id', $order->student_ids ?? [])
             ->with('schoolClass')
             ->orderBy('first_name')
@@ -51,7 +62,11 @@ class CardPrintService
         foreach ($students as $student) {
             $this->ensureToken($student, $school);
             $pdf->AddPage();
-            $this->drawCard($pdf, $student, $school);
+            if ($template) {
+                $this->drawCardFromTemplate($pdf, $student, $school, $template);
+            } else {
+                $this->drawCard($pdf, $student, $school);
+            }
         }
 
         // Private, non-web path. Old files for this order are replaced.
@@ -230,5 +245,89 @@ class CardPrintService
     private function clip(string $value, int $max): string
     {
         return mb_strlen($value) > $max ? mb_substr($value, 0, $max - 1) . '…' : $value;
+    }
+
+    /**
+     * Template-based card rendering: draw the designer's background image then
+     * overlay each configured field at its mm coordinates.
+     */
+    private function drawCardFromTemplate(TCPDF $pdf, Student $student, School $school, CardTemplate $template): void
+    {
+        // Background image (full page bleed).
+        $bgPath = $this->diskPathFor($template->front_image_path);
+        if ($bgPath) {
+            $pdf->Image($bgPath, 0, 0, self::CARD_W, self::CARD_H, '', '', '', true, 300, '', false, false, 0);
+        }
+
+        foreach ($template->fields as $field) {
+            match ($field->field_type) {
+                'text'  => $this->drawTemplateText($pdf, $field, $student, $school),
+                'image' => $this->drawTemplatePhoto($pdf, $field, $student),
+                'qr'    => $this->drawTemplateQr($pdf, $field, $student),
+                default => null,
+            };
+        }
+
+        // Back image (second page) — if configured.
+        $backPath = $template->back_image_path ? $this->diskPathFor($template->back_image_path) : null;
+        if ($backPath) {
+            $pdf->AddPage();
+            $pdf->Image($backPath, 0, 0, self::CARD_W, self::CARD_H, '', '', '', true, 300, '', false, false, 0);
+        }
+    }
+
+    private function drawTemplateText(TCPDF $pdf, CardTemplateField $field, Student $student, School $school): void
+    {
+        $text = match ($field->field_key) {
+            'full_name'     => $student->full_name,
+            'full_name_am'  => $student->full_name_am ?? '',
+            'uid'           => $student->uid,
+            'grade_class'   => $student->schoolClass?->display_name ?? '',
+            'section'       => $student->schoolClass?->section ?? '',
+            'academic_year' => $school->academic_year,
+            'school_name'   => $school->name,
+            'custom_1', 'custom_2', 'custom_3' => (string) ($field->custom_value ?? ''),
+            default         => '',
+        };
+        if ($text === '') {
+            return;
+        }
+
+        $rgb = $this->rgb($field->font_color ?? '#000000');
+        $pdf->SetTextColor(...$rgb);
+        $pdf->SetFont('helvetica', $field->font_weight === 'bold' ? 'B' : '', (int) ($field->font_size ?? 10));
+        $pdf->SetXY($field->x_mm, $field->y_mm);
+        $w = $field->width_mm ?? 0;
+        $h = $field->height_mm ?? 0;
+        $pdf->Cell($w, $h, $text, 0, 0, strtoupper(substr($field->text_align ?? 'L', 0, 1)));
+    }
+
+    private function drawTemplatePhoto(TCPDF $pdf, CardTemplateField $field, Student $student): void
+    {
+        $path = $this->photoPath($student);
+        if (! $path) {
+            return;
+        }
+        $pdf->Image($path, $field->x_mm, $field->y_mm, $field->width_mm, $field->height_mm, '', '', '', true, 300, '', false, false, 1, 'CM');
+    }
+
+    private function drawTemplateQr(TCPDF $pdf, CardTemplateField $field, Student $student): void
+    {
+        $token = $student->qr_token ?? '';
+        if ($token === '') {
+            return;
+        }
+        $style = ['border' => false, 'vpadding' => 0, 'hpadding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => [255, 255, 255]];
+        $pdf->write2DBarcode($token, 'QRCODE,M', $field->x_mm, $field->y_mm, $field->width_mm, $field->height_mm, $style, 'N');
+    }
+
+    private function diskPathFor(string $path): ?string
+    {
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->path($path);
+            }
+        }
+        return null;
     }
 }
