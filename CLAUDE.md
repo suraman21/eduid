@@ -8,18 +8,19 @@ from git).
 
 Server: `/home/arkeonet/arkeoid.arkeonethiopia.com`
 PHP binary: `/opt/cpanel/ea-php84/root/usr/bin/php`
+Composer: `/usr/local/bin/composer` (fallback: `~/composer.phar`)
 
 **STANDING INSTRUCTION:** After every push to GitHub, restate the deploy command
 to the user.
 
 ### Quick deploy (no new migrations — most common)
 ```bash
-{ cd /home/arkeonet/arkeoid.arkeonethiopia.com && git fetch origin && git reset --hard origin/main && /opt/cpanel/ea-php84/root/usr/bin/php artisan config:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan route:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan view:clear; } > /home/arkeonet/deploy_log.txt 2>&1
+{ cd /home/arkeonet/arkeoid.arkeonethiopia.com && git fetch origin && git reset --hard origin/main && /opt/cpanel/ea-php84/root/usr/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader && /opt/cpanel/ea-php84/root/usr/bin/php artisan config:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan route:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan view:clear; } > /home/arkeonet/deploy_log.txt 2>&1
 ```
 
 ### Full deploy (when new migrations are included)
 ```bash
-{ cd /home/arkeonet/arkeoid.arkeonethiopia.com && git fetch origin && git reset --hard origin/main && /opt/cpanel/ea-php84/root/usr/bin/php artisan migrate --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan db:seed --class=FeatureSeeder --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan config:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan cache:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan view:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan route:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan storage:link; } > /home/arkeonet/deploy_log.txt 2>&1
+{ cd /home/arkeonet/arkeoid.arkeonethiopia.com && git fetch origin && git reset --hard origin/main && /opt/cpanel/ea-php84/root/usr/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader && /opt/cpanel/ea-php84/root/usr/bin/php artisan migrate --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan db:seed --class=FeatureSeeder --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan config:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan cache:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan view:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan route:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan storage:link; } > /home/arkeonet/deploy_log.txt 2>&1
 ```
 
 ## Git workflow
