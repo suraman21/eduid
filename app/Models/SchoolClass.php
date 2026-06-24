@@ -63,6 +63,6 @@ class SchoolClass extends Model
      */
     public function activeStudentCount(): int
     {
-        return $this->students()->where('is_active', true)->count();
+        return $this->students()->where('status', 'active')->count();
     }
 }

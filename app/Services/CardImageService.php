@@ -46,27 +46,35 @@ class CardImageService
         mkdir($tmpDir, 0755, true);
 
         $zipPath = "{$tmpDir}/cards.zip";
-        $zip     = new ZipArchive();
-        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
-        foreach ($students as $student) {
-            $this->ensureToken($student, $school);
-            $pngPath = $this->renderPng($student, $school, $template, $tmpDir);
-            if ($pngPath) {
-                $zip->addFile($pngPath, basename($pngPath));
+        try {
+            $zip = new ZipArchive();
+            $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+            foreach ($students as $student) {
+                $this->ensureToken($student, $school);
+                $pngPath = $this->renderPng($student, $school, $template, $tmpDir);
+                if ($pngPath) {
+                    $zip->addFile($pngPath, basename($pngPath));
+                    $backPath = str_replace('.png', '-back.png', $pngPath);
+                    if (file_exists($backPath)) {
+                        $zip->addFile($backPath, basename($backPath));
+                    }
+                }
+            }
+
+            $zip->close();
+
+            // Move to private storage (overwrite any previous run for this order).
+            $storageDir  = "print_jobs/{$order->order_code}";
+            $storagePath = "{$storageDir}/cards-png-" . now()->format('Ymd-His') . '.zip';
+            Storage::disk('local')->put($storagePath, file_get_contents($zipPath));
+        } finally {
+            if (is_dir($tmpDir)) {
+                array_map('unlink', glob("{$tmpDir}/*") ?: []);
+                @rmdir($tmpDir);
             }
         }
-
-        $zip->close();
-
-        // Move to private storage (overwrite any previous run for this order).
-        $storageDir  = "print_jobs/{$order->order_code}";
-        $storagePath = "{$storageDir}/cards-png-" . now()->format('Ymd-His') . '.zip';
-        Storage::disk('local')->put($storagePath, file_get_contents($zipPath));
-
-        // Clean up temp directory.
-        array_map('unlink', glob("{$tmpDir}/*"));
-        rmdir($tmpDir);
 
         return $storagePath;
     }

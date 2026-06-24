@@ -121,6 +121,7 @@ class StudentImportController extends BaseSchoolController
     {
         $this->requireAdmin();
         $this->requireFeature();
+        $this->requireWritableSubscription();
 
         $request->validate(['tmp_key' => 'required|string|size:40']);
 

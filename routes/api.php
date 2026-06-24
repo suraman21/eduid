@@ -40,7 +40,7 @@ Route::prefix('v1')->group(function () {
     })->name('api.health');
 
     // Authentication Login
-    Route::post('/auth/login', [AuthController::class, 'login'])->name('api.login');
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.login');
 
 });
 
