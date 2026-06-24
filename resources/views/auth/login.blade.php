@@ -18,6 +18,13 @@
         <p class="text-slate-400 text-sm mt-1.5 font-light">Access your smart school identity system</p>
     </div>
 
+    <!-- Success banner (e.g. after a password reset) -->
+    @if (session('reset_status'))
+        <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
+            {{ session('reset_status') }}
+        </div>
+    @endif
+
     <!-- Error Alerts -->
     @if ($errors->any())
         <div class="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-start gap-3">
@@ -89,7 +96,7 @@
                 <input type="checkbox" name="remember" class="w-4 h-4 rounded border-slate-700 bg-slate-800/50 text-purple-600 focus:ring-purple-500 focus:ring-offset-slate-900">
                 <span>Remember me</span>
             </label>
-            <a href="#" class="hover:text-purple-400 transition">Forgot password?</a>
+            <a href="{{ route('password.request') }}" class="hover:text-purple-400 transition">Forgot password?</a>
         </div>
 
         <!-- Submit Button -->
