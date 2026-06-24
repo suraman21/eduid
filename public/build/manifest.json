@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-CpMwYgAT.css",
+    "file": "assets/app-B6A1mtoK.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -12,10 +12,17 @@
     "file": "assets/outfit-latin-Bc-8i84L.woff2",
     "src": "resources/fonts/outfit-latin.woff2"
   },
-  "resources/js/app.js": {
-    "file": "assets/app--qyMa_Nr.js",
+  "resources/js/app.tsx": {
+    "file": "assets/app-C8ikv5n3.js",
     "name": "app",
-    "src": "resources/js/app.js",
-    "isEntry": true
+    "src": "resources/js/app.tsx",
+    "isEntry": true,
+    "css": [
+      "assets/app-B6A1mtoK.css"
+    ],
+    "assets": [
+      "assets/outfit-latin-Bc-8i84L.woff2",
+      "assets/outfit-latin-ext-DdQaqQDo.woff2"
+    ]
   }
 }

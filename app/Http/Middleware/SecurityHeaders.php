@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,6 +25,7 @@ class SecurityHeaders
         // so legitimate inline <script> blocks can opt in via nonce="{{ $cspNonce }}".
         $nonce = Str::random(24);
         View::share('cspNonce', $nonce);
+        Vite::useCspNonce($nonce);
 
         /** @var Response $response */
         $response = $next($request);

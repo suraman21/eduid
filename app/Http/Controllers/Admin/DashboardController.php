@@ -10,6 +10,7 @@ use App\Models\Lead;
 use App\Models\Payment;
 use App\Models\CardOrder;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -34,6 +35,11 @@ class DashboardController extends Controller
             ->pluck('count', 'plan_tier')
             ->toArray();
 
-        return view('admin.dashboard', compact('stats', 'recentSchools', 'recentLeads', 'schoolsByPlan'));
+        return Inertia::render('Admin/Dashboard', [
+            'stats'        => $stats,
+            'recentSchools' => $recentSchools,
+            'recentLeads'  => $recentLeads,
+            'schoolsByPlan' => $schoolsByPlan,
+        ]);
     }
 }
