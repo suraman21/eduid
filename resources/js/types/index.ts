@@ -23,4 +23,5 @@ export interface PageProps {
         error: string | null;
     };
     errors: Record<string, string>;
+    [key: string]: unknown;
 }

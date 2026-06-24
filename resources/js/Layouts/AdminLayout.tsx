@@ -6,7 +6,7 @@ import {
     Mail, DollarSign, Layers, FileText, Menu, X, LogOut,
     ChevronRight, ShieldCheck,
 } from 'lucide-react';
-import type { PageProps } from '@/types';
+import Toast from '@/Components/Toast';
 
 interface NavItem {
     label: string;
@@ -84,6 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="min-h-screen bg-[#060a14] text-slate-200 flex">
+            <Toast />
             {/* Desktop sidebar */}
             <aside className="hidden lg:flex flex-col w-56 bg-[#0d1221] border-r border-white/5 fixed inset-y-0 left-0 z-30">
                 <SidebarContent />
