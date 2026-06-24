@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // PRD §10: strict CSP + security headers on all web responses.
         $middleware->web(append: [
             \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
