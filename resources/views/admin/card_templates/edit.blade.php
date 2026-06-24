@@ -50,61 +50,70 @@
     <div id="uploadMsg" class="hidden mt-3 px-3 py-2 rounded-lg text-sm"></div>
 </div>
 
-{{-- Two-panel editor --}}
-<div class="flex gap-5">
+{{-- Three-panel editor: front preview | back preview | field config --}}
+<div class="flex gap-4 items-start">
 
-    {{-- Left: live preview --}}
-    <div class="flex-[3] min-w-0">
+    {{-- FRONT preview panel --}}
+    <div class="flex-1 min-w-0">
         <div class="bg-dark-800 border border-slate-700/50 rounded-xl p-4">
             <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-1">
-                    <button type="button" id="tabFront"
-                            class="text-xs px-3 py-1 rounded-md font-medium transition bg-primary-600 text-white">
-                        Front
-                    </button>
-                    <button type="button" id="tabBack"
-                            class="text-xs px-3 py-1 rounded-md font-medium transition text-slate-400 hover:text-slate-200">
-                        Back
-                    </button>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-primary-500 inline-block"></span>
+                    <p class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Front</p>
+                    <span class="text-xs text-slate-600">— drag fields to position</span>
                 </div>
-                <span id="canvasDims" class="text-xs text-slate-600">{{ $canvasW }}&times;{{ $canvasH }} px</span>
+                <span id="canvasDims" class="text-xs text-slate-500">{{ $canvasW }}&times;{{ $canvasH }} px</span>
             </div>
-
-            {{-- FRONT — outer scaler; width fixed at 500px; height adjusts to canvas aspect ratio --}}
-            <div id="preview-wrapper" class="overflow-hidden rounded-lg bg-slate-950 relative"
-                 style="width:500px;height:{{ round(500 / $canvasW * $canvasH) }}px;">
+            {{-- Outer scaler: fixed 400 px wide --}}
+            <div id="preview-wrapper" class="overflow-hidden rounded-lg bg-slate-950 relative mx-auto"
+                 style="width:400px;height:{{ round(400 / $canvasW * $canvasH) }}px;">
                 <div id="card-preview" style="position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;
-                     width:{{ $canvasW }}px;height:{{ $canvasH }}px;transform:scale({{ round(500/$canvasW, 4) }});">
+                     width:{{ $canvasW }}px;height:{{ $canvasH }}px;transform:scale({{ round(400/$canvasW, 4) }});">
                     <img id="previewBg" alt=""
                          src="{{ $template && Storage::disk('local')->exists("cards/{$school->id}/front.png") ? route('admin.card-template.image', [$school, 'front']) . '?v=' . time() : '' }}"
                          style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;{{ ($template && Storage::disk('local')->exists('cards/' . $school->id . '/front.png')) ? '' : 'display:none;' }}">
-                    <div id="previewPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2);font-size:14px;
+                    <div id="previewPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(255,255,255,.25);font-size:13px;
                          {{ ($template && Storage::disk('local')->exists('cards/' . $school->id . '/front.png')) ? 'display:none;' : '' }}">
+                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 20M6 8h.01M4 6h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
                         Upload a front image to begin
                     </div>
+                    {{-- Field overlays injected by JS --}}
                 </div>
             </div>
+        </div>
+    </div>
 
-            {{-- BACK — static scaled preview (no field overlays; back is image-only) --}}
-            <div id="back-wrapper" class="overflow-hidden rounded-lg bg-slate-950 relative hidden"
-                 style="width:500px;">
-                @php
-                    $backExists  = $template && Storage::disk('local')->exists("cards/{$school->id}/back.png");
-                    $backImgPath = $backExists ? "cards/{$school->id}/back.png" : null;
-                    $backInfo    = $backImgPath ? @getimagesize(Storage::disk('local')->path($backImgPath)) : null;
-                    $backW       = $backInfo ? $backInfo[0] : $canvasW;
-                    $backH       = $backInfo ? $backInfo[1] : $canvasH;
-                    $backScale   = round(500 / $backW, 4);
-                    $backDispH   = round($backH * $backScale);
-                @endphp
-                <div id="back-canvas" style="position:relative;transform-origin:top left;overflow:hidden;
+    {{-- BACK preview panel --}}
+    <div class="flex-1 min-w-0">
+        @php
+            $backExists  = $template && Storage::disk('local')->exists("cards/{$school->id}/back.png");
+            $backImgPath = $backExists ? "cards/{$school->id}/back.png" : null;
+            $backInfo    = $backImgPath ? @getimagesize(Storage::disk('local')->path($backImgPath)) : null;
+            $backW       = $backInfo ? $backInfo[0] : $canvasW;
+            $backH       = $backInfo ? $backInfo[1] : $canvasH;
+            $backScale   = round(400 / $backW, 4);
+            $backDispH   = round($backH * $backScale);
+        @endphp
+        <div class="bg-dark-800 border border-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>
+                    <p class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Back</p>
+                    <span class="text-xs text-slate-600">— background only</span>
+                </div>
+                <span id="backDims" class="text-xs text-slate-500">{{ $backExists ? $backW.'×'.$backH.' px' : '' }}</span>
+            </div>
+            <div id="back-wrapper" class="overflow-hidden rounded-lg bg-slate-950 relative mx-auto"
+                 style="width:400px;height:{{ $backDispH }}px;">
+                <div id="back-canvas" style="position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;
                      width:{{ $backW }}px;height:{{ $backH }}px;transform:scale({{ $backScale }});">
                     <img id="previewBackBg" alt=""
                          src="{{ $backExists ? route('admin.card-template.image', [$school, 'back']) . '?v=' . time() : '' }}"
                          style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;{{ $backExists ? '' : 'display:none;' }}">
-                    <div id="backPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2);font-size:14px;
+                    <div id="backPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(255,255,255,.25);font-size:13px;
                          {{ $backExists ? 'display:none;' : '' }}">
-                        Upload a back image to preview
+                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 20M6 8h.01M4 6h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
+                        Upload a back image
                     </div>
                 </div>
             </div>
@@ -112,7 +121,7 @@
     </div>
 
     {{-- Right: field config panel --}}
-    <div class="flex-[2] min-w-0">
+    <div style="width:280px;flex-shrink:0;">
         <div class="bg-dark-800 border border-slate-700/50 rounded-xl p-4 flex flex-col gap-4">
 
             <div class="flex items-center gap-2">
@@ -129,7 +138,7 @@
                 </button>
             </div>
 
-            <div id="fieldList" class="flex flex-col gap-3 max-h-[480px] overflow-y-auto pr-1"></div>
+            <div id="fieldList" class="flex flex-col gap-3 max-h-[520px] overflow-y-auto pr-1"></div>
 
             <form id="saveForm" method="POST" action="{{ route('admin.card-template.save', $school) }}"
                   class="mt-2 pt-3 border-t border-slate-700/50 flex items-center gap-3">
@@ -155,10 +164,24 @@
 const FIELD_LABELS = @json($fieldLabels);
 let canvasW = {{ $canvasW }};
 let canvasH = {{ $canvasH }};
-const PREVIEW_W = 500;  // outer wrapper fixed width in CSS pixels
+const PREVIEW_W = 400;  // outer wrapper fixed width in CSS pixels
 let currentScale = PREVIEW_W / canvasW;
 let fields = [];
 let nextId  = 0;
+
+// ── Sample placeholder data shown inside field overlays ────────────────────
+const SAMPLE_DATA = {
+    full_name:     'Kidus Bizuayehu',
+    full_name_am:  'ቅዱስ ብዙአየሁ',
+    uid:           'STU-2024-00123',
+    grade_class:   'Grade 10 — Natural',
+    section:       'Section A',
+    academic_year: '2024 / 2025',
+    school_name:   'Abyssinia Academy',
+    custom_1:      'Custom Text 1',
+    custom_2:      'Custom Text 2',
+    custom_3:      'Custom Text 3',
+};
 
 const savedFields = @json($savedFields ?? []);
 savedFields.forEach(f => addFieldObject({...f, id: nextId++}));
@@ -169,24 +192,40 @@ function updatePreviewSize(w, h) {
     currentScale = PREVIEW_W / canvasW;
     const scaledH = Math.round(canvasH * currentScale);
 
-    const wrapper  = document.getElementById('preview-wrapper');
-    const canvas   = document.getElementById('card-preview');
-    const bg       = document.getElementById('previewBg');
+    const wrapper = document.getElementById('preview-wrapper');
+    const canvas  = document.getElementById('card-preview');
 
-    wrapper.style.height  = scaledH + 'px';
-    canvas.style.width    = canvasW + 'px';
-    canvas.style.height   = canvasH + 'px';
+    wrapper.style.height   = scaledH + 'px';
+    canvas.style.width     = canvasW + 'px';
+    canvas.style.height    = canvasH + 'px';
     canvas.style.transform = 'scale(' + currentScale.toFixed(4) + ')';
 
-    bg.style.width  = '100%';
-    bg.style.height = '100%';
-
-    document.getElementById('canvasDims').textContent = canvasW + '×' + canvasH + ' px';
+    document.getElementById('canvasDims').textContent  = canvasW + '×' + canvasH + ' px';
     document.getElementById('canvasWInput').value = canvasW;
     document.getElementById('canvasHInput').value = canvasH;
 
-    // Re-render all overlays so they stay in the right place.
     fields.forEach(f => renderOverlay(f));
+}
+
+function updateBackPreview(w, h, url) {
+    const backScl  = PREVIEW_W / w;
+    const backDispH = Math.round(h * backScl);
+
+    const wrapper = document.getElementById('back-wrapper');
+    const canvas  = document.getElementById('back-canvas');
+    wrapper.style.height   = backDispH + 'px';
+    canvas.style.width     = w + 'px';
+    canvas.style.height    = h + 'px';
+    canvas.style.transform = 'scale(' + backScl.toFixed(4) + ')';
+
+    const img = document.getElementById('previewBackBg');
+    const ph  = document.getElementById('backPlaceholder');
+    img.src = url + '?t=' + Date.now();
+    img.style.display = '';
+    if (ph) ph.style.display = 'none';
+
+    const dimsEl = document.getElementById('backDims');
+    if (dimsEl) dimsEl.textContent = w + '×' + h + ' px';
 }
 
 // ── Add field ──────────────────────────────────────────────────────────────
@@ -299,33 +338,94 @@ function renderFieldCard(f) {
     list.appendChild(el);
 }
 
-// ── Overlay ────────────────────────────────────────────────────────────────
-function overlayColor(key) {
-    if (key === 'photo')   return 'rgba(59,130,246,0.35)';
-    if (key === 'qr_code') return 'rgba(139,92,246,0.35)';
-    return 'rgba(16,185,129,0.28)';
-}
-
+// ── Overlay (WYSIWYG sample rendering) ────────────────────────────────────
 function renderOverlay(f) {
     const preview = document.getElementById('card-preview');
     let el = document.getElementById('ov-' + f.id);
     if (!el) {
         el = document.createElement('div');
         el.id = 'ov-' + f.id;
-        el.style.cssText = 'position:absolute;border:2px dashed rgba(255,255,255,.65);cursor:move;user-select:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;';
+        el.style.cssText = 'position:absolute;box-sizing:border-box;cursor:move;user-select:none;overflow:hidden;';
         preview.appendChild(el);
         makeDraggable(el, f.id);
     }
-    el.style.left       = f.x + 'px';
-    el.style.top        = f.y + 'px';
-    el.style.width      = (f.w || 80) + 'px';
-    el.style.height     = (f.h || 30) + 'px';
-    el.style.background = overlayColor(f.field_key);
 
-    const lbl = el.querySelector('span') ?? document.createElement('span');
-    lbl.style.cssText = 'font-size:10px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;';
-    lbl.textContent = FIELD_LABELS[f.field_key] ?? f.field_key;
-    if (!el.contains(lbl)) el.appendChild(lbl);
+    const w = f.w || 80;
+    const h = f.h || 30;
+    el.style.left   = f.x + 'px';
+    el.style.top    = f.y + 'px';
+    el.style.width  = w + 'px';
+    el.style.height = h + 'px';
+
+    const isPhoto = f.field_key === 'photo';
+    const isQr    = f.field_key === 'qr_code';
+
+    // Clear & re-render interior
+    el.innerHTML = '';
+
+    if (isPhoto) {
+        // Photo placeholder: blued box with person silhouette
+        el.style.border     = '2px solid rgba(59,130,246,0.85)';
+        el.style.background = 'rgba(30,58,138,0.55)';
+        el.style.display    = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.flexDirection  = 'column';
+        el.style.gap = '4px';
+        const svg = document.createElement('div');
+        svg.innerHTML = '<svg width="'+ Math.round(w*.38) +'" height="'+ Math.round(h*.45) +'" viewBox="0 0 24 24" fill="rgba(147,197,253,0.9)" style="pointer-events:none"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+        el.appendChild(svg);
+        const t = document.createElement('span');
+        t.style.cssText = 'font-size:10px;color:rgba(147,197,253,0.9);pointer-events:none;';
+        t.textContent = 'Photo';
+        el.appendChild(t);
+
+    } else if (isQr) {
+        // QR placeholder: pixelated pattern
+        el.style.border     = '2px solid rgba(139,92,246,0.85)';
+        el.style.background = '#fff';
+        el.style.display    = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        const sz  = Math.min(w, h) - 8;
+        const div = document.createElement('div');
+        div.style.cssText = 'width:'+sz+'px;height:'+sz+'px;pointer-events:none;';
+        // Simple 7×7 fake QR grid using background-image pattern
+        div.style.backgroundImage = 'repeating-linear-gradient(0deg,#333 0,#333 1px,transparent 1px,transparent 4px),repeating-linear-gradient(90deg,#333 0,#333 1px,transparent 1px,transparent 4px)';
+        div.style.backgroundSize = '4px 4px';
+        el.appendChild(div);
+
+    } else {
+        // Text field: show actual sample text in configured style
+        const sample = f.custom_value && f.custom_value.trim()
+            ? f.custom_value
+            : (SAMPLE_DATA[f.field_key] ?? FIELD_LABELS[f.field_key] ?? f.field_key);
+
+        el.style.border     = '2px dashed rgba(16,185,129,0.75)';
+        el.style.background = 'rgba(6,78,59,0.25)';
+        el.style.display    = 'flex';
+        el.style.alignItems = 'flex-start';
+        el.style.justifyContent = f.text_align === 'center' ? 'center'
+                                : f.text_align === 'right'  ? 'flex-end'
+                                : 'flex-start';
+        el.style.padding = '2px 4px';
+
+        const txt = document.createElement('span');
+        txt.style.cssText = [
+            'pointer-events:none',
+            'white-space:nowrap',
+            'overflow:hidden',
+            'text-overflow:ellipsis',
+            'line-height:1.2',
+            'font-size:' + (f.font_size || 14) + 'px',
+            'color:' + (f.font_color || '#000000'),
+            'font-weight:' + (f.font_weight === 'bold' ? '700' : '400'),
+            'text-align:' + (f.text_align || 'left'),
+            'text-shadow:0 0 6px rgba(255,255,255,.6),0 1px 3px rgba(0,0,0,.7)',
+        ].join(';');
+        txt.textContent = sample;
+        el.appendChild(txt);
+    }
 }
 
 // ── Drag-to-position ───────────────────────────────────────────────────────
@@ -394,27 +494,6 @@ function showMsg(text, type) {
     el.classList.remove('hidden');
 }
 
-// ── Front/Back tab toggle ──────────────────────────────────────────────────
-let activeTab = 'front';
-function switchTab(tab) {
-    activeTab = tab;
-    const frontWrapper = document.getElementById('preview-wrapper');
-    const backWrapper  = document.getElementById('back-wrapper');
-    const tabFront     = document.getElementById('tabFront');
-    const tabBack      = document.getElementById('tabBack');
-    if (tab === 'front') {
-        frontWrapper.classList.remove('hidden');
-        backWrapper.classList.add('hidden');
-        tabFront.className = 'text-xs px-3 py-1 rounded-md font-medium transition bg-primary-600 text-white';
-        tabBack.className  = 'text-xs px-3 py-1 rounded-md font-medium transition text-slate-400 hover:text-slate-200';
-    } else {
-        frontWrapper.classList.add('hidden');
-        backWrapper.classList.remove('hidden');
-        tabBack.className  = 'text-xs px-3 py-1 rounded-md font-medium transition bg-primary-600 text-white';
-        tabFront.className = 'text-xs px-3 py-1 rounded-md font-medium transition text-slate-400 hover:text-slate-200';
-    }
-}
-
 // ── Image upload ───────────────────────────────────────────────────────────
 function uploadImage(side, file) {
     const statusId = side === 'front' ? 'frontStatus' : 'backStatus';
@@ -451,28 +530,8 @@ function uploadImage(side, file) {
                 img.src = data.url + '?t=' + Date.now();
                 showMsg('Front image uploaded (' + data.width + '×' + data.height + ' px). Canvas updated.', 'success');
             } else {
-                // Update back preview dimensions and image
-                const backW   = data.width;
-                const backH   = data.height;
-                const backScl = 500 / backW;
-                const backDispH = Math.round(backH * backScl);
-
-                const wrapper = document.getElementById('back-wrapper');
-                const canvas  = document.getElementById('back-canvas');
-                wrapper.style.height  = backDispH + 'px';
-                canvas.style.width    = backW + 'px';
-                canvas.style.height   = backH + 'px';
-                canvas.style.transform = 'scale(' + backScl.toFixed(4) + ')';
-
-                const img = document.getElementById('previewBackBg');
-                const ph  = document.getElementById('backPlaceholder');
-                img.src = data.url + '?t=' + Date.now();
-                img.style.display = '';
-                if (ph) ph.style.display = 'none';
-
+                updateBackPreview(data.width, data.height, data.url);
                 showMsg('Back image uploaded (' + data.width + '×' + data.height + ' px).', 'success');
-                // Switch to back tab so the user immediately sees the result
-                switchTab('back');
             }
         })
         .catch(err => {
@@ -488,15 +547,5 @@ document.getElementById('uploadFront').addEventListener('change', e => { if (e.t
 document.getElementById('uploadBack').addEventListener('change',  e => { if (e.target.files[0]) uploadImage('back',  e.target.files[0]); e.target.value = ''; });
 document.getElementById('btnAddField').addEventListener('click', () => addField());
 document.getElementById('saveForm').addEventListener('submit', () => collectFields());
-document.getElementById('tabFront').addEventListener('click', () => switchTab('front'));
-document.getElementById('tabBack').addEventListener('click',  () => switchTab('back'));
-
-// Init back wrapper height if back image already stored
-@if($backExists ?? false)
-(function() {
-    const wrapper = document.getElementById('back-wrapper');
-    wrapper.style.height = '{{ $backDispH ?? round(500 / $canvasW * $canvasH) }}px';
-})();
-@endif
 </script>
 @endsection
