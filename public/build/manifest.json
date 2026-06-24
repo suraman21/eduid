@@ -1,8 +1,16 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-B6A1mtoK.css",
+    "file": "assets/app-64JJtllF.css",
     "src": "resources/css/app.css",
     "isEntry": true
+  },
+  "resources/fonts/jetbrains-mono-latin-ext.woff2": {
+    "file": "assets/jetbrains-mono-latin-ext-Cut-4mMH.woff2",
+    "src": "resources/fonts/jetbrains-mono-latin-ext.woff2"
+  },
+  "resources/fonts/jetbrains-mono-latin.woff2": {
+    "file": "assets/jetbrains-mono-latin-BWZEU5yA.woff2",
+    "src": "resources/fonts/jetbrains-mono-latin.woff2"
   },
   "resources/fonts/outfit-latin-ext.woff2": {
     "file": "assets/outfit-latin-ext-DdQaqQDo.woff2",
@@ -12,17 +20,25 @@
     "file": "assets/outfit-latin-Bc-8i84L.woff2",
     "src": "resources/fonts/outfit-latin.woff2"
   },
+  "resources/js/app.js": {
+    "file": "assets/app--qyMa_Nr.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
   "resources/js/app.tsx": {
-    "file": "assets/app-C8ikv5n3.js",
+    "file": "assets/app-DfEZFbyu.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
     "css": [
-      "assets/app-B6A1mtoK.css"
+      "assets/app-64JJtllF.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",
-      "assets/outfit-latin-ext-DdQaqQDo.woff2"
+      "assets/outfit-latin-ext-DdQaqQDo.woff2",
+      "assets/jetbrains-mono-latin-BWZEU5yA.woff2",
+      "assets/jetbrains-mono-latin-ext-Cut-4mMH.woff2"
     ]
   }
 }

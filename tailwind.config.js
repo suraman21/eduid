@@ -8,6 +8,8 @@ export default {
         './storage/framework/views/*.php',
         './resources/**/*.blade.php',
         './resources/**/*.js',
+        './resources/**/*.ts',
+        './resources/**/*.tsx',
         './resources/**/*.vue',
     ],
     // Classes built by Blade string interpolation (e.g. peer-checked:bg-{$color}-50)
@@ -24,6 +26,7 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Outfit', ...defaultTheme.fontFamily.sans],
+                mono: ['JetBrains Mono', ...defaultTheme.fontFamily.mono],
             },
             // Fixed brand palette used by the admin console and marketing page.
             // (Per-school accent colours are applied via inline styles, not
