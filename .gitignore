@@ -2,6 +2,10 @@
 /node_modules
 /public/hot
 /public/storage
+# Built frontend assets are produced and committed by the GitHub Actions
+# "Build Assets" workflow (git add -f), so the working tree no longer tracks
+# them — this avoids merge conflicts on every push to main.
+/public/build
 /storage/*.key
 /storage/pail
 /vendor
