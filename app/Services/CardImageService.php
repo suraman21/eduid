@@ -82,21 +82,50 @@ class CardImageService
             return null;
         }
 
-        $template->fields->each(function (CardTemplateField $field) use ($canvas, $student, $school) {
+        // Render back-side fields onto back canvas (if back image exists).
+        $backCanvas = $this->loadBackBackground($template);
+
+        $template->fields->each(function (CardTemplateField $field) use ($canvas, $backCanvas, $student, $school) {
+            $target = ($field->side ?? 'front') === 'back' && $backCanvas ? $backCanvas : $canvas;
             match ($field->field_type) {
-                'text'  => $this->drawText($canvas, $field, $student, $school),
-                'image' => $this->drawPhoto($canvas, $field, $student),
-                'qr'    => $this->drawQr($canvas, $field, $student),
+                'text'  => $this->drawText($target, $field, $student, $school),
+                'image' => $this->drawPhoto($target, $field, $student),
+                'qr'    => $this->drawQr($target, $field, $student),
                 default => null,
             };
         });
 
         $filename = sanitize_filename($student->uid) . '.png';
         $outPath  = "{$tmpDir}/{$filename}";
-        imagepng($canvas, $outPath, 9); // max compression for smallest file
+        imagepng($canvas, $outPath, 9);
         imagedestroy($canvas);
 
+        // If a back canvas was rendered, save it as a separate file (uid-back.png).
+        if ($backCanvas) {
+            $backPath = "{$tmpDir}/" . sanitize_filename($student->uid) . '-back.png';
+            imagepng($backCanvas, $backPath, 9);
+            imagedestroy($backCanvas);
+        }
+
         return $outPath;
+    }
+
+    /** Load the back background image, or null if no back image is configured. */
+    private function loadBackBackground(CardTemplate $template): mixed
+    {
+        if (! $template->back_image_path) {
+            return null;
+        }
+        $path = $this->diskPath($template->back_image_path);
+        if (! $path) {
+            return null;
+        }
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $src = match ($ext) {
+            'jpg', 'jpeg' => @imagecreatefromjpeg($path),
+            default        => @imagecreatefrompng($path),
+        };
+        return $src ?: null;
     }
 
     /** Load the front background image as a GD resource at the template's canvas size. */
@@ -192,8 +221,38 @@ class CardImageService
 
         $pw = $field->px_w ?? 80;
         $ph = $field->px_h ?? 100;
-        imagecopyresampled($canvas, $photo, $field->px_x, $field->px_y, 0, 0, $pw, $ph, imagesx($photo), imagesy($photo));
+        $r  = (int) ($field->border_radius ?? 0);
+
+        // Scale photo to destination size on a temp canvas with alpha.
+        $tmp = imagecreatetruecolor($pw, $ph);
+        imagealphablending($tmp, false);
+        imagesavealpha($tmp, true);
+        $trans = imagecolorallocatealpha($tmp, 0, 0, 0, 127);
+        imagefill($tmp, 0, 0, $trans);
+        imagecopyresampled($tmp, $photo, 0, 0, 0, 0, $pw, $ph, imagesx($photo), imagesy($photo));
         imagedestroy($photo);
+
+        if ($r > 0) {
+            // Apply rounded-corner mask: walk the four corner quadrants and punch out
+            // pixels that fall outside the arc radius. O(r²) — fast for typical sizes.
+            $r = min($r, (int)($pw / 2), (int)($ph / 2));
+            for ($cy = 0; $cy < $r; $cy++) {
+                for ($cx = 0; $cx < $r; $cx++) {
+                    $dist = sqrt(($r - $cx) ** 2 + ($r - $cy) ** 2);
+                    if ($dist > $r) {
+                        $clear = imagecolorallocatealpha($tmp, 0, 0, 0, 127);
+                        imagesetpixel($tmp, $cx,          $cy,          $clear); // top-left
+                        imagesetpixel($tmp, $pw - 1 - $cx, $cy,          $clear); // top-right
+                        imagesetpixel($tmp, $cx,          $ph - 1 - $cy, $clear); // bottom-left
+                        imagesetpixel($tmp, $pw - 1 - $cx, $ph - 1 - $cy, $clear); // bottom-right
+                    }
+                }
+            }
+        }
+
+        imagealphablending($canvas, true);
+        imagecopy($canvas, $tmp, $field->px_x, $field->px_y, 0, 0, $pw, $ph);
+        imagedestroy($tmp);
     }
 
     /** Render the student's HMAC QR code directly into the GD canvas. */

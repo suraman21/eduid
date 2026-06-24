@@ -104,6 +104,7 @@ class CardTemplateController extends Controller
             default                                       => @imagecreatefrompng($file->getRealPath()),
         };
 
+        $pngData = null;
         if ($src) {
             // Re-encode as PNG at the original dimensions (EXIF-stripped, format-normalised).
             $canvas = imagecreatetruecolor($origW, $origH);
@@ -120,16 +121,19 @@ class CardTemplateController extends Controller
             $stored = Storage::disk('local')->put("cards/{$school->id}/{$side}.png", $pngData);
         } else {
             // GD failed (unusual format / non-RGB) — store the raw file as-is.
-            $stored = Storage::disk('local')->put("cards/{$school->id}/{$side}.png", file_get_contents($file->getRealPath()));
+            $pngData = file_get_contents($file->getRealPath());
+            $stored  = Storage::disk('local')->put("cards/{$school->id}/{$side}.png", $pngData);
         }
 
         if (! $stored) {
             return response()->json(['success' => false, 'error' => 'Storage write failed.'], 500);
         }
 
+        // Also write to public disk so the preview can be served as a direct static file
+        // (no PHP bootstrap overhead — ~20× faster than the auth-gated controller route).
+        Storage::disk('public')->put("card_previews/{$school->id}/{$side}.png", $pngData);
+
         // Persist canvas dimensions so CardImageService and CardPrintService can use them.
-        // Wrapped in try/catch: if migration hasn't run on this environment the upload
-        // still succeeds — canvas dims will be committed when the template is saved.
         if ($side === 'front') {
             try {
                 CardTemplate::where('school_id', $school->id)
@@ -147,10 +151,10 @@ class CardTemplateController extends Controller
         );
 
         return response()->json([
-            'success' => true,
-            'url'     => route('admin.card-template.image', [$school, $side]),
-            'width'   => $origW,
-            'height'  => $origH,
+            'success'     => true,
+            'url'         => Storage::disk('public')->url("card_previews/{$school->id}/{$side}.png"),
+            'width'       => $origW,
+            'height'      => $origH,
         ]);
     }
 
@@ -216,21 +220,23 @@ class CardTemplateController extends Controller
             };
 
             CardTemplateField::create([
-                'template_id'  => $template->id,
-                'field_type'   => $fieldType,
-                'field_key'    => $key,
-                'label'        => self::FIELD_LABELS[$key] ?? $key,
-                'x_mm'         => $this->toMm($f['x'] ?? 0),
-                'y_mm'         => $this->toMm($f['y'] ?? 0),
-                'width_mm'     => isset($f['w']) && $f['w'] ? $this->toMm($f['w']) : null,
-                'height_mm'    => isset($f['h']) && $f['h'] ? $this->toMm($f['h']) : null,
-                'font_family'  => $f['font_family'] ?? 'Inter',
-                'font_size'    => (int) ($f['font_size'] ?? 12),
-                'font_color'   => $f['font_color'] ?? '#000000',
-                'text_align'   => $f['text_align'] ?? 'left',
-                'font_weight'  => $f['font_weight'] ?? 'normal',
-                'z_index'      => $i,
-                'custom_value' => $f['custom_value'] ?? null,
+                'template_id'   => $template->id,
+                'field_type'    => $fieldType,
+                'field_key'     => $key,
+                'label'         => self::FIELD_LABELS[$key] ?? $key,
+                'x_mm'          => $this->toMm($f['x'] ?? 0),
+                'y_mm'          => $this->toMm($f['y'] ?? 0),
+                'width_mm'      => isset($f['w']) && $f['w'] ? $this->toMm($f['w']) : null,
+                'height_mm'     => isset($f['h']) && $f['h'] ? $this->toMm($f['h']) : null,
+                'font_family'   => $f['font_family'] ?? 'Inter',
+                'font_size'     => (int) ($f['font_size'] ?? 12),
+                'font_color'    => $f['font_color'] ?? '#000000',
+                'text_align'    => $f['text_align'] ?? 'left',
+                'font_weight'   => $f['font_weight'] ?? 'normal',
+                'z_index'       => $i,
+                'side'          => in_array($f['side'] ?? '', ['front', 'back']) ? $f['side'] : 'front',
+                'custom_value'  => $f['custom_value'] ?? null,
+                'border_radius' => (int) ($f['border_radius'] ?? 0),
             ]);
         }
 
@@ -240,8 +246,17 @@ class CardTemplateController extends Controller
             ['fields' => count($fields), 'canvas' => "{$canvasW}×{$canvasH}"]
         );
 
-        return redirect()->route('admin.card-template.edit', $school)
-            ->with('success', 'Template saved — ' . count($fields) . ' field(s), canvas ' . $canvasW . '×' . $canvasH . ' px.');
+        $msg = 'Template saved — ' . count($fields) . ' field(s).';
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'version' => $template->fresh()->version,
+            ]);
+        }
+
+        return redirect()->route('admin.card-template.edit', $school)->with('success', $msg);
     }
 
     /**

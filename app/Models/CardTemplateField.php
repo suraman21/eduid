@@ -24,18 +24,21 @@ class CardTemplateField extends Model
         'text_align',
         'font_weight',
         'z_index',
+        'side',
         'custom_value',
+        'border_radius',
     ];
 
     protected function casts(): array
     {
         return [
-            'x_mm'      => 'float',
-            'y_mm'      => 'float',
-            'width_mm'  => 'float',
-            'height_mm' => 'float',
-            'font_size' => 'integer',
-            'z_index'   => 'integer',
+            'x_mm'          => 'float',
+            'y_mm'          => 'float',
+            'width_mm'      => 'float',
+            'height_mm'     => 'float',
+            'font_size'     => 'integer',
+            'z_index'       => 'integer',
+            'border_radius' => 'integer',
         ];
     }
 
