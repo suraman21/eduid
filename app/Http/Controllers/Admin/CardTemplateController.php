@@ -201,7 +201,6 @@ class CardTemplateController extends Controller
                 'canvas_h'         => $canvasH,
                 'is_active'        => true,
                 'created_by'       => auth()->id(),
-                'version'          => 1,
             ]
         );
 

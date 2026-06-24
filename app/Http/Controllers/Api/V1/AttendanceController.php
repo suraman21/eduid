@@ -142,6 +142,7 @@ class AttendanceController extends BaseApiController
                         'synced_from_app' => true,
                         'device_id'       => $data['device_id'] ?? $session->device_id,
                         'method'          => 'qr_scan',
+                        'idempotency_key' => $key,
                     ]);
                 } else {
                     $session = AttendanceSession::create([

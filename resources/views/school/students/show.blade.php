@@ -170,7 +170,6 @@
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <h3 class="text-sm font-semibold text-gray-900 mb-3">QR Token</h3>
             @if($student->qr_token)
-                <p class="text-xs font-mono text-gray-500 break-all">{{ $student->qr_token }}</p>
                 <p class="text-xs text-gray-400 mt-2">Year: {{ $student->qr_token_year }}</p>
                 <p class="text-xs mt-1 {{ $student->hasValidQrToken() ? 'text-green-500' : 'text-amber-500' }}">
                     {{ $student->hasValidQrToken() ? 'Valid' : 'Expired — needs refresh' }}
