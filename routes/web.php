@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\AdminLoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\Admin\CardOrderController as AdminCardOrderController;
@@ -78,6 +79,13 @@ Route::get('/admin', function () {
     }
     return redirect()->route('admin.login');
 });
+
+// Password Reset (OTP via email — school portal users only).
+// Rate-limited to blunt enumeration + email-bombing.
+Route::get('/forgot-password',  [PasswordResetController::class, 'showForgotForm'])->name('password.request');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendOtp'])->middleware('throttle:login')->name('password.email');
+Route::get('/reset-password',   [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+Route::post('/reset-password',  [PasswordResetController::class, 'reset'])->middleware('throttle:login')->name('password.update');
 
 // Logout (POST for CSRF protection)
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class School extends Model
 {
@@ -39,18 +42,18 @@ class School extends Model
     protected function casts(): array
     {
         return [
-            'is_active'                  => 'boolean',
-            'max_students'               => 'integer',
-            'max_teachers'               => 'integer',
-            'subscription_status'        => 'string',
-            'subscription_expires_at'    => 'datetime',
-            'grace_period_ends_at'       => 'datetime',
-            'attendance_mode'            => 'string',
-            'offered_levels'             => 'array',
-            'code_locked'                => 'boolean',
-            'onboarding_completed_at'    => 'datetime',
-            'student_attendance_method'  => 'string',
-            'staff_attendance_method'    => 'string',
+            'is_active' => 'boolean',
+            'max_students' => 'integer',
+            'max_teachers' => 'integer',
+            'subscription_status' => 'string',
+            'subscription_expires_at' => 'datetime',
+            'grace_period_ends_at' => 'datetime',
+            'attendance_mode' => 'string',
+            'offered_levels' => 'array',
+            'code_locked' => 'boolean',
+            'onboarding_completed_at' => 'datetime',
+            'student_attendance_method' => 'string',
+            'staff_attendance_method' => 'string',
         ];
     }
 
@@ -130,11 +133,11 @@ class School extends Model
      */
     public function getLogoUrlAttribute(): ?string
     {
-        if (!$this->logo_path) {
+        if (! $this->logo_path) {
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::url($this->logo_path);
+        return Storage::url($this->logo_path);
     }
 
     /**
@@ -186,7 +189,7 @@ class School extends Model
 
     public function canAddNewData(): bool
     {
-        return !($this->isInGrace() || $this->isExpired());
+        return ! ($this->isInGrace() || $this->isExpired());
     }
 
     /**
@@ -210,12 +213,12 @@ class School extends Model
      */
     public function hasFeature(string $key): bool
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "school.{$this->id}.feature.{$key}",
             now()->addHour(),
             function () use ($key) {
                 // 1. School-level override
-                $override = \Illuminate\Support\Facades\DB::table('school_feature_overrides')
+                $override = DB::table('school_feature_overrides')
                     ->where('school_id', $this->id)
                     ->where('feature_key', $key)
                     ->first();
@@ -225,7 +228,7 @@ class School extends Model
                 }
 
                 // 2. Plan-level feature
-                $planFeature = \Illuminate\Support\Facades\DB::table('plan_features')
+                $planFeature = DB::table('plan_features')
                     ->where('plan_tier', $this->plan_tier)
                     ->where('feature_key', $key)
                     ->first();
@@ -235,7 +238,7 @@ class School extends Model
                 }
 
                 // 3. Feature registry global default
-                $registry = \Illuminate\Support\Facades\DB::table('feature_registry')
+                $registry = DB::table('feature_registry')
                     ->where('key', $key)
                     ->first();
 
@@ -250,8 +253,18 @@ class School extends Model
      */
     public function flushFeatureCache(): void
     {
-        // We can't tag without a tag-aware driver, so flush by pattern.
-        // This is a best-effort flush — the cache will expire within 1 hour anyway.
-        \Illuminate\Support\Facades\Cache::forget("school.{$this->id}.feature.*");
+        // Cache::forget() does not support wildcards, so the previous "*" call was
+        // a silent no-op. Enumerate every registered feature key and forget each
+        // exact cache entry for this school. The registry list is tiny and itself
+        // cached, so this stays cheap even on the file driver.
+        $keys = Cache::remember(
+            'feature_registry.keys',
+            now()->addHour(),
+            fn () => FeatureRegistry::pluck('key')->all()
+        );
+
+        foreach ($keys as $key) {
+            Cache::forget("school.{$this->id}.feature.{$key}");
+        }
     }
 }

@@ -25,11 +25,10 @@ class CardPrintService
 {
     /** CR80 fallback dimensions in mm (ISO/IEC 7810 ID-1). */
     private const CARD_W = 85.6;
+
     private const CARD_H = 54.0;
 
-    public function __construct(private QrTokenService $qr)
-    {
-    }
+    public function __construct(private QrTokenService $qr) {}
 
     /**
      * Build the print-ready PDF for an order and return its storage-relative
@@ -41,7 +40,7 @@ class CardPrintService
      */
     public function generate(CardOrder $order): string
     {
-        $school   = $order->school;
+        $school = $order->school;
         $template = CardTemplate::where('school_id', $school->id)
             ->where('template_type', 'student')
             ->where('is_active', true)
@@ -54,8 +53,8 @@ class CardPrintService
             ->get();
 
         // Derive page size from the template canvas (px → mm at 300 DPI).
-        $cardW  = $template ? $template->cardWMm() : self::CARD_W;
-        $cardH  = $template ? $template->cardHMm() : self::CARD_H;
+        $cardW = $template ? $template->cardWMm() : self::CARD_W;
+        $cardH = $template ? $template->cardHMm() : self::CARD_H;
         $orient = $cardW >= $cardH ? 'L' : 'P';
 
         $pdf = new TCPDF($orient, 'mm', [$cardW, $cardH], true, 'UTF-8', false);
@@ -77,9 +76,9 @@ class CardPrintService
         }
 
         // Private, non-web path. Old files for this order are replaced.
-        $dir  = "print_jobs/{$order->order_code}";
+        $dir = "print_jobs/{$order->order_code}";
         Storage::disk('local')->deleteDirectory($dir);
-        $path = "{$dir}/cards-" . now()->format('Ymd-His') . '.pdf';
+        $path = "{$dir}/cards-".now()->format('Ymd-His').'.pdf';
 
         Storage::disk('local')->put($path, $pdf->Output('cards.pdf', 'S'));
 
@@ -112,7 +111,7 @@ class CardPrintService
         $pdf->Rect(0, 0, self::CARD_W, 11, 'F');
 
         $logoPath = $this->logoPath($school);
-        $textX    = 3.5;
+        $textX = 3.5;
         if ($logoPath) {
             $pdf->Image($logoPath, 2.5, 2, 7, 7, '', '', '', true, 300, '', false, false, 0);
             $textX = 11;
@@ -131,7 +130,10 @@ class CardPrintService
 
         // ── Photo ──
         $photoPath = $this->photoPath($student);
-        $px = 3.5; $py = 14; $pw = 17; $ph = 21;
+        $px = 3.5;
+        $py = 14;
+        $pw = 17;
+        $ph = 21;
         if ($photoPath) {
             $pdf->Image($photoPath, $px, $py, $pw, $ph, '', '', '', true, 300, '', false, false, 1, 'CM');
         } else {
@@ -162,7 +164,7 @@ class CardPrintService
 
         $rows = [
             'Class' => $student->schoolClass?->display_name ?? '—',
-            'DOB'   => $student->date_of_birth?->format('M d, Y') ?? '—',
+            'DOB' => $student->date_of_birth?->format('M d, Y') ?? '—',
         ];
         if ($student->blood_type) {
             $rows['Blood'] = $student->blood_type;
@@ -180,7 +182,7 @@ class CardPrintService
         }
 
         // ── QR code (bottom-right) ──
-        $qrData  = "{$student->uid}|{$student->qr_token}";
+        $qrData = "{$student->uid}|{$student->qr_token}";
         $qrStyle = [
             'border' => false, 'vpadding' => 0, 'hpadding' => 0,
             'fgcolor' => [0, 0, 0], 'bgcolor' => [255, 255, 255],
@@ -217,6 +219,7 @@ class CardPrintService
                 return Storage::disk($disk)->path($student->photo_path);
             }
         }
+
         return null;
     }
 
@@ -231,6 +234,7 @@ class CardPrintService
                 return Storage::disk($disk)->path($school->logo_path);
             }
         }
+
         return null;
     }
 
@@ -239,8 +243,9 @@ class CardPrintService
     {
         $hex = ltrim($hex, '#');
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
+
         return [
             (int) hexdec(substr($hex, 0, 2)),
             (int) hexdec(substr($hex, 2, 2)),
@@ -251,7 +256,7 @@ class CardPrintService
     /** Truncate long strings so they never overflow the fixed card layout. */
     private function clip(string $value, int $max): string
     {
-        return mb_strlen($value) > $max ? mb_substr($value, 0, $max - 1) . '…' : $value;
+        return mb_strlen($value) > $max ? mb_substr($value, 0, $max - 1).'…' : $value;
     }
 
     /**
@@ -263,41 +268,56 @@ class CardPrintService
         $cardW = $template->cardWMm();
         $cardH = $template->cardHMm();
 
-        // Background image (full page bleed).
+        // ── FRONT page ── background + fields assigned to the front side.
         $bgPath = $this->diskPathFor($template->front_image_path);
         if ($bgPath) {
             $pdf->Image($bgPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
         }
 
-        foreach ($template->fields as $field) {
-            match ($field->field_type) {
-                'text'  => $this->drawTemplateText($pdf, $field, $student, $school),
-                'image' => $this->drawTemplatePhoto($pdf, $field, $student),
-                'qr'    => $this->drawTemplateQr($pdf, $field, $student),
-                default => null,
-            };
+        $frontFields = $template->fields->filter(fn ($f) => ($f->side ?? 'front') !== 'back');
+        foreach ($frontFields as $field) {
+            $this->drawTemplateField($pdf, $field, $student, $school);
         }
 
-        // Back image (second page) — if configured.
+        // ── BACK page ── only when a back image is configured. Back-side fields
+        // are overlaid on this second page so they are never dropped (BUG-001).
         $backPath = $template->back_image_path ? $this->diskPathFor($template->back_image_path) : null;
         if ($backPath) {
             $pdf->AddPage();
             $pdf->Image($backPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
+
+            $backFields = $template->fields->filter(fn ($f) => ($f->side ?? 'front') === 'back');
+            foreach ($backFields as $field) {
+                $this->drawTemplateField($pdf, $field, $student, $school);
+            }
         }
+    }
+
+    /**
+     * Dispatch a single template field to the correct renderer by type.
+     */
+    private function drawTemplateField(TCPDF $pdf, CardTemplateField $field, Student $student, School $school): void
+    {
+        match ($field->field_type) {
+            'text' => $this->drawTemplateText($pdf, $field, $student, $school),
+            'image' => $this->drawTemplatePhoto($pdf, $field, $student),
+            'qr' => $this->drawTemplateQr($pdf, $field, $student),
+            default => null,
+        };
     }
 
     private function drawTemplateText(TCPDF $pdf, CardTemplateField $field, Student $student, School $school): void
     {
         $text = match ($field->field_key) {
-            'full_name'     => $student->full_name,
-            'full_name_am'  => $student->full_name_am ?? '',
-            'uid'           => $student->uid,
-            'grade_class'   => $student->schoolClass?->display_name ?? '',
-            'section'       => $student->schoolClass?->section ?? '',
+            'full_name' => $student->full_name,
+            'full_name_am' => $student->full_name_am ?? '',
+            'uid' => $student->uid,
+            'grade_class' => $student->schoolClass?->display_name ?? '',
+            'section' => $student->schoolClass?->section ?? '',
             'academic_year' => $school->academic_year,
-            'school_name'   => $school->name,
+            'school_name' => $school->name,
             'custom_1', 'custom_2', 'custom_3' => (string) ($field->custom_value ?? ''),
-            default         => '',
+            default => '',
         };
         if ($text === '') {
             return;
@@ -338,6 +358,7 @@ class CardPrintService
                 return Storage::disk($disk)->path($path);
             }
         }
+
         return null;
     }
 }

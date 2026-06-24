@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AssessmentConfig;
+use App\Models\ClassSubject;
 use App\Models\GradingScale;
 use App\Models\School;
 use App\Models\Student;
@@ -50,6 +51,14 @@ class GradeCalculator
             return null;
         }
 
+        // Guard against division by zero — a misconfigured assessment with a
+        // max_score of 0 would otherwise raise a DivisionByZeroError.
+        if ((float) $grades['ca']->max_score <= 0
+            || (float) $grades['midterm']->max_score <= 0
+            || (float) $grades['final']->max_score <= 0) {
+            return null;
+        }
+
         $caScore = (float) $grades['ca']->score / (float) $grades['ca']->max_score * 100;
         $midScore = (float) $grades['midterm']->score / (float) $grades['midterm']->max_score * 100;
         $finalScore = (float) $grades['final']->score / (float) $grades['final']->max_score * 100;
@@ -67,7 +76,7 @@ class GradeCalculator
      */
     public function getTermAverage(Student $student, Term $term, School $school): ?float
     {
-        $classSubjects = \App\Models\ClassSubject::where('class_id', $student->class_id)
+        $classSubjects = ClassSubject::where('class_id', $student->class_id)
             ->where('school_id', $school->id)
             ->with('subject')
             ->get();
