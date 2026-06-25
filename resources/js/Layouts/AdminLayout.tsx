@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -33,6 +33,11 @@ const navItems: NavItem[] = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const { url } = usePage();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        document.documentElement.classList.add('dark');
+        return () => document.documentElement.classList.remove('dark');
+    }, []);
 
     const isActive = (href: string) => url.startsWith(href);
 
