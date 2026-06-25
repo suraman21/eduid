@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\School;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
@@ -23,20 +24,35 @@ class PaymentController extends Controller
             $query->where('status', $status);
         }
 
-        $payments = $query->paginate(25);
+        $payments = $query->paginate(25)->withQueryString();
         $schools  = School::orderBy('name')->get(['id', 'name']);
 
         $totalConfirmed = Payment::where('status', 'confirmed')->sum('amount_etb');
         $pendingCount   = Payment::where('status', 'pending')->count();
 
-        return view('admin.payments.index', compact('payments', 'schools', 'totalConfirmed', 'pendingCount'));
+        return Inertia::render('Admin/Payments/Index', [
+            'payments'        => $payments->through(fn ($p) => [
+                'id'               => $p->id,
+                'school'           => $p->school ? ['id' => $p->school->id, 'name' => $p->school->name] : null,
+                'plan'             => $p->plan ? ['id' => $p->plan->id, 'name' => $p->plan->name] : null,
+                'amount_etb'       => (float) $p->amount_etb,
+                'payment_method'   => $p->payment_method,
+                'reference_number' => $p->reference_number,
+                'payment_date'     => $p->payment_date,
+                'status'           => $p->status,
+            ]),
+            'schools'         => $schools,
+            'total_confirmed' => (float) $totalConfirmed,
+            'pending_count'   => $pendingCount,
+            'filters'         => $request->only('school_id', 'status'),
+        ]);
     }
 
     public function create()
     {
-        return view('admin.payments.create', [
+        return Inertia::render('Admin/Payments/Create', [
             'schools' => School::orderBy('name')->get(['id', 'name', 'code']),
-            'plans'   => SubscriptionPlan::where('is_active', true)->orderBy('tier')->get(),
+            'plans'   => SubscriptionPlan::where('is_active', true)->orderBy('tier')->get(['id', 'name', 'tier', 'price']),
         ]);
     }
 
@@ -83,7 +99,23 @@ class PaymentController extends Controller
     {
         $payment->load(['school', 'recordedBy', 'confirmedBy', 'plan']);
 
-        return view('admin.payments.show', compact('payment'));
+        return Inertia::render('Admin/Payments/Show', [
+            'payment' => [
+                'id'               => $payment->id,
+                'school_name'      => $payment->school->name ?? '—',
+                'plan_name'        => $payment->plan->name ?? null,
+                'amount_etb'       => (float) $payment->amount_etb,
+                'payment_method'   => $payment->payment_method,
+                'bank_name'        => $payment->bank_name,
+                'reference_number' => $payment->reference_number,
+                'payment_date'     => $payment->payment_date,
+                'period_months'    => $payment->period_months ?? 1,
+                'status'           => $payment->status,
+                'notes'            => $payment->notes,
+                'recorded_by'      => $payment->recordedBy->name ?? null,
+                'confirmed_by'     => $payment->confirmedBy?->name,
+            ],
+        ]);
     }
 
     public function confirm(Payment $payment)

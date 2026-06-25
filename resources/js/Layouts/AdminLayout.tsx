@@ -23,7 +23,7 @@ const navItems: NavItem[] = [
     { label: 'Dashboard',      href: '/admin/dashboard',       icon: LayoutDashboard, inertia: true },
     { label: 'Schools',        href: '/admin/schools',         icon: Building2,       inertia: true },
     { label: 'Leads',          href: '/admin/leads',           icon: Mail,        inertia: true },
-    { label: 'Payments',       href: '/admin/payments',        icon: DollarSign },
+    { label: 'Payments',       href: '/admin/payments',        icon: DollarSign,  inertia: true },
     { label: 'Card Orders',    href: '/admin/card-orders',     icon: CreditCard },
     { label: 'Card Templates', href: '/admin/card-templates',  icon: Layers },
     { label: 'Features',       href: '/admin/features',        icon: ShieldCheck },
