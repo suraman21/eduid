@@ -11,6 +11,7 @@ use App\Models\StudentGrade;
 use App\Models\Term;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class ReportCardController extends BaseSchoolController
 {
@@ -40,7 +41,21 @@ class ReportCardController extends BaseSchoolController
                 ->get();
         }
 
-        return view('school.report_cards.index', compact('classes', 'terms', 'filters', 'students', 'class', 'term'));
+        return Inertia::render('School/ReportCards/Index', [
+            'classes'  => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
+            'terms'    => $terms->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'academic_year' => $t->academic_year]),
+            'filters'  => ['class_id' => $filters['class_id'] ?? null, 'term_id' => $filters['term_id'] ?? null],
+            'class'    => $class ? ['id' => $class->id, 'name' => $class->display_name] : null,
+            'term'     => $term ? ['id' => $term->id, 'name' => $term->name, 'academic_year' => $term->academic_year] : null,
+            'students' => $students->map(fn ($s) => [
+                'id'          => $s->id,
+                'full_name'   => $s->full_name,
+                'full_name_am' => $s->full_name_am,
+                'uid'         => $s->uid,
+                'photo_url'   => $s->photo_url,
+                'initials'    => strtoupper(substr($s->first_name, 0, 1) . substr($s->last_name, 0, 1)),
+            ]),
+        ]);
     }
 
     public function show(Student $student, Request $request)
@@ -180,8 +195,37 @@ class ReportCardController extends BaseSchoolController
 
         $school = $this->currentSchool();
 
-        return view('school.report_cards.show', compact(
-            'student', 'term', 'subjectRows', 'termAvg', 'rank', 'classSize', 'school', 'config'
-        ));
+        $weightLabels = [
+            'ca'      => 'CA (' . round($caW * 100) . '%)',
+            'midterm' => 'Midterm (' . round($midW * 100) . '%)',
+            'final'   => 'Final (' . round($finW * 100) . '%)',
+        ];
+
+        return Inertia::render('School/ReportCards/Show', [
+            'student' => [
+                'id'          => $student->id,
+                'full_name'   => $student->full_name,
+                'full_name_am' => $student->full_name_am,
+                'uid'         => $student->uid,
+                'gender'      => $student->gender,
+                'class_name'  => $student->schoolClass?->display_name,
+                'date_of_birth' => $student->date_of_birth?->format('M d, Y'),
+            ],
+            'term'     => ['id' => $term->id, 'name' => $term->name, 'academic_year' => $term->academic_year],
+            'school'   => ['name' => $school->name, 'address' => $school->address ?? null],
+            'term_avg' => $termAvg,
+            'rank'     => $rank,
+            'class_size' => $classSize,
+            'weight_labels' => $weightLabels,
+            'subject_rows' => array_map(fn ($row) => [
+                'subject_name' => $row['subject']->name,
+                'ca'     => $row['ca']  ? ['score' => (float)$row['ca']->score,  'max' => (float)$row['ca']->max_score]  : null,
+                'midterm'=> $row['midterm'] ? ['score' => (float)$row['midterm']->score, 'max' => (float)$row['midterm']->max_score] : null,
+                'final'  => $row['final'] ? ['score' => (float)$row['final']->score, 'max' => (float)$row['final']->max_score] : null,
+                'total'  => $row['total'],
+                'letter' => $row['letter'],
+            ], $subjectRows),
+            'generated_at' => now()->format('M d, Y'),
+        ]);
     }
 }
