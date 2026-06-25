@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Tone = 'green' | 'amber' | 'rose' | 'blue' | 'purple' | 'slate';
+export type Tone = 'green' | 'amber' | 'rose' | 'blue' | 'purple' | 'slate';
 
 interface Props {
     tone?: Tone;

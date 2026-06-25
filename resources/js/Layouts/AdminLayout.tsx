@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Building2, GraduationCap, CreditCard,
@@ -13,11 +13,15 @@ interface NavItem {
     href: string;
     icon: React.ElementType;
     badge?: number;
+    /** True once the target route is served by an Inertia page (enables SPA nav). */
+    inertia?: boolean;
 }
 
+// `inertia: true` ⇒ render an Inertia <Link> for SPA navigation.
+// Leave it off while the route still returns a Blade view (full-page <a>).
 const navItems: NavItem[] = [
-    { label: 'Dashboard',      href: '/admin/dashboard',       icon: LayoutDashboard },
-    { label: 'Schools',        href: '/admin/schools',         icon: Building2 },
+    { label: 'Dashboard',      href: '/admin/dashboard',       icon: LayoutDashboard, inertia: true },
+    { label: 'Schools',        href: '/admin/schools',         icon: Building2,       inertia: true },
     { label: 'Leads',          href: '/admin/leads',           icon: Mail },
     { label: 'Payments',       href: '/admin/payments',        icon: DollarSign },
     { label: 'Card Orders',    href: '/admin/card-orders',     icon: CreditCard },
@@ -49,20 +53,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
                 {navItems.map(item => {
                     const active = isActive(item.href);
-                    return (
-                        <a
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
-                                active
-                                    ? 'bg-purple-600/20 text-purple-300'
-                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                            }`}
-                        >
+                    const className = `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                        active
+                            ? 'bg-purple-600/20 text-purple-300'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                    }`;
+                    const inner = (
+                        <>
                             <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
                             <span className="flex-1">{item.label}</span>
                             {active && <ChevronRight className="w-3 h-3 text-purple-400" />}
-                        </a>
+                        </>
+                    );
+                    return item.inertia ? (
+                        <Link key={item.href} href={item.href} className={className}>{inner}</Link>
+                    ) : (
+                        <a key={item.href} href={item.href} className={className}>{inner}</a>
                     );
                 })}
             </nav>
