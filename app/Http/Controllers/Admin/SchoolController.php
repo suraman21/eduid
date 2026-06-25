@@ -5,32 +5,31 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class SchoolController extends Controller
 {
     public function index(Request $request)
     {
-        $query = School::query();
+        $schools = School::query()
+            ->withCount(['students', 'users'])
+            ->latest()
+            ->get()
+            ->map(fn ($s) => [
+                'id'                  => $s->id,
+                'name'                => $s->name,
+                'code'                => $s->code,
+                'email'               => $s->email,
+                'plan_tier'           => $s->plan_tier ?? 'starter',
+                'students_count'      => $s->students_count,
+                'users_count'         => $s->users_count,
+                'is_active'           => (bool) $s->is_active,
+                'subscription_status' => $s->subscription_status ?? 'active',
+            ]);
 
-        if ($search = $request->get('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        if ($plan = $request->get('plan')) {
-            $query->where('plan_tier', $plan);
-        }
-
-        if ($status = $request->get('status')) {
-            $query->where('is_active', $status === 'active');
-        }
-
-        $schools = $query->withCount(['students', 'users'])->latest()->paginate(15);
-
-        return view('admin.schools.index', compact('schools'));
+        return Inertia::render('Admin/Schools/Index', [
+            'schools' => $schools,
+        ]);
     }
 
     public function create()
