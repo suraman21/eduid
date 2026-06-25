@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-Cv4bJTie.css",
+    "file": "assets/app-C9jSd2bZ.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -27,12 +27,12 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-CJ6AC7uQ.js",
+    "file": "assets/app-D-Q_78M4.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
     "css": [
-      "assets/app-Cv4bJTie.css"
+      "assets/app-C9jSd2bZ.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",
