@@ -14,6 +14,7 @@ use App\Models\Term;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class GradeController extends BaseSchoolController
 {
@@ -91,9 +92,20 @@ class GradeController extends BaseSchoolController
             }
         }
 
-        return view('school.grades.index', compact(
-            'classes', 'terms', 'class', 'term', 'matrix', 'filters'
-        ));
+        return Inertia::render('School/Grades/Index', [
+            'classes' => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
+            'terms'   => $terms->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'academic_year' => $t->academic_year]),
+            'selected_class' => $class ? ['id' => $class->id, 'name' => $class->display_name] : null,
+            'selected_term'  => $term ? ['id' => $term->id, 'name' => $term->name] : null,
+            'matrix' => collect($matrix)->map(fn ($row) => [
+                'subject_id'   => $row['subject']->id,
+                'subject_name' => $row['subject']->name,
+                'teacher_name' => $row['class_subject']->teacher?->name,
+                'types'        => $row['types'],
+            ])->values(),
+            'filters'  => $filters,
+            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+        ]);
     }
 
     // ── Enter: grade entry form for one subject/term/assessment_type ───────
@@ -139,16 +151,25 @@ class GradeController extends BaseSchoolController
             ->whereNull('grade_level')
             ->first();
 
-        return view('school.grades.enter', [
-            'class'          => $class,
-            'subject'        => $subject,
-            'term'           => $term,
-            'assessmentType' => $filters['assessment_type'],
-            'assessmentLabel'=> self::ASSESSMENT_LABELS[$filters['assessment_type']],
-            'students'       => $students,
-            'existing'       => $existing,
-            'isLocked'       => $isLocked,
-            'config'         => $config,
+        return Inertia::render('School/Grades/Enter', [
+            'class'           => ['id' => $class->id, 'name' => $class->display_name],
+            'subject'         => ['id' => $subject->id, 'name' => $subject->name],
+            'term'            => ['id' => $term->id, 'name' => $term->name],
+            'assessment_type' => $filters['assessment_type'],
+            'assessment_label'=> self::ASSESSMENT_LABELS[$filters['assessment_type']],
+            'students'        => $students->map(fn ($s) => [
+                'id'       => $s->id,
+                'name'     => $s->full_name,
+                'uid'      => $s->uid,
+                'initials' => strtoupper(substr($s->first_name, 0, 1)) . strtoupper(substr($s->last_name, 0, 1)),
+                'score'    => optional($existing[$s->id] ?? null)->score,
+                'max_score'=> optional($existing[$s->id] ?? null)->max_score ?? 100,
+                'status'   => optional($existing[$s->id] ?? null)->status,
+            ])->values(),
+            'is_locked' => $isLocked,
+            'weight'    => $config ? [
+                'ca' => $config->ca_weight, 'midterm' => $config->midterm_weight, 'final' => $config->final_weight,
+            ][$filters['assessment_type']] : null,
         ]);
     }
 
@@ -391,7 +412,26 @@ class GradeController extends BaseSchoolController
         }
         unset($row);
 
-        return view('school.grades.gradebook', compact('class', 'term', 'rows', 'classSubjects'));
+        return Inertia::render('School/Grades/Gradebook', [
+            'class' => ['id' => $class->id, 'name' => $class->display_name],
+            'term'  => ['id' => $term->id, 'name' => $term->name],
+            'subjects' => $classSubjects->map(fn ($cs) => [
+                'id'    => $cs->subject_id,
+                'code'  => $cs->subject->code ?? \Illuminate\Support\Str::limit($cs->subject->name, 8),
+                'name'  => $cs->subject->name,
+            ])->values(),
+            'rows' => collect($rows)->map(fn ($row) => [
+                'student_name' => $row['student']->full_name,
+                'student_uid'  => $row['student']->uid,
+                'rank'         => $row['rank'],
+                'term_avg'     => $row['term_avg'],
+                'subject_totals' => collect($row['subject_totals'])->map(fn ($st, $sid) => [
+                    'subject_id' => $sid,
+                    'total'      => $st['total'],
+                    'published'  => $st['published'],
+                ])->values(),
+            ])->values(),
+        ]);
     }
 
     // ── Term management (simple CRUD) ──────────────────────────────────────
@@ -400,7 +440,13 @@ class GradeController extends BaseSchoolController
     {
         $this->requireAdmin();
         $terms = Term::orderBy('order')->get();
-        return view('school.grades.terms', compact('terms'));
+        return Inertia::render('School/Grades/Terms', [
+            'terms' => $terms->map(fn ($t) => [
+                'id' => $t->id, 'name' => $t->name, 'academic_year' => $t->academic_year,
+                'order' => $t->order, 'weight' => $t->weight, 'is_current' => (bool) $t->is_current,
+            ]),
+            'next_order' => $terms->count() + 1,
+        ]);
     }
 
     public function termStore(Request $request)
