@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 /**
  * OTP-based password reset for school portal users.
@@ -34,7 +35,9 @@ class PasswordResetController extends Controller
 
     public function showForgotForm()
     {
-        return view('auth.forgot-password');
+        return Inertia::render('Auth/ForgotPassword', [
+            'status' => session('status'),
+        ]);
     }
 
     /**
@@ -100,9 +103,10 @@ class PasswordResetController extends Controller
 
     public function showResetForm(Request $request)
     {
-        return view('auth.reset-password', [
+        return Inertia::render('Auth/ResetPassword', [
             'school_code' => (string) $request->query('school_code', ''),
-            'email' => (string) $request->query('email', ''),
+            'email'       => (string) $request->query('email', ''),
+            'status'      => session('status'),
         ]);
     }
 
