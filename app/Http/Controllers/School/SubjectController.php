@@ -5,6 +5,7 @@ namespace App\Http\Controllers\School;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class SubjectController extends BaseSchoolController
 {
@@ -12,7 +13,16 @@ class SubjectController extends BaseSchoolController
     {
         $subjects = Subject::orderBy('name')->get();
 
-        return view('school.subjects.index', compact('subjects'));
+        return Inertia::render('School/Subjects/Index', [
+            'subjects' => $subjects->map(fn ($s) => [
+                'id'        => $s->id,
+                'name'      => $s->name,
+                'code'      => $s->code,
+                'color'     => $s->color ?? '#6366f1',
+                'is_active' => (bool) $s->is_active,
+            ]),
+            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+        ]);
     }
 
     public function store(Request $request)
