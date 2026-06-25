@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
@@ -46,7 +46,7 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
                 {navItems.map(item => {
                     const active = isActive(item.href);
                     return (
-                        <Link
+                        <a
                             key={item.href}
                             href={item.href}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
@@ -57,21 +57,22 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
                             <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? '' : 'text-slate-400'}`} style={active ? { color: accent } : undefined} />
                             <span className={`flex-1 ${active ? '' : 'text-slate-600'}`}>{item.label}</span>
                             {active && <ChevronRight className="w-3 h-3" style={{ color: accent }} />}
-                        </Link>
+                        </a>
                     );
                 })}
             </nav>
 
             <div className="px-2 pb-4 border-t border-slate-100 pt-3">
-                <Link
-                    href="/logout"
-                    method="post"
-                    as="button"
-                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150"
-                >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign out</span>
-                </Link>
+                <form method="POST" action="/logout" style={{ margin: 0 }}>
+                    <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''} />
+                    <button
+                        type="submit"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign out</span>
+                    </button>
+                </form>
             </div>
         </div>
     );
