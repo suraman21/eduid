@@ -5,6 +5,7 @@ namespace App\Http\Controllers\School;
 use App\Models\SchoolClass;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class ClassController extends BaseSchoolController
 {
@@ -16,14 +17,28 @@ class ClassController extends BaseSchoolController
             ->orderBy('section')
             ->get();
 
-        return view('school.classes.index', compact('classes'));
+        return Inertia::render('School/Classes/Index', [
+            'classes' => $classes->map(fn ($c) => [
+                'id'             => $c->id,
+                'grade'          => $c->grade,
+                'section'        => $c->section,
+                'display_name'   => $c->display_name,
+                'academic_year'  => $c->academic_year,
+                'students_count' => $c->students_count,
+                'is_active'      => (bool) $c->is_active,
+            ]),
+            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+        ]);
     }
 
     public function create()
     {
         $this->requireAdmin();
 
-        return view('school.classes.form', ['class' => new SchoolClass()]);
+        return Inertia::render('School/Classes/Form', [
+            'schoolClass'   => null,
+            'academic_year' => $this->currentSchool()->academic_year,
+        ]);
     }
 
     public function store(Request $request)
@@ -43,7 +58,18 @@ class ClassController extends BaseSchoolController
     {
         $this->requireAdmin();
 
-        return view('school.classes.form', compact('class'));
+        return Inertia::render('School/Classes/Form', [
+            'schoolClass' => [
+                'id'            => $class->id,
+                'grade'         => $class->grade,
+                'section'       => $class->section,
+                'academic_year' => $class->academic_year,
+                'level_order'   => $class->level_order,
+                'is_active'     => (bool) $class->is_active,
+                'display_name'  => $class->display_name,
+            ],
+            'academic_year' => $class->academic_year,
+        ]);
     }
 
     public function update(Request $request, SchoolClass $class)
