@@ -22,7 +22,9 @@ class IdCardController extends BaseSchoolController
      */
     public function show(Student $student)
     {
-        $this->requireTeacherCanAccessClass($student->class_id);
+        if ($student->class_id !== null) {
+            $this->requireTeacherCanAccessClass($student->class_id);
+        }
 
         $school = $this->currentSchool();
         $student->load('schoolClass');
