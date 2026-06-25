@@ -10,7 +10,6 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
 
 class AttendanceController extends BaseSchoolController
 {
@@ -30,20 +29,27 @@ class AttendanceController extends BaseSchoolController
             $query->whereDate('session_date', $date);
         }
 
-        $sessions = $query->orderByDesc('session_date')->orderByDesc('id')->paginate(20);
-        $classes  = $this->activeClasses();
+        $paginator = $query->orderByDesc('session_date')->orderByDesc('id')->paginate(20);
+        $classes   = $this->activeClasses();
 
-        return Inertia::render('School/Attendance/Index', [
-            'sessions' => $sessions->through(fn ($s) => [
-                'id'            => $s->id,
-                'session_date'  => $s->session_date->format('M d, Y'),
-                'class_name'    => $s->schoolClass?->display_name ?? '—',
-                'session_type'  => $s->session_type,
-                'teacher_name'  => $s->teacher?->name ?? '—',
-                'records_count' => $s->records_count,
-            ]),
-            'classes' => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
-            'filters' => $request->only('class_id', 'date'),
+        return \Inertia\Inertia::render('School/Attendance/Index', [
+            'sessions' => [
+                'data'      => $paginator->getCollection()->map(fn($s) => [
+                    'id'           => $s->id,
+                    'session_date' => $s->session_date->format('M d, Y'),
+                    'session_type' => $s->session_type,
+                    'records_count'=> $s->records_count,
+                    'class_name'   => $s->schoolClass?->display_name,
+                    'teacher_name' => $s->teacher?->name,
+                ])->values(),
+                'links'     => $paginator->linkCollection()->toArray(),
+                'has_pages' => $paginator->hasPages(),
+            ],
+            'classes' => $classes->map(fn($c) => ['id' => $c->id, 'display_name' => $c->display_name])->values(),
+            'filters' => [
+                'class_id' => $request->get('class_id'),
+                'date'     => $request->get('date'),
+            ],
         ]);
     }
 
@@ -86,14 +92,15 @@ class AttendanceController extends BaseSchoolController
             }
         }
 
-        return Inertia::render('School/Attendance/Create', [
-            'classes'     => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
-            'class'       => $class ? ['id' => $class->id, 'name' => $class->display_name] : null,
-            'roster'      => $roster->map(fn ($s) => [
-                'id'       => $s->id,
-                'name'     => $s->full_name,
-                'uid'      => $s->uid,
-                'initials' => strtoupper(substr($s->first_name, 0, 1)) . strtoupper(substr($s->last_name, 0, 1)),
+        return \Inertia\Inertia::render('School/Attendance/Create', [
+            'classes'     => $classes->map(fn($c) => ['id' => $c->id, 'display_name' => $c->display_name])->values(),
+            'class'       => $class ? ['id' => $class->id, 'display_name' => $class->display_name] : null,
+            'roster'      => $roster->map(fn($s) => [
+                'id'         => $s->id,
+                'full_name'  => $s->full_name,
+                'uid'        => $s->uid,
+                'first_name' => $s->first_name,
+                'last_name'  => $s->last_name,
             ])->values(),
             'existing'    => $existing,
             'sessionDate' => $filters['session_date'] ?? today()->toDateString(),
@@ -133,28 +140,21 @@ class AttendanceController extends BaseSchoolController
     {
         $attendance->load(['schoolClass', 'teacher', 'records.student']);
 
-        $records = $attendance->records->sortBy('student.first_name');
-        $counts = [
-            'present' => $records->where('status', 'present')->count(),
-            'late'    => $records->where('status', 'late')->count(),
-            'excused' => $records->where('status', 'excused')->count(),
-            'absent'  => $records->where('status', 'absent')->count(),
-        ];
-
-        return Inertia::render('School/Attendance/Show', [
+        return \Inertia\Inertia::render('School/Attendance/Show', [
             'session' => [
                 'id'           => $attendance->id,
-                'class_name'   => $attendance->schoolClass?->display_name ?? '—',
+                'class_name'   => $attendance->schoolClass?->display_name,
                 'class_id'     => $attendance->class_id,
-                'session_date' => $attendance->session_date->format('M d, Y'),
-                'session_date_raw' => $attendance->session_date->toDateString(),
+                'session_date' => $attendance->session_date->toDateString(),
                 'session_type' => $attendance->session_type,
-                'teacher_name' => $attendance->teacher?->name ?? '—',
-                'counts'       => $counts,
-                'records'      => $records->map(fn ($r) => [
-                    'id'           => $r->id,
-                    'student_name' => $r->student?->full_name ?? '—',
-                    'student_uid'  => $r->student?->uid ?? '',
+                'teacher_name' => $attendance->teacher?->name,
+                'present'      => $attendance->records->where('status', 'present')->count(),
+                'late'         => $attendance->records->where('status', 'late')->count(),
+                'excused'      => $attendance->records->where('status', 'excused')->count(),
+                'absent'       => $attendance->records->where('status', 'absent')->count(),
+                'records'      => $attendance->records->sortBy('student.first_name')->map(fn($r) => [
+                    'student_name' => $r->student?->full_name,
+                    'student_uid'  => $r->student?->uid,
                     'status'       => $r->status,
                     'note'         => $r->note,
                 ])->values(),

@@ -20,7 +20,7 @@ class AdminLoginController extends Controller
         if (Auth::check() && Auth::user()->isSuperAdmin()) {
             return redirect('/admin/dashboard');
         }
-        return view('auth.admin-login');
+        return \Inertia\Inertia::render('Auth/AdminLogin');
     }
 
     /**

@@ -18,15 +18,33 @@ class PhotoSessionController extends BaseSchoolController
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('school.photo_sessions.index', compact('sessions'));
+        return \Inertia\Inertia::render('School/PhotoSessions/Index', [
+            'sessions' => [
+                'data'      => $sessions->getCollection()->map(fn($s) => [
+                    'id'               => $s->id,
+                    'session_type'     => $s->session_type,
+                    'class_name'       => $s->schoolClass?->display_name,
+                    'status'           => $s->status,
+                    'photos_captured'  => $s->photos_captured,
+                    'total_students'   => $s->total_students,
+                    'progress'         => $s->progress,
+                    'created_at_human' => $s->created_at->diffForHumans(),
+                    'is_active'        => $s->isActive(),
+                ])->values(),
+                'total'     => $sessions->total(),
+                'links'     => $sessions->linkCollection()->toArray(),
+                'has_pages' => $sessions->hasPages(),
+            ],
+        ]);
     }
 
     public function create()
     {
         $this->requireAdmin();
 
-        return view('school.photo_sessions.create', [
-            'classes' => SchoolClass::where('is_active', true)->orderBy('grade')->get(),
+        return \Inertia\Inertia::render('School/PhotoSessions/Create', [
+            'classes' => SchoolClass::where('is_active', true)->orderBy('grade')->get()
+                ->map(fn($c) => ['id' => $c->id, 'display_name' => $c->display_name])->values(),
         ]);
     }
 
@@ -87,10 +105,33 @@ class PhotoSessionController extends BaseSchoolController
             ->get()
             ->keyBy('id');
 
-        return view('school.photo_sessions.show', [
-            'session'        => $photoSession,
-            'currentStudent' => $currentStudent,
-            'queueStudents'  => $queueStudents,
+        return \Inertia\Inertia::render('School/PhotoSessions/Show', [
+            'session' => [
+                'id'               => $photoSession->id,
+                'session_type'     => $photoSession->session_type,
+                'status'           => $photoSession->status,
+                'class_name'       => $photoSession->schoolClass?->display_name,
+                'photos_captured'  => $photoSession->photos_captured,
+                'total_students'   => $photoSession->total_students,
+                'progress'         => $photoSession->progress,
+                'current_position' => $photoSession->current_position,
+                'student_queue'    => $photoSession->student_queue,
+                'is_active'        => $photoSession->isActive(),
+                'created_by_name'  => $photoSession->createdBy?->name,
+            ],
+            'currentStudent' => $currentStudent ? [
+                'id'         => $currentStudent->id,
+                'full_name'  => $currentStudent->full_name,
+                'uid'        => $currentStudent->uid,
+                'class_name' => $currentStudent->schoolClass?->display_name,
+                'photo_url'  => $currentStudent->photo_url,
+            ] : null,
+            'queueStudents' => $queueStudents->map(fn($s) => [
+                'id'        => $s->id,
+                'full_name' => $s->full_name,
+                'uid'       => $s->uid,
+                'photo_url' => $s->photo_url,
+            ])->toArray(),
         ]);
     }
 
