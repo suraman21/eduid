@@ -107,7 +107,7 @@ function StatTile({
 
 export default function Dashboard({ stats, school, recent_students }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
     const user = props.auth?.user;
 
     const isGrace   = school.subscription_status === 'grace';

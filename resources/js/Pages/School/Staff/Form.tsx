@@ -46,7 +46,7 @@ interface Props {
 
 export default function Form({ member }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
     const isEdit = member !== null;
 
     const { data, setData, post, transform, processing, errors } = useForm({

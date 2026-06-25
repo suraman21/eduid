@@ -59,7 +59,7 @@ const STATUSES = ['active', 'promoted', 'repeating', 'graduated', 'transferred',
 
 export default function Form({ student, classes }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
     const isEdit = student !== null;
 
     const [photoPreview, setPhotoPreview] = useState<string | null>(student?.photo_url ?? null);

@@ -42,7 +42,7 @@ interface Props {
 
 export default function Form({ schoolClass, academic_year }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
     const isEdit = schoolClass !== null;
 
     const { data, setData, post, put, processing, errors } = useForm({

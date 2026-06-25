@@ -34,7 +34,7 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
     const { url, props } = usePage<PageProps>();
     const school = props.school;
     const user = props.auth?.user;
-    const accent = normHex(school?.accent_color);
+    const accent = normHex(props.accent);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [search, setSearch] = useState('');
 

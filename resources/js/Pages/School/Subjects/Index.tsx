@@ -180,7 +180,7 @@ function EditForm({ subject, accent, onCancel }: { subject: SubjectRow; accent: 
 
 export default function Index({ subjects, is_admin }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex((props as any).school?.accent_color);
+    const accent = normHex((props as any).accent);
     const [editingSubject, setEditingSubject] = useState<SubjectRow | null>(null);
 
     return (

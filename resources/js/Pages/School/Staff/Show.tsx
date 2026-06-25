@@ -61,7 +61,7 @@ interface Props {
 
 export default function Show({ member, is_admin }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
 
     const roleColors = ROLE_COLORS[member.role] ?? { bg: '#f1f5f9', text: '#475569' };
 
