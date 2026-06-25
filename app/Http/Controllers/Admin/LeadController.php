@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class LeadController extends Controller
 {
@@ -23,15 +24,32 @@ class LeadController extends Controller
             $query->where('status', $status);
         }
 
-        $leads   = $query->latest()->paginate(25);
+        $leads    = $query->latest()->paginate(25)->withQueryString();
         $newCount = Lead::where('status', 'new')->count();
 
-        return view('admin.leads.index', compact('leads', 'newCount'));
+        return Inertia::render('Admin/Leads/Index', [
+            'leads'     => $leads,
+            'new_count' => $newCount,
+            'filters'   => $request->only('search', 'status'),
+        ]);
     }
 
     public function show(Lead $lead)
     {
-        return view('admin.leads.show', compact('lead'));
+        return Inertia::render('Admin/Leads/Show', [
+            'lead' => [
+                'id'           => $lead->id,
+                'name'         => $lead->name,
+                'school_name'  => $lead->school_name,
+                'phone'        => $lead->phone,
+                'email'        => $lead->email,
+                'message'      => $lead->message,
+                'status'       => $lead->status,
+                'admin_notes'  => $lead->admin_notes,
+                'created_at'   => $lead->created_at->toISOString(),
+                'contacted_at' => $lead->contacted_at?->toISOString(),
+            ],
+        ]);
     }
 
     public function update(Request $request, Lead $lead)
