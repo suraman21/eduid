@@ -65,7 +65,7 @@ export default function Form({ student, classes }: Props) {
     const [photoPreview, setPhotoPreview] = useState<string | null>(student?.photo_url ?? null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { data, setData, post, put, processing, errors } = useForm({
+    const { data, setData, post, transform, processing, errors } = useForm({
         first_name:      student?.first_name ?? '',
         last_name:       student?.last_name ?? '',
         first_name_am:   student?.first_name_am ?? '',
@@ -92,12 +92,12 @@ export default function Form({ student, classes }: Props) {
     function submit(e: React.FormEvent) {
         e.preventDefault();
         if (isEdit) {
-            // Use post with _method spoofing for file uploads with PUT
-            post(`/school/students/${student.id}`, {
-                forceFormData: true,
-                data: { ...data, _method: 'PUT' },
-            });
+            // Multipart PUT isn't supported by browsers; Inertia/Laravel use
+            // POST + `_method: PUT` spoofing so the file upload still goes through.
+            transform(d => ({ ...d, _method: 'PUT' }));
+            post(`/school/students/${student!.id}`, { forceFormData: true });
         } else {
+            transform(d => d);
             post('/school/students', { forceFormData: true });
         }
     }

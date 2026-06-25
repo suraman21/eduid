@@ -77,7 +77,7 @@ export default function Show({ order, students }: Props) {
 
     function cancel(e: React.FormEvent) {
         e.preventDefault();
-        if (!confirm('Cancel this order?')) return;
+        if (!window.confirm('Cancel this order?')) return;
         cancelForm.post(`/admin/card-orders/${order.id}/cancel`);
     }
 
