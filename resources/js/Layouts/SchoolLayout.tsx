@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,6 +26,10 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
     const school = props.school;
     const accent = school?.accent_color || '#6366f1';
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        document.documentElement.classList.remove('dark');
+    }, []);
 
     const isActive = (href: string) => url.startsWith(href);
     const initials = (school?.name ?? 'S').slice(0, 1).toUpperCase();
