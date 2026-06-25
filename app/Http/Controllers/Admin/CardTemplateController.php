@@ -51,6 +51,7 @@ class CardTemplateController extends Controller
         $savedFields = $template
             ? $template->fields->map(fn($f) => [
                 'field_key'    => $f->field_key,
+                'side'         => $f->side ?? 'front',
                 'x'            => $f->px_x,
                 'y'            => $f->px_y,
                 'w'            => $f->px_w ?? 0,
@@ -61,16 +62,43 @@ class CardTemplateController extends Controller
                 'text_align'   => $f->text_align,
                 'font_weight'  => $f->font_weight,
                 'custom_value' => $f->custom_value,
+                'border_radius'=> $f->border_radius ?? 0,
             ])->values()->all()
             : [];
 
-        return view('admin.card_templates.edit', [
-            'school'      => $school,
-            'template'    => $template,
+        $canvasW = $template?->canvasW() ?? CardTemplate::DEFAULT_W;
+        $canvasH = $template?->canvasH() ?? CardTemplate::DEFAULT_H;
+
+        $frontPublicUrl = Storage::disk('public')->exists("card_previews/{$school->id}/front.png")
+            ? Storage::disk('public')->url("card_previews/{$school->id}/front.png")
+            : (($template && Storage::disk('local')->exists("cards/{$school->id}/front.png"))
+                ? route('admin.card-template.image', [$school, 'front'])
+                : null);
+
+        $backExists = $template && Storage::disk('local')->exists("cards/{$school->id}/back.png");
+        $backPublicUrl = Storage::disk('public')->exists("card_previews/{$school->id}/back.png")
+            ? Storage::disk('public')->url("card_previews/{$school->id}/back.png")
+            : ($backExists ? route('admin.card-template.image', [$school, 'back']) : null);
+
+        $backInfo = $backExists ? @getimagesize(Storage::disk('local')->path("cards/{$school->id}/back.png")) : null;
+        $backW    = $backInfo ? $backInfo[0] : $canvasW;
+        $backH    = $backInfo ? $backInfo[1] : $canvasH;
+
+        return \Inertia\Inertia::render('Admin/CardTemplates/Edit', [
+            'school'      => ['id' => $school->id, 'name' => $school->name],
+            'template'    => $template ? ['version' => $template->version, 'field_count' => $template->fields->count()] : null,
             'fieldLabels' => self::FIELD_LABELS,
             'savedFields' => $savedFields,
-            'canvasW'     => $template?->canvasW() ?? CardTemplate::DEFAULT_W,
-            'canvasH'     => $template?->canvasH() ?? CardTemplate::DEFAULT_H,
+            'canvasW'     => $canvasW,
+            'canvasH'     => $canvasH,
+            'backW'       => $backW,
+            'backH'       => $backH,
+            'frontUrl'    => $frontPublicUrl,
+            'backUrl'     => $backPublicUrl,
+            'uploadUrl'   => route('admin.card-template.upload', $school),
+            'saveUrl'     => route('admin.card-template.save', $school),
+            'backUrl_exists' => $backExists,
+            'schoolUrl'   => route('admin.schools.show', $school),
         ]);
     }
 
