@@ -72,9 +72,9 @@ class StudentController extends BaseSchoolController
     {
         $this->requireAdmin();
 
-        return view('school.students.form', [
-            'student' => new Student(),
-            'classes' => $this->activeClasses(),
+        return Inertia::render('School/Students/Form', [
+            'student' => null,
+            'classes' => $this->activeClasses()->map(fn($c) => ['id' => $c->id, 'name' => $c->name]),
         ]);
     }
 
@@ -123,7 +123,39 @@ class StudentController extends BaseSchoolController
     {
         $student->load('schoolClass', 'guardians');
 
-        return view('school.students.show', compact('student'));
+        return Inertia::render('School/Students/Show', [
+            'student' => [
+                'id'              => $student->id,
+                'full_name'       => $student->full_name,
+                'full_name_am'    => $student->full_name_am,
+                'uid'             => $student->uid,
+                'gender'          => $student->gender,
+                'date_of_birth'   => $student->date_of_birth?->format('Y-m-d'),
+                'blood_type'      => $student->blood_type,
+                'status'          => $student->status ?? 'active',
+                'photo_url'       => $student->photo_url,
+                'initials'        => collect(explode(' ', $student->full_name))->map(fn($w) => strtoupper($w[0] ?? ''))->take(2)->implode(''),
+                'class_name'      => $student->schoolClass?->name,
+                'enrollment_date' => $student->enrollment_date?->format('Y-m-d'),
+                'join_date'       => $student->join_date?->format('Y-m-d'),
+                'end_date'        => $student->end_date?->format('Y-m-d'),
+                'medical_notes'   => $student->medical_notes,
+                'qr_token'        => $student->qr_token,
+                'qr_token_year'   => $student->qr_token_year,
+                'qr_valid'        => $student->hasValidQrToken(),
+                'created_at'      => $student->created_at->format('M d, Y'),
+                'guardians'       => $student->guardians->map(fn($g) => [
+                    'id'           => $g->id,
+                    'full_name'    => $g->full_name,
+                    'phone'        => $g->phone,
+                    'phone_alt'    => $g->phone_alt,
+                    'email'        => $g->email,
+                    'relationship' => $g->relationship,
+                    'is_primary'   => (bool) $g->pivot->is_primary,
+                ]),
+            ],
+            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+        ]);
     }
 
     /**
@@ -155,9 +187,25 @@ class StudentController extends BaseSchoolController
     {
         $this->requireAdmin();
 
-        return view('school.students.form', [
-            'student' => $student,
-            'classes' => $this->activeClasses(),
+        return Inertia::render('School/Students/Form', [
+            'student' => [
+                'id'              => $student->id,
+                'first_name'      => $student->first_name,
+                'last_name'       => $student->last_name,
+                'first_name_am'   => $student->first_name_am,
+                'last_name_am'    => $student->last_name_am,
+                'gender'          => $student->gender,
+                'date_of_birth'   => $student->date_of_birth?->format('Y-m-d'),
+                'blood_type'      => $student->blood_type,
+                'status'          => $student->status ?? 'active',
+                'class_id'        => $student->class_id,
+                'medical_notes'   => $student->medical_notes,
+                'enrollment_date' => $student->enrollment_date?->format('Y-m-d'),
+                'join_date'       => $student->join_date?->format('Y-m-d'),
+                'end_date'        => $student->end_date?->format('Y-m-d'),
+                'photo_url'       => $student->photo_url,
+            ],
+            'classes' => $this->activeClasses()->map(fn($c) => ['id' => $c->id, 'name' => $c->name]),
         ]);
     }
 
