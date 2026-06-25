@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class StudentController extends BaseSchoolController
 {
@@ -50,7 +51,21 @@ class StudentController extends BaseSchoolController
         $unassignedCount = (clone $query)->whereNull('class_id')->count();
         $classes         = $this->activeClasses();
 
-        return view('school.students.index', compact('students', 'classes', 'unassignedCount'));
+        return Inertia::render('School/Students/Index', [
+            'students'         => $students->through(fn ($s) => [
+                'id'         => $s->id,
+                'full_name'  => $s->full_name,
+                'uid'        => $s->uid,
+                'status'     => $s->status,
+                'photo_url'  => $s->photo_url,
+                'initials'   => collect(explode(' ', $s->full_name))->map(fn ($w) => strtoupper($w[0] ?? ''))->take(2)->implode(''),
+                'class_name' => $s->schoolClass?->name,
+                'gender'     => $s->gender,
+            ]),
+            'classes'          => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->name]),
+            'unassigned_count' => $unassignedCount,
+            'filters'          => $request->only('search', 'class_id', 'status'),
+        ]);
     }
 
     public function create()

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { usePage } from '@inertiajs/react';
+import { usePage, Link } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
@@ -8,11 +8,11 @@ import {
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
 
-interface NavItem { label: string; href: string; icon: React.ElementType; }
+interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; }
 
 const navItems: NavItem[] = [
-    { label: 'Dashboard',   href: '/school/dashboard',        icon: LayoutDashboard },
-    { label: 'Students',    href: '/school/students',         icon: Users },
+    { label: 'Dashboard',   href: '/school/dashboard',        icon: LayoutDashboard, inertia: true },
+    { label: 'Students',    href: '/school/students',         icon: Users,           inertia: true },
     { label: 'Classes',     href: '/school/classes',          icon: GraduationCap },
     { label: 'Subjects',    href: '/school/subjects',         icon: BookOpen },
     { label: 'Staff',       href: '/school/staff',            icon: UserCog },
@@ -49,19 +49,19 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
             <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
                 {navItems.map(item => {
                     const active = isActive(item.href);
-                    return (
-                        <a
-                            key={item.href}
-                            href={item.href}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
-                            style={active
-                                ? { background: `${accent}14`, color: accent, borderRight: `3px solid ${accent}` }
-                                : undefined}
-                        >
+                    const linkClass = "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150";
+                    const linkStyle = active ? { background: `${accent}14`, color: accent, borderRight: `3px solid ${accent}` } : undefined;
+                    const inner = (
+                        <>
                             <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? '' : 'text-slate-400'}`} style={active ? { color: accent } : undefined} />
                             <span className={`flex-1 ${active ? '' : 'text-slate-600'}`}>{item.label}</span>
                             {active && <ChevronRight className="w-3 h-3" style={{ color: accent }} />}
-                        </a>
+                        </>
+                    );
+                    return item.inertia ? (
+                        <Link key={item.href} href={item.href} className={linkClass} style={linkStyle}>{inner}</Link>
+                    ) : (
+                        <a key={item.href} href={item.href} className={linkClass} style={linkStyle}>{inner}</a>
                     );
                 })}
             </nav>
