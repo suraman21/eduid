@@ -52,12 +52,12 @@ function OverrideRow({ schoolId, feature, planDefault, override }: {
 
     function set(e: React.FormEvent) {
         e.preventDefault();
-        setForm.post(`/admin/features/override/${schoolId}`);
+        setForm.post(`/admin/features/schools/${schoolId}/overrides`);
     }
 
     function remove(e: React.FormEvent) {
         e.preventDefault();
-        removeForm.delete(`/admin/features/override/${schoolId}/${feature.key}`);
+        removeForm.delete(`/admin/features/schools/${schoolId}/overrides/${feature.key}`);
     }
 
     return (

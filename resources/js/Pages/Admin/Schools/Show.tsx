@@ -170,7 +170,7 @@ export default function Show({ school }: Props) {
                     Back to Schools
                 </a>
                 <a
-                    href={`/admin/card-templates/${school.id}/edit`}
+                    href={`/admin/schools/${school.id}/card-template`}
                     className="inline-flex items-center gap-1.5 text-sm bg-white/5 border border-white/10 hover:border-purple-500/50 text-slate-300 px-4 py-2 rounded-lg transition"
                 >
                     <ExternalLink className="w-3.5 h-3.5" />
