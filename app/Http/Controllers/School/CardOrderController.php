@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 /**
  * School-facing card ordering. A school admin selects students, the system
@@ -25,7 +26,17 @@ class CardOrderController extends BaseSchoolController
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('school.card_orders.index', compact('orders'));
+        return Inertia::render('School/CardOrders/Index', [
+            'orders' => $orders->through(fn ($o) => [
+                'id'            => $o->id,
+                'order_code'    => $o->order_code,
+                'order_type'    => $o->order_type,
+                'student_count' => $o->student_count,
+                'amount_etb'    => $o->amount_etb,
+                'status'        => $o->status,
+                'created_at'    => $o->created_at->format('M d, Y'),
+            ]),
+        ]);
     }
 
     public function create(Request $request)
@@ -44,13 +55,23 @@ class CardOrderController extends BaseSchoolController
         // the admin doesn't double-order cards for the same student.
         $alreadyOrdered = $this->studentsInOpenOrders();
 
-        return view('school.card_orders.create', [
-            'roster'         => $roster,
-            'classes'        => $this->activeClasses(),
-            'classId'        => $classId,
-            'orderTypes'     => CardOrder::SCHOOL_ORDER_TYPES,
-            'pricing'        => CardOrder::PRICING,
-            'alreadyOrdered' => $alreadyOrdered,
+        return Inertia::render('School/CardOrders/Create', [
+            'roster' => $roster->map(fn ($s) => [
+                'id'         => $s->id,
+                'full_name'  => $s->full_name,
+                'uid'        => $s->uid,
+                'initials'   => strtoupper(substr($s->first_name, 0, 1) . substr($s->last_name, 0, 1)),
+                'class_name' => $s->schoolClass?->display_name,
+                'has_photo'  => $s->hasPhoto(),
+                'in_open'    => in_array($s->id, $alreadyOrdered, true),
+            ]),
+            'classes'     => $this->activeClasses()->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
+            'class_id'    => $classId ? (int) $classId : null,
+            'order_types' => array_map(fn ($t) => [
+                'value' => $t,
+                'label' => ucfirst(str_replace('_', ' ', $t)),
+                'price' => CardOrder::PRICING[$t],
+            ], CardOrder::SCHOOL_ORDER_TYPES),
         ]);
     }
 
@@ -101,9 +122,31 @@ class CardOrderController extends BaseSchoolController
         $cardOrder->load('orderedBy');
         $students = $cardOrder->getStudents()->load('schoolClass');
 
-        return view('school.card_orders.show', [
-            'order'    => $cardOrder,
-            'students' => $students,
+        $steps = ['pending', 'confirmed', 'printing', 'shipped', 'delivered'];
+        $stepIdx = array_search($cardOrder->status, $steps, true);
+
+        return Inertia::render('School/CardOrders/Show', [
+            'order' => [
+                'id'            => $cardOrder->id,
+                'order_code'    => $cardOrder->order_code,
+                'order_type'    => $cardOrder->order_type,
+                'student_count' => $cardOrder->student_count,
+                'amount_etb'    => $cardOrder->amount_etb,
+                'status'        => $cardOrder->status,
+                'is_pending'    => $cardOrder->isPending(),
+                'is_cancelled'  => $cardOrder->isCancelled(),
+                'can_cancel'    => $cardOrder->canBeCancelledBy(auth()->user()),
+                'cancel_reason' => $cardOrder->cancel_reason,
+                'tracking_note' => $cardOrder->tracking_note,
+                'ordered_by'    => $cardOrder->orderedBy?->name,
+                'created_at'    => $cardOrder->created_at->format('M d, Y'),
+                'step_index'    => $stepIdx !== false ? $stepIdx : -1,
+            ],
+            'students' => $students->map(fn ($s) => [
+                'id'        => $s->id,
+                'full_name' => $s->full_name,
+                'uid'       => $s->uid,
+            ]),
         ]);
     }
 
