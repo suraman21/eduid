@@ -3,7 +3,7 @@ import { usePage, Link, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
-    ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X, Sparkles,
+    ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -26,14 +26,6 @@ function normHex(c: string | null | undefined) {
     const h = (c || '#6366f1').trim();
     return /^#[0-9a-fA-F]{6}$/.test(h) ? h : '#6366f1';
 }
-function shade(hexColor: string, factor: number) {
-    const h = normHex(hexColor).slice(1);
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    const f = (c: number) => Math.max(0, Math.min(255, Math.round(c * factor)));
-    return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
-}
 function alpha(hexColor: string, a: number) {
     return `${normHex(hexColor)}${Math.round(a * 255).toString(16).padStart(2, '0')}`;
 }
@@ -54,7 +46,7 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
     const initials = (school?.name ?? 'S').slice(0, 1).toUpperCase();
 
     const sidebarGradient =
-        `linear-gradient(180deg, ${shade(accent, 0.62)} 0%, ${shade(accent, 0.30)} 42%, ${shade(accent, 0.10)} 100%)`;
+        `linear-gradient(180deg, ${accent} 0%, ${alpha(accent, 0.90)} 38%, rgba(8,10,24,0.97) 100%)`;
 
     function submitSearch(e: React.FormEvent) {
         e.preventDefault();
@@ -138,20 +130,6 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
                         : <a key={item.href} href={item.href} {...common}>{inner}</a>;
                 })}
             </nav>
-
-            {/* plan card */}
-            <div className="relative px-3 pb-3">
-                <div
-                    className="rounded-2xl p-4"
-                    style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(8px)' }}
-                >
-                    <div className="flex items-center gap-2 mb-1">
-                        <Sparkles className="w-3.5 h-3.5 text-white/80" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Current Plan</p>
-                    </div>
-                    <p className="text-sm font-extrabold text-white capitalize">{school?.plan_tier ?? 'Starter'}</p>
-                </div>
-            </div>
 
             {/* sign out */}
             <div className="relative px-3 pb-5">
