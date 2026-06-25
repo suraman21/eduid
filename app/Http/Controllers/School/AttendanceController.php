@@ -29,10 +29,28 @@ class AttendanceController extends BaseSchoolController
             $query->whereDate('session_date', $date);
         }
 
-        $sessions = $query->orderByDesc('session_date')->orderByDesc('id')->paginate(20);
-        $classes  = $this->activeClasses();
+        $paginator = $query->orderByDesc('session_date')->orderByDesc('id')->paginate(20);
+        $classes   = $this->activeClasses();
 
-        return view('school.attendance.index', compact('sessions', 'classes'));
+        return \Inertia\Inertia::render('School/Attendance/Index', [
+            'sessions' => [
+                'data'      => $paginator->getCollection()->map(fn($s) => [
+                    'id'           => $s->id,
+                    'session_date' => $s->session_date->format('M d, Y'),
+                    'session_type' => $s->session_type,
+                    'records_count'=> $s->records_count,
+                    'class_name'   => $s->schoolClass?->display_name,
+                    'teacher_name' => $s->teacher?->name,
+                ])->values(),
+                'links'     => $paginator->linkCollection()->toArray(),
+                'has_pages' => $paginator->hasPages(),
+            ],
+            'classes' => $classes->map(fn($c) => ['id' => $c->id, 'display_name' => $c->display_name])->values(),
+            'filters' => [
+                'class_id' => $request->get('class_id'),
+                'date'     => $request->get('date'),
+            ],
+        ]);
     }
 
     /**
@@ -74,13 +92,19 @@ class AttendanceController extends BaseSchoolController
             }
         }
 
-        return view('school.attendance.create', [
-            'classes'      => $classes,
-            'class'        => $class,
-            'roster'       => $roster,
-            'existing'     => $existing,
-            'sessionDate'  => $filters['session_date'] ?? today()->toDateString(),
-            'sessionType'  => $filters['session_type'] ?? 'morning',
+        return \Inertia\Inertia::render('School/Attendance/Create', [
+            'classes'     => $classes->map(fn($c) => ['id' => $c->id, 'display_name' => $c->display_name])->values(),
+            'class'       => $class ? ['id' => $class->id, 'display_name' => $class->display_name] : null,
+            'roster'      => $roster->map(fn($s) => [
+                'id'         => $s->id,
+                'full_name'  => $s->full_name,
+                'uid'        => $s->uid,
+                'first_name' => $s->first_name,
+                'last_name'  => $s->last_name,
+            ])->values(),
+            'existing'    => $existing,
+            'sessionDate' => $filters['session_date'] ?? today()->toDateString(),
+            'sessionType' => $filters['session_type'] ?? 'morning',
         ]);
     }
 
@@ -116,7 +140,26 @@ class AttendanceController extends BaseSchoolController
     {
         $attendance->load(['schoolClass', 'teacher', 'records.student']);
 
-        return view('school.attendance.show', ['session' => $attendance]);
+        return \Inertia\Inertia::render('School/Attendance/Show', [
+            'session' => [
+                'id'           => $attendance->id,
+                'class_name'   => $attendance->schoolClass?->display_name,
+                'class_id'     => $attendance->class_id,
+                'session_date' => $attendance->session_date->toDateString(),
+                'session_type' => $attendance->session_type,
+                'teacher_name' => $attendance->teacher?->name,
+                'present'      => $attendance->records->where('status', 'present')->count(),
+                'late'         => $attendance->records->where('status', 'late')->count(),
+                'excused'      => $attendance->records->where('status', 'excused')->count(),
+                'absent'       => $attendance->records->where('status', 'absent')->count(),
+                'records'      => $attendance->records->sortBy('student.first_name')->map(fn($r) => [
+                    'student_name' => $r->student?->full_name,
+                    'student_uid'  => $r->student?->uid,
+                    'status'       => $r->status,
+                    'note'         => $r->note,
+                ])->values(),
+            ],
+        ]);
     }
 
     /**
