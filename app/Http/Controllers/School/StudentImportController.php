@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 /**
  * CSV bulk student import.
@@ -53,8 +54,8 @@ class StudentImportController extends BaseSchoolController
         $this->requireAdmin();
         $this->requireFeature();
 
-        return view('school.students.import', [
-            'classes' => SchoolClass::where('is_active', true)->orderBy('grade')->get(),
+        return Inertia::render('School/Students/Import', [
+            'classes' => SchoolClass::where('is_active', true)->orderBy('grade')->get(['id', 'grade', 'section']),
         ]);
     }
 
@@ -76,7 +77,6 @@ class StudentImportController extends BaseSchoolController
         }
 
         // Validate every row, collecting errors per row.
-        $school  = $this->currentSchool();
         $classes = SchoolClass::where('is_active', true)->get()->keyBy(fn ($c) => $this->classKey($c->grade, $c->section));
         $results = [];
 
@@ -94,9 +94,7 @@ class StudentImportController extends BaseSchoolController
         $invalidCount = count($results) - $validCount;
 
         if ($validCount === 0) {
-            return back()
-                ->with('error', 'No valid rows found. Please fix the errors below and re-upload.')
-                ->with('preview', $results);
+            return back()->with('error', 'No valid rows found. Please fix the errors and re-upload.');
         }
 
         // Store the tmp file so confirm can re-read it (avoid re-uploading).
@@ -105,8 +103,8 @@ class StudentImportController extends BaseSchoolController
         Storage::put($tmpPath, file_get_contents($path));
         session(['csv_import_tmp' => $tmpPath, 'csv_import_key' => $tmpKey]);
 
-        return view('school.students.import', [
-            'classes'      => SchoolClass::where('is_active', true)->orderBy('grade')->get(),
+        return Inertia::render('School/Students/Import', [
+            'classes'      => SchoolClass::where('is_active', true)->orderBy('grade')->get(['id', 'grade', 'section']),
             'preview'      => $results,
             'validCount'   => $validCount,
             'invalidCount' => $invalidCount,
