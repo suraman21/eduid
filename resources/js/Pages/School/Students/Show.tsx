@@ -203,7 +203,7 @@ function AddGuardianForm({ studentId, accent }: { studentId: number; accent: str
 /* ── Main page ───────────────────────────────────────────────── */
 export default function Show({ student, is_admin }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
 
     function removeGuardian(guardianId: number) {
         if (!confirm('Remove this guardian from the student?')) return;

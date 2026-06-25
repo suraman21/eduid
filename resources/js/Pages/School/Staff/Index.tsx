@@ -48,7 +48,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function Index({ staff, filters, is_admin }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
 
     const [search, setSearch] = useState(filters.search ?? '');
     const [role, setRole]     = useState(filters.role ?? '');
@@ -156,7 +156,7 @@ export default function Index({ staff, filters, is_admin }: Props) {
                                     </td>
                                     <td className="px-5 py-3 text-right">
                                         <div className="flex items-center gap-3 justify-end">
-                                            <Link href={`/school/staff/${m.id}`} className="text-slate-400 hover:text-indigo-600 transition" title="View">
+                                            <Link href={`/school/staff/${m.id}`} className="text-slate-400 transition hover:opacity-100" title="View" style={{ ['--hover-accent' as string]: accent }} onMouseEnter={e => (e.currentTarget.style.color = accent)} onMouseLeave={e => (e.currentTarget.style.color = '')}>
                                                 <Eye className="w-4 h-4" />
                                             </Link>
                                             {is_admin && (
@@ -181,11 +181,12 @@ export default function Index({ staff, filters, is_admin }: Props) {
                             key={i}
                             disabled={!link.url}
                             onClick={() => link.url && router.visit(link.url, { preserveState: true })}
-                            className={`px-3 py-1.5 text-xs rounded-lg transition ${
-                                link.active ? 'bg-indigo-600 text-white'
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                                link.active ? 'text-white'
                                     : link.url ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
                                     : 'bg-white border border-slate-100 text-slate-300 cursor-not-allowed'
                             }`}
+                            style={link.active ? { background: accent } : undefined}
                             dangerouslySetInnerHTML={{ __html: link.label }}
                         />
                     ))}

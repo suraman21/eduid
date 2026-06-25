@@ -30,7 +30,7 @@ interface Props {
 
 export default function Index({ classes, is_admin }: Props) {
     const { props } = usePage<PageProps>();
-    const accent = normHex(props.school?.accent_color);
+    const accent = normHex(props.accent);
 
     return (
         <SchoolLayout>

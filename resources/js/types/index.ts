@@ -18,6 +18,8 @@ export interface PageProps {
         user: User | null;
     };
     school: School | null;
+    /** Flat, always-present accent colour (hex). Immune to page `school` shadowing. */
+    accent: string;
     flash: {
         success: string | null;
         error: string | null;
