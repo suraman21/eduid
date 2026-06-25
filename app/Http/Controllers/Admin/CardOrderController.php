@@ -9,6 +9,7 @@ use App\Services\CardPrintService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 /**
  * Super-admin processing of card orders. The admin enters the confirmation
@@ -39,9 +40,20 @@ class CardOrderController extends Controller
             $query->where('order_code', 'like', "%{$code}%");
         }
 
-        $orders = $query->orderByDesc('created_at')->paginate(20);
+        $orders = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
-        return view('admin.card_orders.index', compact('orders'));
+        return Inertia::render('Admin/CardOrders/Index', [
+            'orders'  => $orders->through(fn ($o) => [
+                'id'            => $o->id,
+                'order_code'    => $o->order_code,
+                'school_name'   => $o->school?->name,
+                'order_type'    => $o->order_type,
+                'student_count' => $o->student_count,
+                'amount_etb'    => (float) $o->amount_etb,
+                'status'        => $o->status,
+            ]),
+            'filters' => $request->only('code', 'status'),
+        ]);
     }
 
     /**
@@ -58,12 +70,28 @@ class CardOrderController extends Controller
                 ->first();
         }
 
-        $students = $order ? $order->getStudents()->load('schoolClass') : collect();
+        $students     = $order ? $order->getStudents()->load('schoolClass') : collect();
+        $noPhotoCount = $students->filter(fn ($s) => ! $s->hasPhoto())->count();
 
-        return view('admin.card_orders.process', [
-            'code'     => $code,
-            'order'    => $order,
-            'students' => $students,
+        return Inertia::render('Admin/CardOrders/Process', [
+            'code'          => $code,
+            'order'         => $order ? [
+                'id'            => $order->id,
+                'order_code'    => $order->order_code,
+                'school_name'   => $order->school?->name,
+                'ordered_by'    => $order->orderedBy?->name,
+                'order_type'    => $order->order_type,
+                'student_count' => $order->student_count,
+                'amount_etb'    => (float) $order->amount_etb,
+                'status'        => $order->status,
+            ] : null,
+            'students'      => $students->map(fn ($s) => [
+                'id'        => $s->id,
+                'full_name' => $s->full_name,
+                'uid'       => $s->uid,
+                'has_photo' => $s->hasPhoto(),
+            ]),
+            'no_photo_count' => $noPhotoCount,
         ]);
     }
 
@@ -72,9 +100,27 @@ class CardOrderController extends Controller
         $cardOrder->load(['school', 'orderedBy']);
         $students = $cardOrder->getStudents()->load('schoolClass');
 
-        return view('admin.card_orders.show', [
-            'order'    => $cardOrder,
-            'students' => $students,
+        return Inertia::render('Admin/CardOrders/Show', [
+            'order'    => [
+                'id'              => $cardOrder->id,
+                'order_code'      => $cardOrder->order_code,
+                'school_name'     => $cardOrder->school?->name,
+                'ordered_by'      => $cardOrder->orderedBy?->name,
+                'order_type'      => $cardOrder->order_type,
+                'student_count'   => $cardOrder->student_count,
+                'amount_etb'      => (float) $cardOrder->amount_etb,
+                'status'          => $cardOrder->status,
+                'cancel_reason'   => $cardOrder->cancel_reason,
+                'print_file_path' => $cardOrder->print_file_path,
+                'can_cancel'      => $cardOrder->canBeCancelledBy(auth()->user()),
+                'created_at'      => $cardOrder->created_at->toISOString(),
+            ],
+            'students' => $students->map(fn ($s) => [
+                'id'        => $s->id,
+                'full_name' => $s->full_name,
+                'uid'       => $s->uid,
+                'has_photo' => $s->hasPhoto(),
+            ]),
         ]);
     }
 
