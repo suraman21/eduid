@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Building2, GraduationCap, CreditCard,
-    Mail, DollarSign, Layers, FileText, Menu, X, LogOut,
+    Mail, DollarSign, Layers, FileText, Menu, LogOut,
     ChevronRight, ShieldCheck,
 } from 'lucide-react';
 import Toast from '@/Components/Toast';
@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {navItems.map(item => {
                     const active = isActive(item.href);
                     return (
-                        <Link
+                        <a
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
@@ -62,22 +62,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
                             <span className="flex-1">{item.label}</span>
                             {active && <ChevronRight className="w-3 h-3 text-purple-400" />}
-                        </Link>
+                        </a>
                     );
                 })}
             </nav>
 
             {/* Footer */}
             <div className="px-2 pb-4 border-t border-white/5 pt-3">
-                <Link
-                    href="/admin/logout"
-                    method="post"
-                    as="button"
-                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
-                >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign out</span>
-                </Link>
+                <form method="POST" action="/admin/logout" style={{ margin: 0 }}>
+                    <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''} />
+                    <button
+                        type="submit"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign out</span>
+                    </button>
+                </form>
             </div>
         </div>
     );
