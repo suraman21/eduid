@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class LoginController extends Controller
 {
@@ -21,7 +22,9 @@ class LoginController extends Controller
         if (Auth::check()) {
             return $this->redirectUser(Auth::user());
         }
-        return view('auth.login');
+        return Inertia::render('Auth/Login', [
+            'reset_status' => session('reset_status'),
+        ]);
     }
 
     /**
