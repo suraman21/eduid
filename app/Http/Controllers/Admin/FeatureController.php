@@ -9,7 +9,7 @@ use App\Models\School;
 use App\Models\SchoolFeatureOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class FeatureController extends Controller
 {
@@ -24,14 +24,26 @@ class FeatureController extends Controller
 
         if ($schoolId = $request->get('school_id')) {
             $selectedSchool  = School::find($schoolId);
-            $schoolOverrides = SchoolFeatureOverride::where('school_id', $schoolId)
-                ->get()
-                ->keyBy('feature_key');
+            $schoolOverrides = SchoolFeatureOverride::where('school_id', $schoolId)->get();
         }
 
-        return view('admin.features.index', compact(
-            'features', 'planFeats', 'schools', 'selectedSchool', 'schoolOverrides'
-        ));
+        // Build a flat feature_key → {starter, standard, premium} matrix for the frontend
+        $planMatrix = $features->mapWithKeys(fn ($f) => [
+            $f->key => [
+                'starter'  => (bool) ($planFeats->get('starter')?->firstWhere('feature_key', $f->key)?->is_enabled ?? false),
+                'standard' => (bool) ($planFeats->get('standard')?->firstWhere('feature_key', $f->key)?->is_enabled ?? false),
+                'premium'  => (bool) ($planFeats->get('premium')?->firstWhere('feature_key', $f->key)?->is_enabled ?? false),
+            ],
+        ]);
+
+        return Inertia::render('Admin/Features/Index', [
+            'features'        => $features->values(),
+            'plan_matrix'     => $planMatrix,
+            'schools'         => $schools->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'plan_tier' => $s->plan_tier]),
+            'selected_school' => $selectedSchool ? ['id' => $selectedSchool->id, 'name' => $selectedSchool->name, 'plan_tier' => $selectedSchool->plan_tier] : null,
+            'overrides'       => $schoolOverrides->map(fn ($o) => ['feature_key' => $o->feature_key, 'is_enabled' => (bool) $o->is_enabled])->values(),
+            'filters'         => $request->only('school_id'),
+        ]);
     }
 
     public function setOverride(Request $request, School $school)

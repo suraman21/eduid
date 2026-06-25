@@ -26,8 +26,8 @@ const navItems: NavItem[] = [
     { label: 'Payments',       href: '/admin/payments',        icon: DollarSign,  inertia: true },
     { label: 'Card Orders',    href: '/admin/card-orders',     icon: CreditCard,  inertia: true },
     { label: 'Card Templates', href: '/admin/card-templates',  icon: Layers },
-    { label: 'Features',       href: '/admin/features',        icon: ShieldCheck },
-    { label: 'Audit Log',      href: '/admin/audit-log',       icon: FileText },
+    { label: 'Features',       href: '/admin/features',        icon: ShieldCheck, inertia: true },
+    { label: 'Audit Log',      href: '/admin/audit-log',       icon: FileText,    inertia: true },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
