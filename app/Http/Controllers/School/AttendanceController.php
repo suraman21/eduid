@@ -10,6 +10,7 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class AttendanceController extends BaseSchoolController
 {
@@ -32,7 +33,18 @@ class AttendanceController extends BaseSchoolController
         $sessions = $query->orderByDesc('session_date')->orderByDesc('id')->paginate(20);
         $classes  = $this->activeClasses();
 
-        return view('school.attendance.index', compact('sessions', 'classes'));
+        return Inertia::render('School/Attendance/Index', [
+            'sessions' => $sessions->through(fn ($s) => [
+                'id'            => $s->id,
+                'session_date'  => $s->session_date->format('M d, Y'),
+                'class_name'    => $s->schoolClass?->display_name ?? '—',
+                'session_type'  => $s->session_type,
+                'teacher_name'  => $s->teacher?->name ?? '—',
+                'records_count' => $s->records_count,
+            ]),
+            'classes' => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
+            'filters' => $request->only('class_id', 'date'),
+        ]);
     }
 
     /**
@@ -74,13 +86,18 @@ class AttendanceController extends BaseSchoolController
             }
         }
 
-        return view('school.attendance.create', [
-            'classes'      => $classes,
-            'class'        => $class,
-            'roster'       => $roster,
-            'existing'     => $existing,
-            'sessionDate'  => $filters['session_date'] ?? today()->toDateString(),
-            'sessionType'  => $filters['session_type'] ?? 'morning',
+        return Inertia::render('School/Attendance/Create', [
+            'classes'     => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->display_name]),
+            'class'       => $class ? ['id' => $class->id, 'name' => $class->display_name] : null,
+            'roster'      => $roster->map(fn ($s) => [
+                'id'       => $s->id,
+                'name'     => $s->full_name,
+                'uid'      => $s->uid,
+                'initials' => strtoupper(substr($s->first_name, 0, 1)) . strtoupper(substr($s->last_name, 0, 1)),
+            ])->values(),
+            'existing'    => $existing,
+            'sessionDate' => $filters['session_date'] ?? today()->toDateString(),
+            'sessionType' => $filters['session_type'] ?? 'morning',
         ]);
     }
 
@@ -116,7 +133,33 @@ class AttendanceController extends BaseSchoolController
     {
         $attendance->load(['schoolClass', 'teacher', 'records.student']);
 
-        return view('school.attendance.show', ['session' => $attendance]);
+        $records = $attendance->records->sortBy('student.first_name');
+        $counts = [
+            'present' => $records->where('status', 'present')->count(),
+            'late'    => $records->where('status', 'late')->count(),
+            'excused' => $records->where('status', 'excused')->count(),
+            'absent'  => $records->where('status', 'absent')->count(),
+        ];
+
+        return Inertia::render('School/Attendance/Show', [
+            'session' => [
+                'id'           => $attendance->id,
+                'class_name'   => $attendance->schoolClass?->display_name ?? '—',
+                'class_id'     => $attendance->class_id,
+                'session_date' => $attendance->session_date->format('M d, Y'),
+                'session_date_raw' => $attendance->session_date->toDateString(),
+                'session_type' => $attendance->session_type,
+                'teacher_name' => $attendance->teacher?->name ?? '—',
+                'counts'       => $counts,
+                'records'      => $records->map(fn ($r) => [
+                    'id'           => $r->id,
+                    'student_name' => $r->student?->full_name ?? '—',
+                    'student_uid'  => $r->student?->uid ?? '',
+                    'status'       => $r->status,
+                    'note'         => $r->note,
+                ])->values(),
+            ],
+        ]);
     }
 
     /**
