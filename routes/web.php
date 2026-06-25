@@ -27,6 +27,7 @@ use App\Http\Controllers\School\ReportCardController as SchoolReportCardControll
 use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
 use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,7 +56,10 @@ Route::get('/', function () {
         }
         return redirect('/school/dashboard');
     }
-    return view('welcome');
+    return Inertia::render('Welcome', [
+        'success' => session('success'),
+        'error'   => session('error'),
+    ]);
 })->name('home');
 
 // Lead capture / Contact form
