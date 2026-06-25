@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class StaffController extends BaseSchoolController
 {
@@ -31,16 +32,30 @@ class StaffController extends BaseSchoolController
             $query->where('role', $role);
         }
 
-        $staff = $query->orderBy('name')->paginate(20);
+        $staff = $query->orderBy('name')->paginate(20)->withQueryString();
 
-        return view('school.staff.index', compact('staff'));
+        return Inertia::render('School/Staff/Index', [
+            'staff' => $staff->through(fn ($m) => [
+                'id'          => $m->id,
+                'name'        => $m->name,
+                'email'       => $m->email,
+                'role'        => $m->role,
+                'job_title'   => $m->job_title,
+                'employee_id' => $m->employee_id,
+                'is_active'   => (bool) $m->is_active,
+                'initials'    => strtoupper(substr($m->name, 0, 2)),
+            ]),
+            'filters'  => $request->only('search', 'role'),
+            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+        ]);
     }
 
     public function create()
     {
         $this->requireAdmin();
-
-        return view('school.staff.form', ['member' => new User()]);
+        return Inertia::render('School/Staff/Form', [
+            'member' => null,
+        ]);
     }
 
     public function store(Request $request)
@@ -69,14 +84,46 @@ class StaffController extends BaseSchoolController
 
     public function show(User $staff)
     {
-        return view('school.staff.show', ['member' => $staff]);
+        return Inertia::render('School/Staff/Show', [
+            'member' => [
+                'id'                            => $staff->id,
+                'name'                          => $staff->name,
+                'email'                         => $staff->email,
+                'role'                          => $staff->role,
+                'job_title'                     => $staff->job_title,
+                'phone'                         => $staff->phone,
+                'employee_id'                   => $staff->employee_id,
+                'is_active'                     => (bool) $staff->is_active,
+                'can_login'                     => (bool) $staff->can_login,
+                'is_homeroom'                   => (bool) $staff->is_homeroom,
+                'is_coordinator'                => (bool) $staff->is_coordinator,
+                'can_record_staff_attendance'   => (bool) $staff->can_record_staff_attendance,
+                'last_login_at'                 => $staff->last_login_at?->diffForHumans(),
+                'initials'                      => strtoupper(substr($staff->name, 0, 2)),
+            ],
+            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+        ]);
     }
 
     public function edit(User $staff)
     {
         $this->requireAdmin();
-
-        return view('school.staff.form', ['member' => $staff]);
+        return Inertia::render('School/Staff/Form', [
+            'member' => [
+                'id'                            => $staff->id,
+                'name'                          => $staff->name,
+                'email'                         => $staff->email,
+                'role'                          => $staff->role,
+                'phone'                         => $staff->phone,
+                'employee_id'                   => $staff->employee_id,
+                'job_title'                     => $staff->job_title,
+                'is_active'                     => (bool) $staff->is_active,
+                'can_login'                     => (bool) $staff->can_login,
+                'is_homeroom'                   => (bool) $staff->is_homeroom,
+                'is_coordinator'                => (bool) $staff->is_coordinator,
+                'can_record_staff_attendance'   => (bool) $staff->can_record_staff_attendance,
+            ],
+        ]);
     }
 
     public function update(Request $request, User $staff)
