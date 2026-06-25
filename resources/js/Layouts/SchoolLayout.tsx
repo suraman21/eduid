@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { usePage, Link } from '@inertiajs/react';
+import { usePage, Link, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
-    ClipboardCheck, FileBarChart, Menu, LogOut, Upload,
+    ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X, Sparkles,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -21,16 +21,30 @@ const navItems: NavItem[] = [
     { label: 'Import',      href: '/school/students/import',  icon: Upload },
 ];
 
-function hex(color: string, alpha: number) {
-    const a = Math.round(alpha * 255).toString(16).padStart(2, '0');
-    return `${color}${a}`;
+/* ── colour helpers ──────────────────────────────────────────── */
+function normHex(c: string | null | undefined) {
+    const h = (c || '#6366f1').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(h) ? h : '#6366f1';
+}
+function shade(hexColor: string, factor: number) {
+    const h = normHex(hexColor).slice(1);
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    const f = (c: number) => Math.max(0, Math.min(255, Math.round(c * factor)));
+    return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
+}
+function alpha(hexColor: string, a: number) {
+    return `${normHex(hexColor)}${Math.round(a * 255).toString(16).padStart(2, '0')}`;
 }
 
 export default function SchoolLayout({ children }: { children: React.ReactNode }) {
     const { url, props } = usePage<PageProps>();
     const school = props.school;
-    const accent: string = (school as any)?.accent_color || '#6366f1';
+    const user = props.auth?.user;
+    const accent = normHex(school?.accent_color);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [search, setSearch] = useState('');
 
     useEffect(() => {
         document.documentElement.classList.remove('dark');
@@ -39,103 +53,117 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
     const isActive = (href: string) => url.startsWith(href);
     const initials = (school?.name ?? 'S').slice(0, 1).toUpperCase();
 
-    const SidebarContent = () => (
-        <div className="flex flex-col h-full">
-            {/* School header */}
+    const sidebarGradient =
+        `linear-gradient(180deg, ${shade(accent, 0.62)} 0%, ${shade(accent, 0.30)} 42%, ${shade(accent, 0.10)} 100%)`;
+
+    function submitSearch(e: React.FormEvent) {
+        e.preventDefault();
+        router.get('/school/students', { search }, { preserveState: false });
+        setSidebarOpen(false);
+    }
+
+    /* ── sidebar inner ─────────────────────────────────────── */
+    const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
+        <div className="flex flex-col h-full relative overflow-hidden" style={{ background: sidebarGradient }}>
+            {/* decorative top glow */}
             <div
-                className="px-4 py-5"
-                style={{ borderBottom: `1px solid ${hex(accent, 0.14)}` }}
-            >
-                <div className="flex items-center gap-3">
-                    {/* Glowing avatar */}
-                    <div className="relative flex-shrink-0">
-                        <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-base font-extrabold"
-                            style={{
-                                background: accent,
-                                boxShadow: `0 0 0 3px ${hex(accent, 0.18)}, 0 0 16px ${hex(accent, 0.35)}`,
-                            }}
-                        >
-                            {initials}
-                        </div>
-                        {/* online dot */}
-                        <div
-                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-white"
-                            style={{ boxShadow: '0 0 6px #22c55e80' }}
-                        />
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-sm font-extrabold text-slate-900 leading-tight truncate">
-                            {school?.name ?? 'School'}
-                        </p>
-                        <p
-                            className="text-[10px] font-mono tracking-wider uppercase mt-0.5"
-                            style={{ color: accent }}
-                        >
-                            {(school as any)?.code ?? '—'}
-                        </p>
-                    </div>
+                className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl pointer-events-none"
+                style={{ background: alpha(accent, 0.35) }}
+            />
+            <div
+                className="absolute bottom-0 left-0 w-full h-32 blur-2xl pointer-events-none"
+                style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.4), transparent)' }}
+            />
+
+            {/* logo / school */}
+            <div className="relative flex items-center gap-3 px-5 pt-6 pb-5">
+                <div
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-base font-extrabold flex-shrink-0"
+                    style={{
+                        background: 'rgba(255,255,255,0.16)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255,255,255,0.25)',
+                        color: '#fff',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                    }}
+                >
+                    {initials}
+                </div>
+                <div className="min-w-0">
+                    <p className="text-sm font-extrabold text-white leading-tight truncate">{school?.name ?? 'School'}</p>
+                    <p className="text-[10px] font-mono tracking-widest uppercase text-white/55 mt-0.5">{(school as any)?.code ?? '—'}</p>
                 </div>
             </div>
 
-            {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+            {/* nav */}
+            <nav className="relative flex-1 px-3 py-2 space-y-1 overflow-y-auto">
                 {navItems.map(item => {
                     const active = isActive(item.href);
-
-                    const style: React.CSSProperties = active ? {
-                        background: hex(accent, 0.10),
-                        color: accent,
-                        border: `1px solid ${hex(accent, 0.22)}`,
-                        boxShadow: `0 0 14px ${hex(accent, 0.14)}, inset 0 0 8px ${hex(accent, 0.06)}`,
-                    } : {
-                        border: '1px solid transparent',
-                    };
-
-                    const cls = [
-                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold',
-                        'transition-all duration-150',
-                        active ? '' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/70',
-                    ].join(' ');
+                    const cls = 'group flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200';
+                    const style: React.CSSProperties = active
+                        ? { background: '#ffffff', color: accent, boxShadow: '0 8px 24px rgba(0,0,0,0.28)' }
+                        : { color: 'rgba(255,255,255,0.72)' };
 
                     const inner = (
                         <>
-                            <item.icon
-                                className="w-4 h-4 flex-shrink-0"
-                                style={active ? { color: accent } : { color: '#94a3b8' }}
-                                strokeWidth={active ? 2 : 1.75}
-                            />
+                            <span
+                                className="flex items-center justify-center w-8 h-8 rounded-xl transition-all"
+                                style={active
+                                    ? { background: alpha(accent, 0.12), color: accent }
+                                    : { background: 'rgba(255,255,255,0.10)', color: '#fff' }}
+                            >
+                                <item.icon className="w-4 h-4" strokeWidth={2} />
+                            </span>
                             <span className="flex-1">{item.label}</span>
                             {active && (
-                                <div
-                                    className="w-1.5 h-1.5 rounded-full"
-                                    style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
-                                />
+                                <span className="w-2 h-2 rounded-full" style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />
                             )}
                         </>
                     );
 
-                    return item.inertia ? (
-                        <Link key={item.href} href={item.href} className={cls} style={style}>{inner}</Link>
-                    ) : (
-                        <a key={item.href} href={item.href} className={cls} style={style}>{inner}</a>
-                    );
+                    const common = {
+                        className: cls,
+                        style,
+                        onClick: onNavigate,
+                        onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
+                            if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.10)';
+                        },
+                        onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
+                            if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                        },
+                    };
+
+                    return item.inertia
+                        ? <Link key={item.href} href={item.href} {...common}>{inner}</Link>
+                        : <a key={item.href} href={item.href} {...common}>{inner}</a>;
                 })}
             </nav>
 
-            {/* Sign out */}
-            <div className="px-3 pb-4 pt-3" style={{ borderTop: `1px solid ${hex(accent, 0.10)}` }}>
+            {/* plan card */}
+            <div className="relative px-3 pb-3">
+                <div
+                    className="rounded-2xl p-4"
+                    style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(8px)' }}
+                >
+                    <div className="flex items-center gap-2 mb-1">
+                        <Sparkles className="w-3.5 h-3.5 text-white/80" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Current Plan</p>
+                    </div>
+                    <p className="text-sm font-extrabold text-white capitalize">{school?.plan_tier ?? 'Starter'}</p>
+                </div>
+            </div>
+
+            {/* sign out */}
+            <div className="relative px-3 pb-5">
                 <form method="POST" action="/logout" style={{ margin: 0 }}>
-                    <input
-                        type="hidden"
-                        name="_token"
-                        value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''}
-                    />
+                    <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''} />
                     <button
                         type="submit"
-                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150"
+                        className="flex items-center gap-3 w-full px-3.5 py-3 rounded-2xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-all duration-150"
                     >
-                        <LogOut className="w-4 h-4" />
+                        <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/10">
+                            <LogOut className="w-4 h-4" />
+                        </span>
                         <span>Sign out</span>
                     </button>
                 </form>
@@ -143,79 +171,94 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
         </div>
     );
 
+    const pageBg = `radial-gradient(circle at 12% 0%, ${alpha(accent, 0.16)}, transparent 45%), radial-gradient(circle at 100% 100%, ${alpha(accent, 0.10)}, transparent 40%), #eef0f7`;
+
     return (
-        <div className="min-h-screen text-slate-900 flex" style={{ background: '#f8f9fc' }}>
+        <div className="min-h-screen flex lg:gap-5 lg:p-5" style={{ background: pageBg }}>
             <Toast />
 
-            {/* Desktop sidebar */}
+            {/* desktop sidebar — floating panel */}
             <aside
-                className="hidden lg:flex flex-col w-60 fixed inset-y-0 left-0 z-30 bg-white"
-                style={{
-                    borderRight: `1px solid ${hex(accent, 0.12)}`,
-                    boxShadow: `2px 0 24px ${hex(accent, 0.06)}`,
-                }}
+                className="hidden lg:flex flex-col w-64 flex-shrink-0 rounded-[28px] overflow-hidden sticky top-5 self-start"
+                style={{ height: 'calc(100vh - 2.5rem)', boxShadow: `0 20px 50px ${alpha(accent, 0.28)}` }}
             >
                 <SidebarContent />
             </aside>
 
-            {/* Mobile overlay + sidebar */}
+            {/* mobile drawer */}
             <AnimatePresence>
                 {sidebarOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
                             onClick={() => setSidebarOpen(false)}
                         />
                         <motion.aside
-                            initial={{ x: -260 }} animate={{ x: 0 }} exit={{ x: -260 }}
-                            transition={{ duration: 0.22, ease: 'easeOut' }}
-                            className="fixed inset-y-0 left-0 w-60 bg-white z-50 lg:hidden"
-                            style={{
-                                borderRight: `1px solid ${hex(accent, 0.12)}`,
-                                boxShadow: `4px 0 32px ${hex(accent, 0.10)}`,
-                            }}
+                            initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            className="fixed inset-y-3 left-3 w-64 rounded-[28px] overflow-hidden z-50 lg:hidden"
+                            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}
                         >
-                            <SidebarContent />
+                            <button
+                                onClick={() => setSidebarOpen(false)}
+                                className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <SidebarContent onNavigate={() => setSidebarOpen(false)} />
                         </motion.aside>
                     </>
                 )}
             </AnimatePresence>
 
-            {/* Main */}
-            <div className="flex-1 lg:ml-60 flex flex-col min-h-screen">
-                {/* Top bar */}
-                <header
-                    className="sticky top-0 z-20 h-14 flex items-center px-4 lg:px-6"
-                    style={{
-                        background: 'rgba(248,249,252,0.85)',
-                        backdropFilter: 'blur(12px)',
-                        borderBottom: `1px solid ${hex(accent, 0.10)}`,
-                        boxShadow: `0 1px 12px ${hex(accent, 0.06)}`,
-                    }}
-                >
+            {/* main column */}
+            <div className="flex-1 min-w-0 flex flex-col">
+                {/* top bar */}
+                <header className="flex items-center gap-3 mb-6 px-1">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                        className="lg:hidden p-2.5 rounded-2xl bg-white text-slate-600 shadow-sm border border-slate-200/60"
                     >
                         <Menu className="w-5 h-5" />
                     </button>
+
+                    {/* search */}
+                    <form onSubmit={submitSearch} className="flex-1 max-w-md">
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search students…"
+                                className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white text-sm text-slate-700 placeholder:text-slate-400 border border-slate-200/70 shadow-sm focus:outline-none focus:ring-2 transition"
+                                style={{ ['--tw-ring-color' as any]: alpha(accent, 0.35) }}
+                            />
+                        </div>
+                    </form>
+
                     <div className="flex-1" />
-                    {/* Subtle accent pill in topbar */}
+
+                    {/* plan pill */}
                     <div
-                        className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
-                        style={{
-                            background: hex(accent, 0.08),
-                            color: accent,
-                            border: `1px solid ${hex(accent, 0.16)}`,
-                        }}
+                        className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold capitalize bg-white shadow-sm border border-slate-200/60"
+                        style={{ color: accent }}
                     >
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
-                        {school?.name ?? 'School'}
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
+                        {school?.plan_tier ?? 'Starter'}
+                    </div>
+
+                    {/* avatar */}
+                    <div
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-sm font-extrabold flex-shrink-0"
+                        style={{ background: accent, boxShadow: `0 6px 18px ${alpha(accent, 0.4)}` }}
+                        title={user?.name ?? school?.name ?? ''}
+                    >
+                        {(user?.name ?? school?.name ?? 'S').slice(0, 1).toUpperCase()}
                     </div>
                 </header>
 
-                <main className="flex-1 px-4 lg:px-8 py-7">{children}</main>
+                <main className="flex-1 px-1 pb-8">{children}</main>
             </div>
         </div>
     );
