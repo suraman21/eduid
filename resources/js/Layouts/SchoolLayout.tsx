@@ -13,11 +13,11 @@ interface NavItem { label: string; href: string; icon: React.ElementType; inerti
 const navItems: NavItem[] = [
     { label: 'Dashboard',   href: '/school/dashboard',        icon: LayoutDashboard, inertia: true },
     { label: 'Students',    href: '/school/students',         icon: Users,           inertia: true },
-    { label: 'Classes',     href: '/school/classes',          icon: GraduationCap },
-    { label: 'Subjects',    href: '/school/subjects',         icon: BookOpen },
-    { label: 'Staff',       href: '/school/staff',            icon: UserCog },
-    { label: 'Attendance',  href: '/school/attendance',       icon: ClipboardCheck },
-    { label: 'Grades',      href: '/school/grades',           icon: FileBarChart },
+    { label: 'Classes',     href: '/school/classes',          icon: GraduationCap,   inertia: true },
+    { label: 'Subjects',    href: '/school/subjects',         icon: BookOpen,        inertia: true },
+    { label: 'Staff',       href: '/school/staff',            icon: UserCog,         inertia: true },
+    { label: 'Attendance',  href: '/school/attendance',       icon: ClipboardCheck,  inertia: true },
+    { label: 'Grades',      href: '/school/grades',           icon: FileBarChart,    inertia: true },
     { label: 'Import',      href: '/school/students/import',  icon: Upload },
 ];
 
