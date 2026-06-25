@@ -6,6 +6,7 @@ use App\Models\CardOrder;
 use App\Models\School;
 use App\Models\Student;
 use App\Services\QrTokenService;
+use Inertia\Inertia;
 use TCPDF2DBarcode;
 
 /**
@@ -32,7 +33,10 @@ class IdCardController extends BaseSchoolController
 
         $qrSvg = $this->qrSvg($this->qrPayload($student));
 
-        return view('school.id_cards.show', compact('student', 'school', 'qrSvg'));
+        return Inertia::render('School/IdCards/Show', [
+            'student' => $this->cardStudent($student, $qrSvg),
+            'school'  => $this->cardSchool($school),
+        ]);
     }
 
     /**
@@ -51,13 +55,52 @@ class IdCardController extends BaseSchoolController
                 // Ensure the token exists before the QR payload is assembled.
                 $this->ensureToken($s, $school);
 
-                return [
-                    'student' => $s,
-                    'qrSvg' => $this->qrSvg($this->qrPayload($s)),
-                ];
-            });
+                return $this->cardStudent($s, $this->qrSvg($this->qrPayload($s)));
+            })
+            ->values();
 
-        return view('school.id_cards.batch', compact('students', 'school', 'cardOrder'));
+        return Inertia::render('School/IdCards/Batch', [
+            'students'  => $students,
+            'school'    => $this->cardSchool($school),
+            'cardOrder' => [
+                'id'    => $cardOrder->id,
+                'code'  => $cardOrder->order_code,
+                'count' => $students->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Shape a student into the flat card payload the React preview consumes.
+     */
+    private function cardStudent(Student $student, string $qrSvg): array
+    {
+        return [
+            'id'            => $student->id,
+            'full_name'     => $student->full_name,
+            'full_name_am'  => $student->full_name_am,
+            'uid'           => $student->uid,
+            'photo_url'     => $student->photo_url,
+            'class_name'    => $student->schoolClass?->display_name,
+            'date_of_birth' => $student->date_of_birth?->format('M d, Y'),
+            'blood_type'    => $student->blood_type,
+            'qr_svg'        => $qrSvg,
+        ];
+    }
+
+    /**
+     * Shape the school into the flat card payload.
+     */
+    private function cardSchool(School $school): array
+    {
+        return [
+            'name'          => $school->name,
+            'code'          => $school->code,
+            'academic_year' => $school->academic_year,
+            'accent_color'  => $school->accent_color,
+            'logo_url'      => $school->logo_url,
+            'phone'         => $school->phone,
+        ];
     }
 
     /**
