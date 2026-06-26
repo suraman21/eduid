@@ -55,7 +55,7 @@ export default function DemoSection({ flash }: Props) {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-slate-400">Email Address</p>
-                  <p className="text-xs sm:text-sm font-semibold">hello@eduid.ai</p>
+                  <p className="text-xs sm:text-sm font-semibold">info@arkeonethiopia.com</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 hover:translate-x-1 transition-transform duration-200">
@@ -64,11 +64,11 @@ export default function DemoSection({ flash }: Props) {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-slate-400">Contact Line</p>
-                  <p className="text-xs sm:text-sm font-semibold">+251 (911) 000-000</p>
+                  <p className="text-xs sm:text-sm font-semibold">+251 911 000 000</p>
                 </div>
               </div>
             </div>
-            <p className="text-[9px] text-slate-400 font-mono mt-8 z-10">* GDPR & FERPA compliant data security standards guaranteed.</p>
+            <p className="text-[9px] text-slate-400 font-mono mt-8 z-10">Serving schools across Ethiopia · Payment via Telebirr or bank transfer</p>
           </div>
 
           <div className="md:col-span-3 p-8 sm:p-12 relative">
@@ -79,7 +79,7 @@ export default function DemoSection({ flash }: Props) {
                 </div>
                 <h3 className="font-display font-extrabold text-xl text-primary mb-2">Demo Request Submitted!</h3>
                 <p className="text-sm text-slate-500 max-w-xs leading-relaxed mb-6">
-                  Thank you for your interest. One of our consultants will reach out with customized ID templates within 24 hours.
+                  Thank you for your interest. The Arkeon team will contact you within 24 hours to walk you through the platform and next steps.
                 </p>
                 <button onClick={() => setSubmitSuccess(false)} className="px-6 py-2.5 bg-primary hover:bg-slate-800 text-white font-semibold rounded-lg text-xs">
                   Back to Form

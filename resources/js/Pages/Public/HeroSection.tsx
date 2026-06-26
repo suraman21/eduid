@@ -1,64 +1,104 @@
-import React, { useState, useRef } from 'react';
-import { IdCard, ArrowRight, Nfc, QrCode, Sparkles, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowRight, Sparkles, Check, UserRound } from 'lucide-react';
 import { motion } from 'framer-motion';
+import QRCode from 'qrcode';
 
 interface HeroSectionProps {
   onOpenDemo: () => void;
 }
 
-export default function HeroSection({ onOpenDemo }: HeroSectionProps) {
-  const [studentName, setStudentName] = useState('Sarah Jenkins');
-  const [studentRole, setStudentRole] = useState<'STUDENT' | 'STAFF' | 'FACULTY' | 'ADMIN'>('STUDENT');
-  const [studentId, setStudentId] = useState('AIA-54321');
-  const [academicYear, setAcademicYear] = useState('2025/26');
-  const [schoolName, setSchoolName] = useState('Abyssinia Academy');
-  const [accentColor, setAccentColor] = useState<'emerald' | 'navy' | 'indigo' | 'amber'>('emerald');
-  const [showQr, setShowQr] = useState(true);
-  const [avatarIndex, setAvatarIndex] = useState(0);
+function normHex(c: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#6366f1';
+}
 
-  const avatars = [
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200',
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200',
-    'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=200&h=200',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=200&h=200',
-  ];
+// Deterministic UID from a demo token — matches the PRD payload format: UID|HMAC-token
+function makeDemoPayload(uid: string) {
+  // In production the token is an HMAC-SHA256 of UID+secret.
+  // For the public demo we use a fixed demo token so the QR is always scannable
+  // and decodes to something meaningful, but labels it clearly as DEMO.
+  return `${uid}|DEMO-TOKEN-${uid}`;
+}
+
+interface DemoCard {
+  name: string;
+  nameAm: string;
+  uid: string;
+  grade: string;
+  dob: string;
+  blood: string;
+  schoolName: string;
+  schoolCode: string;
+  year: string;
+  accent: string;
+  avatarIndex: number;
+}
+
+const AVATARS = [
+  { initial: 'AM', bg: '#d1fae5' },
+  { initial: 'BK', bg: '#dbeafe' },
+  { initial: 'SL', bg: '#fce7f3' },
+  { initial: 'YG', bg: '#fef3c7' },
+];
+
+const BLOOD_TYPES = ['A+', 'B+', 'O+', 'AB+', 'A−', 'B−', 'O−', 'AB−'];
+const ACCENT_PALETTE = [
+  { label: 'Emerald', value: '#059669' },
+  { label: 'Indigo',  value: '#4f46e5' },
+  { label: 'Amber',   value: '#d97706' },
+  { label: 'Navy',    value: '#1e3a5f' },
+];
+
+export default function HeroSection({ onOpenDemo }: HeroSectionProps) {
+  const [card, setCard] = useState<DemoCard>({
+    name: 'Abebe Girma',
+    nameAm: 'አበበ ግርማ',
+    uid: 'AIA-2026-00142',
+    grade: 'Grade 10 – Section A',
+    dob: '2010-04-14',
+    blood: 'O+',
+    schoolName: 'Abyssinia International Academy',
+    schoolCode: 'AIA',
+    year: '2025/26',
+    accent: '#059669',
+    avatarIndex: 0,
+  });
+  const [qrSvg, setQrSvg] = useState('');
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [tiltStyle, setTiltStyle] = useState<React.CSSProperties>({
-    transform: 'rotateX(0deg) rotateY(0deg) scale(1)',
+    transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)',
     transition: 'transform 0.5s ease-out',
   });
-  const [shimmerStyle, setShimmerStyle] = useState<React.CSSProperties>({
-    opacity: 0.3,
-    backgroundPosition: '50% 50%',
-  });
+  const [shimmerStyle, setShimmerStyle] = useState<React.CSSProperties>({ opacity: 0.3, backgroundPosition: '50% 50%' });
+
+  // Regenerate QR whenever UID changes
+  useEffect(() => {
+    const payload = makeDemoPayload(card.uid);
+    QRCode.toString(payload, { type: 'svg', width: 52, margin: 0, color: { dark: '#111827', light: '#ffffff' } })
+      .then(setQrSvg)
+      .catch(() => setQrSvg(''));
+  }, [card.uid]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const rotateX = (rect.height / 2 - y) / 12;
-    const rotateY = (x - rect.width / 2) / 12;
-    setTiltStyle({ transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`, transition: 'transform 0.1s ease-out' });
-    setShimmerStyle({ backgroundPosition: `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`, opacity: 0.6 });
+    const rotX = (rect.height / 2 - y) / 14;
+    const rotY = (x - rect.width / 2) / 14;
+    setTiltStyle({ transform: `perspective(1000px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.04)`, transition: 'transform 0.1s ease-out' });
+    setShimmerStyle({ backgroundPosition: `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`, opacity: 0.55 });
   };
-
   const handleMouseLeave = () => {
     setTiltStyle({ transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)', transition: 'transform 0.6s ease-out' });
-    setShimmerStyle({ backgroundPosition: '50% 50%', opacity: 0.3 });
+    setShimmerStyle({ opacity: 0.3, backgroundPosition: '50% 50%' });
   };
 
-  const getAccentColorClasses = () => {
-    switch (accentColor) {
-      case 'navy':   return { text: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20', badgeText: 'text-white', badgeBg: 'bg-primary', glow: 'bg-primary/10' };
-      case 'indigo': return { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', badgeText: 'text-indigo-700', badgeBg: 'bg-indigo-100', glow: 'bg-indigo-500/10' };
-      case 'amber':  return { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', badgeText: 'text-amber-700', badgeBg: 'bg-amber-100', glow: 'bg-amber-500/10' };
-      default:       return { text: 'text-secondary', bg: 'bg-secondary/10', border: 'border-secondary/20', badgeText: 'text-emerald-800', badgeBg: 'bg-emerald-100', glow: 'bg-secondary/10' };
-    }
-  };
+  const set = (key: keyof DemoCard, val: string | number) =>
+    setCard(prev => ({ ...prev, [key]: val }));
 
-  const currentAccent = getAccentColorClasses();
+  const accent = normHex(card.accent);
+  const avatar = AVATARS[card.avatarIndex];
 
   return (
     <section className="relative pt-36 pb-16 md:pt-40 md:pb-24 lg:pt-48 lg:pb-32 overflow-hidden bg-gradient-to-b from-white via-slate-50/50 to-white">
@@ -68,7 +108,7 @@ export default function HeroSection({ onOpenDemo }: HeroSectionProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
-          {/* Left content */}
+          {/* Left copy */}
           <motion.div
             className="lg:col-span-7 text-center lg:text-left z-10"
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } } }}
@@ -77,26 +117,26 @@ export default function HeroSection({ onOpenDemo }: HeroSectionProps) {
           >
             <motion.div
               variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } } }}
-              className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-secondary/10 text-secondary border border-secondary/20 shadow-sm animate-pulse-slow"
+              className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-secondary/10 text-secondary border border-secondary/20 shadow-sm"
             >
               <span className="flex h-2 w-2 rounded-full bg-secondary" />
-              <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em]">Education 4.0 Standard</span>
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em]">Built for Ethiopian Schools</span>
             </motion.div>
 
             <motion.h1
               variants={{ hidden: { opacity: 0, y: 25 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: 'easeOut' } } }}
               className="font-display text-[38px] sm:text-[48px] md:text-[62px] lg:text-[68px] xl:text-[74px] mb-6 text-primary leading-[1.08] tracking-tight font-extrabold"
             >
-              Modern Identity for the{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-emerald-600">Next Generation</span>{' '}
-              of Schools.
+              Smart PVC ID Cards &amp;{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-emerald-600">QR Attendance</span>{' '}
+              for Your School.
             </motion.h1>
 
             <motion.p
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } } }}
               className="font-sans text-base sm:text-lg md:text-xl text-slate-600 mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed"
             >
-              Replace manual registers with smart PVC ID cards and instant QR attendance. Secure, real-time, and built for modern campuses.
+              Register your students, order professional PVC cards, and take QR-based attendance with our teacher mobile app — all in one platform. No paper registers. No manual data entry.
             </motion.p>
 
             <motion.div
@@ -107,7 +147,7 @@ export default function HeroSection({ onOpenDemo }: HeroSectionProps) {
                 onClick={onOpenDemo}
                 className="group w-full sm:w-auto bg-primary hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-display text-sm font-semibold flex items-center justify-center gap-2.5 transition-all shadow-xl hover:scale-[1.02] active:scale-95 duration-150"
               >
-                <span>Get Started - Free Demo</span>
+                <span>Request a Free Demo</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               <a
@@ -120,150 +160,229 @@ export default function HeroSection({ onOpenDemo }: HeroSectionProps) {
 
             <motion.div
               variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: 0.5, duration: 0.6 } } }}
-              className="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start"
+              className="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start"
             >
-              <div className="flex -space-x-3.5">
-                {[
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100&h=100',
-                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100',
-                  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100&h=100',
-                ].map((url, i) => (
-                  <img key={i} src={url} className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm" alt="" />
-                ))}
-                <div className="w-10 h-10 rounded-full bg-secondary/15 border-2 border-white flex items-center justify-center text-xs font-bold text-secondary shadow-sm">+250</div>
+              <div className="flex items-center gap-3 text-sm text-slate-500">
+                <span className="inline-flex items-center gap-1.5 text-secondary font-semibold"><Check className="w-3.5 h-3.5" /> Arkeon prints & ships cards</span>
+                <span className="text-slate-300">·</span>
+                <span className="inline-flex items-center gap-1.5 text-secondary font-semibold"><Check className="w-3.5 h-3.5" /> Delivered in 3 business days</span>
               </div>
-              <p className="text-sm text-slate-500 font-medium text-center sm:text-left">
-                Trusted by <span className="text-primary font-bold">250+</span> forward-thinking institutions nationwide
-              </p>
             </motion.div>
           </motion.div>
 
-          {/* Right visual */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center gap-8 z-10 w-full">
-            <div className="relative w-full max-w-[380px] aspect-[1.58/1]">
-              <div className={`absolute -inset-4 rounded-[28px] ${currentAccent.glow} blur-2xl opacity-70 transition-all duration-300`} />
+          {/* Right: real ID card preview + customizer */}
+          <div className="lg:col-span-5 flex flex-col items-center justify-center gap-6 z-10 w-full">
+
+            {/* Card preview — mirrors the real IdCard.tsx layout exactly */}
+            <div className="relative w-full max-w-[360px]">
+              <div
+                className="absolute -inset-4 rounded-[28px] blur-2xl opacity-60 transition-all duration-300"
+                style={{ background: `${accent}22` }}
+              />
               <div
                 ref={cardRef}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                style={tiltStyle}
-                className="relative w-full h-full bg-white rounded-[20px] shadow-[0_20px_50px_rgba(15,23,42,0.15)] overflow-hidden border border-slate-200/60 select-none cursor-grab active:cursor-grabbing"
+                style={{
+                  ...tiltStyle,
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '342 / 216',
+                  borderRadius: 8,
+                  boxShadow: '0 20px 50px rgba(15,23,42,0.18)',
+                  overflow: 'hidden',
+                  fontFamily: "'Outfit', sans-serif",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'white',
+                  cursor: 'grab',
+                  userSelect: 'none',
+                }}
               >
-                <div className="absolute inset-0 p-6 flex flex-col justify-between z-10">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-primary rounded-md text-white flex items-center justify-center">
-                        <IdCard className="w-4 h-4" />
-                      </div>
-                      <span className="font-display font-black text-xs text-primary tracking-tight">EDUID</span>
-                    </div>
-                    <div className={`w-8 h-8 rounded-full ${currentAccent.bg} flex items-center justify-center transition-all duration-300`}>
-                      <Nfc className={`w-4 h-4 ${currentAccent.text}`} />
+                {/* Preview watermark */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none',
+                    backgroundImage: `repeating-linear-gradient(-45deg, ${accent}1a 0, ${accent}1a 2px, transparent 2px, transparent 60px)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <span style={{ transform: 'rotate(-22deg)', fontSize: 22, fontWeight: 800, letterSpacing: 4, color: `${accent}47`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                    Preview
+                  </span>
+                </div>
+
+                {/* Header stripe */}
+                <div style={{ background: accent, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 4, background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                    {card.schoolCode.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: 'white', fontSize: 9, fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.schoolName}</p>
+                    <p style={{ color: 'rgba(255,255,255,.75)', fontSize: 7, lineHeight: 1.2 }}>{card.year}</p>
+                  </div>
+                  <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 7, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Student ID</p>
+                </div>
+
+                {/* Body */}
+                <div style={{ flex: 1, display: 'flex', padding: '10px 12px', gap: 10, overflow: 'hidden' }}>
+                  {/* Avatar */}
+                  <div style={{ flexShrink: 0 }}>
+                    <div style={{ width: 64, height: 80, borderRadius: 4, border: '1.5px solid #e5e7eb', background: avatar.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#374151' }}>
+                      {avatar.initial}
                     </div>
                   </div>
 
-                  <div className="flex gap-4 items-center">
-                    <div className="relative w-20 h-20 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shadow-inner flex-shrink-0">
-                      <img src={avatars[avatarIndex]} alt={studentName} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-display font-black text-lg text-primary leading-none truncate tracking-tight">{studentName || 'Your Name'}</h4>
-                      <span className={`inline-flex items-center px-2 py-0.5 mt-1 rounded text-[9px] font-black tracking-wider uppercase ${currentAccent.badgeBg} ${currentAccent.badgeText} transition-all duration-300`}>{studentRole}</span>
-                      <div className="flex flex-wrap gap-1.5 mt-2.5">
-                        <span className="text-[9px] font-mono font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 inline-block">ID: {studentId || 'AIA-54321'}</span>
-                        <span className="text-[9px] font-mono font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 inline-block">YEAR: {academicYear || '2025/26'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-end gap-3">
-                    <div className="space-y-0.5 min-w-0 flex-1">
-                      <p className="text-[8px] text-slate-400 uppercase font-black tracking-widest leading-none">Institution</p>
-                      <p className="text-sm font-black text-primary tracking-tight uppercase leading-none font-display truncate">{schoolName || 'Abyssinia Academy'}</p>
-                    </div>
-                    {showQr && (
-                      <div className="p-2 bg-white rounded-xl shadow-md border border-slate-200 hover:scale-105 transition-transform duration-200 flex-shrink-0">
-                        <QrCode className="w-10 h-10 text-slate-800" />
-                      </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#111827', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {card.name || 'Student Name'}
+                    </p>
+                    {card.nameAm && (
+                      <p style={{ fontSize: 9, color: '#6b7280', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {card.nameAm}
+                      </p>
                     )}
+                    <p style={{ fontSize: 9, color: '#374151', marginTop: 2 }}>
+                      <span style={{ color: '#9ca3af' }}>Class: </span>{card.grade || '—'}
+                    </p>
+                    <p style={{ fontSize: 9, color: '#374151' }}>
+                      <span style={{ color: '#9ca3af' }}>DOB: </span>{card.dob}
+                    </p>
+                    <p style={{ fontSize: 9, color: '#374151' }}>
+                      <span style={{ color: '#9ca3af' }}>Blood: </span><strong>{card.blood}</strong>
+                    </p>
+                  </div>
+
+                  {/* Real QR */}
+                  <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                    {qrSvg
+                      ? <div style={{ width: 52, height: 52 }} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+                      : <div style={{ width: 52, height: 52, background: '#f3f4f6', borderRadius: 4 }} />
+                    }
+                    <p style={{ fontSize: 6, color: '#9ca3af', fontFamily: 'monospace', letterSpacing: 0.3, textAlign: 'center' }}>{card.uid}</p>
                   </div>
                 </div>
 
+                {/* Footer */}
+                <div style={{ background: '#f9fafb', borderTop: '1px solid #f3f4f6', padding: '4px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <p style={{ fontSize: 7, color: '#9ca3af' }}>{card.schoolCode}</p>
+                  <p style={{ fontSize: 7, color: '#9ca3af' }}>EduID · Arkeon Ethiopia</p>
+                </div>
+
+                {/* Shimmer */}
                 <div
                   className="absolute inset-0 pointer-events-none mix-blend-overlay transition-opacity duration-300"
-                  style={{ background: `linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%)`, backgroundSize: '200% 200%', ...shimmerStyle }}
+                  style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%)', backgroundSize: '200% 200%', ...shimmerStyle }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-slate-50/10 to-slate-100/20 pointer-events-none" />
               </div>
             </div>
 
-            {/* Customizer */}
-            <div className="w-full bg-white rounded-2xl p-5 border border-slate-200 shadow-lg max-w-[380px]">
+            {/* Customizer panel */}
+            <div className="w-full bg-white rounded-2xl p-5 border border-slate-200 shadow-lg max-w-[360px]">
               <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
                 <Sparkles className="w-4 h-4 text-secondary" />
-                <h5 className="font-display font-bold text-xs uppercase tracking-wider text-slate-500">Card Sandbox Simulator</h5>
+                <h5 className="font-display font-bold text-xs uppercase tracking-wider text-slate-500">Card Preview — Try It Live</h5>
               </div>
               <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Student / Staff Name</label>
-                  <input type="text" value={studentName} onChange={e => setStudentName(e.target.value.slice(0, 24))} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all" placeholder="Enter Name" />
-                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">ID Number</label>
-                    <input type="text" value={studentId} onChange={e => setStudentId(e.target.value.slice(0, 16))} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all font-mono" placeholder="e.g. AIA-54321" />
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Student Name</label>
+                    <input
+                      type="text"
+                      value={card.name}
+                      onChange={e => set('name', e.target.value.slice(0, 28))}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary"
+                      placeholder="e.g. Abebe Girma"
+                    />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Academic Year</label>
-                    <input type="text" value={academicYear} onChange={e => setAcademicYear(e.target.value.slice(0, 12))} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all font-mono" placeholder="e.g. 2025/26" />
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Amharic Name</label>
+                    <input
+                      type="text"
+                      value={card.nameAm}
+                      onChange={e => set('nameAm', e.target.value.slice(0, 28))}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary"
+                      placeholder="e.g. አበበ ግርማ"
+                    />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">School / Institution Name</label>
-                  <input type="text" value={schoolName} onChange={e => setSchoolName(e.target.value.slice(0, 32))} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all font-semibold" placeholder="e.g. Abyssinia Academy" />
-                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Role Type</label>
-                    <select value={studentRole} onChange={e => setStudentRole(e.target.value as any)} className="w-full text-xs px-2 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all font-medium">
-                      <option value="STUDENT">Student</option>
-                      <option value="STAFF">Staff</option>
-                      <option value="FACULTY">Faculty</option>
-                      <option value="ADMIN">Admin</option>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Grade / Class</label>
+                    <input
+                      type="text"
+                      value={card.grade}
+                      onChange={e => set('grade', e.target.value.slice(0, 24))}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary"
+                      placeholder="Grade 10 – A"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Blood Type</label>
+                    <select
+                      value={card.blood}
+                      onChange={e => set('blood', e.target.value)}
+                      className="w-full text-xs px-2 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary"
+                    >
+                      {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">School Name</label>
+                  <input
+                    type="text"
+                    value={card.schoolName}
+                    onChange={e => set('schoolName', e.target.value.slice(0, 40))}
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary font-semibold"
+                    placeholder="e.g. Abyssinia International Academy"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Design Color</label>
-                    <div className="flex gap-1.5 items-center justify-between h-9 px-1 bg-slate-50 rounded-lg border border-slate-200">
-                      {(['emerald', 'navy', 'indigo', 'amber'] as const).map(color => (
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Card Color</label>
+                    <div className="flex gap-1.5 items-center h-9 px-2 bg-slate-50 rounded-lg border border-slate-200">
+                      {ACCENT_PALETTE.map(p => (
                         <button
-                          key={color}
-                          onClick={() => setAccentColor(color)}
-                          className={`w-5 h-5 rounded-full border transition-all ${
-                            color === 'emerald' ? 'bg-secondary' : color === 'navy' ? 'bg-primary' : color === 'indigo' ? 'bg-indigo-600' : 'bg-amber-500'
-                          } ${accentColor === color ? 'ring-2 ring-offset-2 ring-slate-400 scale-110 border-white' : 'border-transparent'}`}
-                          title={color}
+                          key={p.value}
+                          onClick={() => set('accent', p.value)}
+                          title={p.label}
+                          className="w-5 h-5 rounded-full border transition-all"
+                          style={{
+                            background: p.value,
+                            outline: card.accent === p.value ? `2px solid ${p.value}` : 'none',
+                            outlineOffset: 2,
+                            transform: card.accent === p.value ? 'scale(1.2)' : 'scale(1)',
+                          }}
                         />
                       ))}
                     </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Change Avatar Photo</label>
-                  <div className="flex gap-2 items-center">
-                    {avatars.map((url, i) => (
-                      <button key={i} onClick={() => setAvatarIndex(i)} className={`relative w-8 h-8 rounded-lg overflow-hidden border-2 transition-all ${avatarIndex === i ? 'border-secondary scale-105 shadow-sm' : 'border-transparent hover:border-slate-300'}`}>
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                        {avatarIndex === i && (
-                          <div className="absolute inset-0 bg-secondary/20 flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white font-bold" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Avatar</label>
+                    <div className="flex gap-1.5 items-center h-9 px-1 bg-slate-50 rounded-lg border border-slate-200">
+                      {AVATARS.map((av, i) => (
+                        <button
+                          key={i}
+                          onClick={() => set('avatarIndex', i)}
+                          className={`w-7 h-7 rounded-md text-xs font-bold transition-all flex items-center justify-center border ${card.avatarIndex === i ? 'ring-2 ring-secondary scale-110 border-secondary/20' : 'border-transparent'}`}
+                          style={{ background: av.bg }}
+                        >
+                          {av.initial}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
+              <p className="mt-3 text-[10px] text-slate-400 text-center">
+                The QR above is real and scannable — it encodes the student UID in the same format used on printed cards.
+              </p>
             </div>
           </div>
 
