@@ -179,7 +179,14 @@ class CardImageService
             return;
         }
 
-        $font     = $this->fontPath($field->font_family ?? 'Inter');
+        // Auto-select an Ethiopic-capable font whenever the text contains Ethiopic
+        // glyphs — Inter.ttf has no Ethiopic coverage, so Amharic names would render
+        // as blank boxes if we trusted the configured family alone.
+        $family = $field->font_family ?? 'Inter';
+        if (preg_match('/\p{Ethiopic}/u', $text)) {
+            $family = 'NotoSansEthiopic';
+        }
+        $font     = $this->fontPath($family);
         $fontSize = (int) ($field->font_size ?? 12);
         $color    = $this->gdColor($canvas, $field->font_color ?? '#000000');
 
@@ -199,6 +206,12 @@ class CardImageService
         }
 
         imagettftext($canvas, $fontSize, 0, $x, $y, $color, $font, $text);
+
+        // Faux-bold: Inter.ttf ships regular-only and GD has no synthetic weight, so
+        // emulate bold with a 1px horizontal over-draw (matches the PDF 'B' style).
+        if (($field->font_weight ?? 'normal') === 'bold') {
+            imagettftext($canvas, $fontSize, 0, $x + 1, $y, $color, $font, $text);
+        }
     }
 
     /** Composite the student's photo into the field rectangle. */

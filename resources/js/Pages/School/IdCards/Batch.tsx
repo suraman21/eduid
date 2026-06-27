@@ -2,6 +2,7 @@ import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import IdCard, { type CardStudent, type CardSchool } from '@/Components/IdCard';
+import TemplateCard, { type CardTemplateData, type TemplateValues } from '@/Components/TemplateCard';
 import type { PageProps } from '@/types';
 import { ArrowLeft } from 'lucide-react';
 
@@ -16,10 +17,24 @@ function alpha(hexColor: string, a: number) {
 interface Props {
     students: CardStudent[];
     school: CardSchool;
+    template: CardTemplateData | null;
     cardOrder: { id: number; code: string; count: number };
 }
 
-export default function Batch({ students, school, cardOrder }: Props) {
+function toValues(student: CardStudent, school: CardSchool): TemplateValues {
+    return {
+        full_name:     student.full_name,
+        full_name_am:  student.full_name_am,
+        uid:           student.uid,
+        class_name:    student.class_name,
+        academic_year: school.academic_year ?? undefined,
+        school_name:   school.name,
+        photo_url:     student.photo_url,
+        qr_svg:        student.qr_svg,
+    };
+}
+
+export default function Batch({ students, school, template, cardOrder }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
 
@@ -51,7 +66,9 @@ export default function Batch({ students, school, cardOrder }: Props) {
             ) : (
                 <div className="flex flex-wrap gap-6 justify-center">
                     {students.map(s => (
-                        <IdCard key={s.id} student={s} school={school} preview />
+                        template
+                            ? <TemplateCard key={s.id} template={template} values={toValues(s, school)} displayWidth={340} accent={accent} preview />
+                            : <IdCard key={s.id} student={s} school={school} preview />
                     ))}
                 </div>
             )}

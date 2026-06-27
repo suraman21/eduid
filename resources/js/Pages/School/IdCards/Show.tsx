@@ -2,6 +2,7 @@ import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import IdCard, { type CardStudent, type CardSchool } from '@/Components/IdCard';
+import TemplateCard, { type CardTemplateData, type TemplateValues } from '@/Components/TemplateCard';
 import type { PageProps } from '@/types';
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 
@@ -16,9 +17,23 @@ function alpha(hexColor: string, a: number) {
 interface Props {
     student: CardStudent;
     school: CardSchool;
+    template: CardTemplateData | null;
 }
 
-export default function Show({ student, school }: Props) {
+function toValues(student: CardStudent, school: CardSchool): TemplateValues {
+    return {
+        full_name:     student.full_name,
+        full_name_am:  student.full_name_am,
+        uid:           student.uid,
+        class_name:    student.class_name,
+        academic_year: school.academic_year ?? undefined,
+        school_name:   school.name,
+        photo_url:     student.photo_url,
+        qr_svg:        student.qr_svg,
+    };
+}
+
+export default function Show({ student, school, template }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
 
@@ -48,7 +63,9 @@ export default function Show({ student, school }: Props) {
             </div>
 
             <div className="flex justify-center py-6">
-                <IdCard student={student} school={school} preview />
+                {template
+                    ? <TemplateCard template={template} values={toValues(student, school)} displayWidth={380} accent={accent} preview />
+                    : <IdCard student={student} school={school} preview />}
             </div>
 
             {/* Golden-rule explainer */}

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\School;
 
 use App\Models\CardOrder;
+use App\Models\CardTemplate;
 use App\Models\School;
 use App\Models\Student;
 use App\Services\QrTokenService;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use TCPDF2DBarcode;
 
@@ -36,8 +38,9 @@ class IdCardController extends BaseSchoolController
         $qrSvg = $this->qrSvg($this->qrPayload($student));
 
         return Inertia::render('School/IdCards/Show', [
-            'student' => $this->cardStudent($student, $qrSvg),
-            'school'  => $this->cardSchool($school),
+            'student'  => $this->cardStudent($student, $qrSvg),
+            'school'   => $this->cardSchool($school),
+            'template' => $this->cardTemplate($school),
         ]);
     }
 
@@ -64,12 +67,78 @@ class IdCardController extends BaseSchoolController
         return Inertia::render('School/IdCards/Batch', [
             'students'  => $students,
             'school'    => $this->cardSchool($school),
+            'template'  => $this->cardTemplate($school),
             'cardOrder' => [
                 'id'    => $cardOrder->id,
                 'code'  => $cardOrder->order_code,
                 'count' => $students->count(),
             ],
         ]);
+    }
+
+    /**
+     * Build the active card template payload for the school, or null when none is
+     * configured (the React side then falls back to the built-in branded layout).
+     *
+     * Coordinates are emitted in canvas pixels — the same space the super-admin
+     * designer positions fields in — so the on-screen preview matches the printed
+     * card field-for-field. The background is served from the public preview disk
+     * the designer already writes to (low-res, watermarked on screen per the
+     * Golden Rule — never the print-ready artwork).
+     */
+    private function cardTemplate(School $school): ?array
+    {
+        $template = CardTemplate::where('school_id', $school->id)
+            ->where('template_type', 'student')
+            ->where('is_active', true)
+            ->with('fields')
+            ->first();
+
+        if (! $template) {
+            return null;
+        }
+
+        $frontPath = "card_previews/{$school->id}/front.png";
+        $backPath  = "card_previews/{$school->id}/back.png";
+
+        $frontUrl = Storage::disk('public')->exists($frontPath)
+            ? Storage::disk('public')->url($frontPath) : null;
+        $backUrl = Storage::disk('public')->exists($backPath)
+            ? Storage::disk('public')->url($backPath) : null;
+
+        // Without a usable background image there is nothing to overlay — fall back.
+        if (! $frontUrl) {
+            return null;
+        }
+
+        [$backW, $backH] = $backUrl && ($info = @getimagesize(Storage::disk('public')->path($backPath)))
+            ? [$info[0], $info[1]]
+            : [$template->canvasW(), $template->canvasH()];
+
+        return [
+            'frontUrl' => $frontUrl,
+            'backUrl'  => $backUrl,
+            'canvasW'  => $template->canvasW(),
+            'canvasH'  => $template->canvasH(),
+            'backW'    => $backW,
+            'backH'    => $backH,
+            'fields'   => $template->fields->map(fn ($f) => [
+                'field_type'    => $f->field_type,
+                'field_key'     => $f->field_key,
+                'side'          => $f->side ?? 'front',
+                'x'             => $f->px_x,
+                'y'             => $f->px_y,
+                'w'             => $f->px_w ?? 0,
+                'h'             => $f->px_h ?? 0,
+                'font_size'     => $f->font_size,
+                'font_color'    => $f->font_color,
+                'font_family'   => $f->font_family,
+                'text_align'    => $f->text_align,
+                'font_weight'   => $f->font_weight,
+                'border_radius' => $f->border_radius ?? 0,
+                'custom_value'  => $f->custom_value,
+            ])->values()->all(),
+        ];
     }
 
     /**

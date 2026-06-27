@@ -28,7 +28,32 @@ class CardPrintService
 
     private const CARD_H = 54.0;
 
+    /** Lazily-registered TCPDF font name for Ethiopic text (core fonts lack it). */
+    private ?string $amharicFont = null;
+
     public function __construct(private QrTokenService $qr) {}
+
+    /** True when the string contains any Ethiopic-script characters. */
+    private function hasEthiopic(string $text): bool
+    {
+        return (bool) preg_match('/\p{Ethiopic}/u', $text);
+    }
+
+    /**
+     * Register (once) and return the embedded Noto Sans Ethiopic font name.
+     * helvetica and the other TCPDF core fonts have no Ethiopic glyphs, so any
+     * Amharic name would silently print blank without this.
+     */
+    private function amharicFont(): string
+    {
+        if ($this->amharicFont === null) {
+            $this->amharicFont = \TCPDF_FONTS::addTTFfont(
+                base_path('resources/fonts/NotoSansEthiopic.ttf'), 'TrueTypeUnicode', '', 32
+            ) ?: 'helvetica';
+        }
+
+        return $this->amharicFont;
+    }
 
     /**
      * Build the print-ready PDF for an order and return its storage-relative
@@ -156,7 +181,8 @@ class CardPrintService
         $y = 18.4;
         if ($student->full_name_am) {
             $pdf->SetTextColor(107, 114, 128);
-            $pdf->SetFont('helvetica', '', 6);
+            // Amharic glyphs require the embedded Noto font, not core helvetica.
+            $pdf->SetFont($this->hasEthiopic($student->full_name_am) ? $this->amharicFont() : 'helvetica', '', 6);
             $pdf->SetXY($ix, $y);
             $pdf->Cell(38, 3, $this->clip($student->full_name_am, 30), 0, 0, 'L');
             $y += 3.2;
@@ -325,7 +351,12 @@ class CardPrintService
 
         $rgb = $this->rgb($field->font_color ?? '#000000');
         $pdf->SetTextColor(...$rgb);
-        $pdf->SetFont('helvetica', $field->font_weight === 'bold' ? 'B' : '', (int) ($field->font_size ?? 10));
+        // Ethiopic text needs the embedded Noto font; Latin keeps helvetica + bold.
+        if ($this->hasEthiopic($text)) {
+            $pdf->SetFont($this->amharicFont(), '', (int) ($field->font_size ?? 10));
+        } else {
+            $pdf->SetFont('helvetica', $field->font_weight === 'bold' ? 'B' : '', (int) ($field->font_size ?? 10));
+        }
         $pdf->SetXY($field->x_mm, $field->y_mm);
         $w = $field->width_mm ?? 0;
         $h = $field->height_mm ?? 0;

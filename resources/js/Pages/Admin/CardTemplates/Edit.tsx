@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
+import QRCode from 'qrcode';
 import AdminLayout from '@/Layouts/AdminLayout';
 import PageHeader from '@/Components/PageHeader';
+import TemplateCard, { type TemplateField, type CardTemplateData, type TemplateValues } from '@/Components/TemplateCard';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -281,6 +283,45 @@ export default function CardTemplatesEdit({
     setFields(prev => prev.filter(f => f.id !== id));
   };
 
+  // ── Final-card preview via the shared renderer (real data + live QR) ──────
+  const [showFinal, setShowFinal] = useState(true);
+  const [sampleQr, setSampleQr] = useState('');
+  useEffect(() => {
+    QRCode.toString(`${SAMPLE_DATA.uid}|DEMO-TOKEN`, { type: 'svg', margin: 0, color: { dark: '#0f172a', light: '#ffffff' } })
+      .then(setSampleQr).catch(() => setSampleQr(''));
+  }, []);
+
+  const sampleAvatar = useMemo(() => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="190" height="240" viewBox="0 0 190 240"><rect width="190" height="240" fill="#dbeafe"/><text x="95" y="138" font-family="Outfit,Arial,sans-serif" font-size="86" font-weight="700" fill="#1e3a5f" text-anchor="middle">KB</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }, []);
+
+  const previewValues: TemplateValues = {
+    full_name: SAMPLE_DATA.full_name,
+    full_name_am: SAMPLE_DATA.full_name_am,
+    uid: SAMPLE_DATA.uid,
+    class_name: SAMPLE_DATA.grade_class,
+    section: SAMPLE_DATA.section,
+    academic_year: SAMPLE_DATA.academic_year,
+    school_name: school.name,
+    photo_url: sampleAvatar,
+    qr_svg: sampleQr,
+  };
+
+  const previewTemplate: CardTemplateData = {
+    frontUrl, backUrl,
+    canvasW, canvasH, backW: backCanvasW, backH: backCanvasH,
+    fields: fields.map((f): TemplateField => ({
+      field_type: f.field_key === 'photo' ? 'image' : f.field_key === 'qr_code' ? 'qr' : 'text',
+      field_key: f.field_key,
+      side: f.side,
+      x: f.x, y: f.y, w: f.w, h: f.h,
+      font_size: f.font_size, font_color: f.font_color, font_family: f.font_family,
+      text_align: f.text_align, font_weight: f.font_weight,
+      border_radius: f.border_radius, custom_value: f.custom_value,
+    })),
+  };
+
   // ── Upload ─────────────────────────────────────────────────────────────
 
   const uploadImage = async (side: 'front' | 'back', file: File) => {
@@ -505,6 +546,35 @@ export default function CardTemplatesEdit({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Final card preview — the exact shared renderer schools and the public page use */}
+      <div className="mt-6 bg-dark-800 border border-slate-700/50 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Final card preview</span>
+            <span className="text-xs text-slate-500">how schools &amp; the public page render it — real data + live QR</span>
+          </div>
+          <button type="button" onClick={() => setShowFinal(v => !v)} className="text-xs text-slate-400 hover:text-slate-200">
+            {showFinal ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showFinal && (frontUrl ? (
+          <div className="flex flex-wrap gap-6 justify-center py-3">
+            <div className="flex flex-col items-center gap-2">
+              <TemplateCard template={previewTemplate} values={previewValues} displayWidth={360} side="front" preview={false} />
+              <span className="text-[11px] text-slate-500">Front</span>
+            </div>
+            {backUrl && (
+              <div className="flex flex-col items-center gap-2">
+                <TemplateCard template={previewTemplate} values={previewValues} displayWidth={360} side="back" preview={false} />
+                <span className="text-[11px] text-slate-500">Back</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500 py-6 text-center">Upload a front image to see the final preview.</p>
+        ))}
       </div>
     </div>
     </AdminLayout>

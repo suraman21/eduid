@@ -62,7 +62,9 @@ class CardTemplateTest extends TestCase
             ->get(route('admin.card-template.edit', $this->school));
 
         $response->assertOk();
-        $response->assertSee('Card Template Editor');
+        // The heading is rendered client-side by Inertia/React, so assert on the
+        // resolved Inertia component rather than the server HTML.
+        $response->assertInertia(fn ($page) => $page->component('Admin/CardTemplates/Edit', false));
     }
 
     public function test_school_admin_cannot_access_template_editor(): void
