@@ -98,22 +98,23 @@ class IdCardController extends BaseSchoolController
             return null;
         }
 
-        $frontPath = "card_previews/{$school->id}/front.png";
-        $backPath  = "card_previews/{$school->id}/back.png";
-
-        $frontUrl = Storage::disk('public')->exists($frontPath)
-            ? Storage::disk('public')->url($frontPath) : null;
-        $backUrl = Storage::disk('public')->exists($backPath)
-            ? Storage::disk('public')->url($backPath) : null;
+        // Resolve each side's background URL. Prefer the fast public-disk preview the
+        // designer writes to; if that copy is absent (e.g. storage:link missing on
+        // shared hosting, or a template uploaded before the public write existed),
+        // fall back to a tenant-scoped private-disk route so the preview still works.
+        $frontUrl = $this->templateImageUrl($school, 'front');
+        $backUrl  = $this->templateImageUrl($school, 'back');
 
         // Without a usable background image there is nothing to overlay — fall back.
         if (! $frontUrl) {
             return null;
         }
 
-        [$backW, $backH] = $backUrl && ($info = @getimagesize(Storage::disk('public')->path($backPath)))
-            ? [$info[0], $info[1]]
-            : [$template->canvasW(), $template->canvasH()];
+        $backLocal = "cards/{$school->id}/back.png";
+        $backInfo  = $backUrl && Storage::disk('local')->exists($backLocal)
+            ? @getimagesize(Storage::disk('local')->path($backLocal))
+            : null;
+        [$backW, $backH] = $backInfo ? [$backInfo[0], $backInfo[1]] : [$template->canvasW(), $template->canvasH()];
 
         return [
             'frontUrl' => $frontUrl,
@@ -139,6 +140,42 @@ class IdCardController extends BaseSchoolController
                 'custom_value'  => $f->custom_value,
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * Resolve a usable URL for one side of the school's card-template background,
+     * or null when no image exists on either disk. Public preview first (fast,
+     * static), then a tenant-scoped private-disk route as a fallback.
+     */
+    private function templateImageUrl(School $school, string $side): ?string
+    {
+        // The private-disk copy is the designer's authoritative write and needs no
+        // storage:link symlink, so it is the reliable source on shared hosting.
+        if (Storage::disk('local')->exists("cards/{$school->id}/{$side}.png")) {
+            return route('school.id-card.template-image', $side);
+        }
+        if (Storage::disk('public')->exists("card_previews/{$school->id}/{$side}.png")) {
+            return Storage::disk('public')->url("card_previews/{$school->id}/{$side}.png");
+        }
+        return null;
+    }
+
+    /**
+     * Stream the current school's own card-template background from the private
+     * disk. Tenant-scoped: a school can only ever read its own template image.
+     */
+    public function templateImage(string $side)
+    {
+        abort_unless(in_array($side, ['front', 'back'], true), 404);
+
+        $school = $this->currentSchool();
+        $path = "cards/{$school->id}/{$side}.png";
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, null, [
+            'Cache-Control' => 'private, max-age=60',
+            'Content-Type'  => 'image/png',
+        ]);
     }
 
     /**

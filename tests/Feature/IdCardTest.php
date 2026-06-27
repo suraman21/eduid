@@ -172,4 +172,55 @@ class IdCardTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_id_card_uses_template_when_one_exists(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            "cards/{$this->school->id}/front.png", 'fake-png-bytes'
+        );
+
+        $template = \App\Models\CardTemplate::create([
+            'school_id'        => $this->school->id,
+            'name'             => 'Student Card',
+            'template_type'    => 'student',
+            'front_image_path' => "cards/{$this->school->id}/front.png",
+            'canvas_w'         => 1012,
+            'canvas_h'         => 638,
+            'is_active'        => true,
+            'created_by'       => $this->admin->id,
+        ]);
+        \App\Models\CardTemplateField::create([
+            'template_id' => $template->id, 'field_type' => 'text', 'field_key' => 'full_name',
+            'x_mm' => 10, 'y_mm' => 10, 'width_mm' => 40, 'height_mm' => 8, 'side' => 'front',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('school.students.id-card', $this->student));
+
+        $response->assertOk();
+        // The template payload must be present so the school sees the designed card,
+        // not the branded fallback — even though no public-disk copy exists.
+        $response->assertInertia(fn ($page) => $page
+            ->where('template.canvasW', 1012)
+            ->has('template.fields', 1)
+        );
+    }
+
+    public function test_template_image_is_tenant_scoped(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            "cards/{$this->school->id}/front.png", 'fake-png-bytes'
+        );
+
+        $this->actingAs($this->admin)
+            ->get(route('school.id-card.template-image', 'front'))
+            ->assertOk();
+
+        // A non-existent side 404s rather than leaking anything.
+        $this->actingAs($this->admin)
+            ->get(route('school.id-card.template-image', 'back'))
+            ->assertNotFound();
+    }
 }

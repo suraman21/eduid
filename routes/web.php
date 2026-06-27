@@ -188,6 +188,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('school.students.id-card');
         Route::get('/card-orders/{cardOrder}/id-cards', [SchoolIdCardController::class, 'batch'])
             ->name('school.card-orders.id-cards');
+        // Serve the school's own card-template background (tenant-scoped, private disk)
+        // so the preview works even when the public-disk copy is absent.
+        Route::get('/id-card/template-image/{side}', [SchoolIdCardController::class, 'templateImage'])
+            ->name('school.id-card.template-image');
 
         Route::resource('/students', SchoolStudentController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
