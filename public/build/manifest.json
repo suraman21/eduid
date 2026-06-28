@@ -95,7 +95,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-B2Lpn-gC.css",
+    "file": "assets/app-B1-36D-M.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -190,8 +190,18 @@
       "_animations-BA9ne7ld.js"
     ]
   },
+  "resources/js/Pages/Admin/CardTemplates/CropModal.tsx": {
+    "file": "assets/CropModal-ChUa8EiK.js",
+    "name": "CropModal",
+    "src": "resources/js/Pages/Admin/CardTemplates/CropModal.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-motion-Yn65oEY7.js",
+      "_vendor-react-Dm-qCjdm.js"
+    ]
+  },
   "resources/js/Pages/Admin/CardTemplates/Edit.tsx": {
-    "file": "assets/Edit-CfqMhXmi.js",
+    "file": "assets/Edit-C-9uM-n-.js",
     "name": "Edit",
     "src": "resources/js/Pages/Admin/CardTemplates/Edit.tsx",
     "isDynamicEntry": true,
@@ -202,6 +212,7 @@
       "_AdminLayout-CkPYzbt3.js",
       "_PageHeader-Ctmcv397.js",
       "_TemplateCard-SHZJL1Rc.js",
+      "resources/js/Pages/Admin/CardTemplates/CropModal.tsx",
       "_Toast-tQL_oBa-.js",
       "_vendor-ui-CfS_TccD.js",
       "_animations-BA9ne7ld.js"
@@ -934,7 +945,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-z0p1cD_a.js",
+    "file": "assets/app-Bf39oBGn.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -948,6 +959,7 @@
       "resources/js/Pages/Admin/CardOrders/Print.tsx",
       "resources/js/Pages/Admin/CardOrders/Process.tsx",
       "resources/js/Pages/Admin/CardOrders/Show.tsx",
+      "resources/js/Pages/Admin/CardTemplates/CropModal.tsx",
       "resources/js/Pages/Admin/CardTemplates/Edit.tsx",
       "resources/js/Pages/Admin/Dashboard.tsx",
       "resources/js/Pages/Admin/Features/Index.tsx",
@@ -1005,7 +1017,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-B2Lpn-gC.css"
+      "assets/app-B1-36D-M.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

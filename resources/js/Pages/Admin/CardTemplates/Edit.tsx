@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import AdminLayout from '@/Layouts/AdminLayout';
 import PageHeader from '@/Components/PageHeader';
 import TemplateCard, { type TemplateField, type CardTemplateData, type TemplateValues } from '@/Components/TemplateCard';
+import CropModal from './CropModal';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,11 @@ interface Props {
   backUrl: string | null;
   uploadUrl: string;
   saveUrl: string;
+  convertUrl: string;
   schoolUrl: string;
+  orientation: 'landscape' | 'portrait';
+  isLegacy: boolean;
+  cr80: { landscape: { w: number; h: number }; portrait: { w: number; h: number } };
 }
 
 const PREVIEW_W = 400;
@@ -204,18 +209,27 @@ export default function CardTemplatesEdit({
   canvasW: initCanvasW, canvasH: initCanvasH,
   backW: initBackW, backH: initBackH,
   frontUrl: initFrontUrl, backUrl: initBackUrl,
-  uploadUrl, saveUrl, schoolUrl,
+  uploadUrl, saveUrl, convertUrl, schoolUrl,
+  orientation: initOrientation, isLegacy, cr80,
 }: Props) {
   const [fields, setFields] = useState<Field[]>(() =>
     savedFields.map((f, i) => ({ ...f, id: i, side: f.side ?? 'front', border_radius: f.border_radius ?? 0 }))
   );
   const nextId = useRef(savedFields.length);
-  const [canvasW, setCanvasW] = useState(initCanvasW);
-  const [canvasH, setCanvasH] = useState(initCanvasH);
-  const [backCanvasW, setBackCanvasW] = useState(initBackW);
-  const [backCanvasH, setBackCanvasH] = useState(initBackH);
+
+  // The canvas aspect is LOCKED to CR80. In legacy mode we keep the old canvas
+  // so existing fields display, but Save is blocked until the template is
+  // converted (the banner drives that). Otherwise the canvas follows orientation.
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>(initOrientation);
+  const lockedDims = orientation === 'portrait' ? cr80.portrait : cr80.landscape;
+
+  const [canvasW, setCanvasW] = useState(isLegacy ? initCanvasW : lockedDims.w);
+  const [canvasH, setCanvasH] = useState(isLegacy ? initCanvasH : lockedDims.h);
+  const [backCanvasW, setBackCanvasW] = useState(isLegacy ? initBackW : lockedDims.w);
+  const [backCanvasH, setBackCanvasH] = useState(isLegacy ? initBackH : lockedDims.h);
   const [frontUrl, setFrontUrl] = useState(initFrontUrl);
   const [backUrl, setBackUrl] = useState(initBackUrl);
+  const [cropState, setCropState] = useState<{ side: 'front' | 'back'; file: File } | null>(null);
   const [addSide, setAddSide] = useState<'front' | 'back'>('front');
   const [addKey, setAddKey] = useState('');
   const [templateName, setTemplateName] = useState(template?.version ? '' : '');
@@ -328,37 +342,49 @@ export default function CardTemplatesEdit({
 
   // ── Upload ─────────────────────────────────────────────────────────────
 
-  const uploadImage = async (side: 'front' | 'back', file: File) => {
+  // Switch the locked orientation, rescaling existing fields proportionally so
+  // the layout is preserved across the aspect flip.
+  const switchOrientation = (next: 'landscape' | 'portrait') => {
+    if (next === orientation) return;
+    const from = orientation === 'portrait' ? cr80.portrait : cr80.landscape;
+    const to = next === 'portrait' ? cr80.portrait : cr80.landscape;
+    const sx = to.w / from.w, sy = to.h / from.h;
+    setFields(prev => prev.map(f => ({ ...f, x: Math.round(f.x * sx), y: Math.round(f.y * sy), w: Math.round(f.w * sx), h: Math.round(f.h * sy) })));
+    setOrientation(next);
+    setCanvasW(to.w); setCanvasH(to.h); setBackCanvasW(to.w); setBackCanvasH(to.h);
+  };
+
+  // Upload a CR80-baked PNG produced by the crop modal.
+  const uploadBaked = async (side: 'front' | 'back', blob: Blob) => {
+    setCropState(null);
     setUploadMsg({ text: `Uploading ${side} image…`, type: 'info' });
     const fd = new FormData();
     fd.append('side', side);
-    fd.append('image', file);
+    fd.append('image', new File([blob], `${side}.png`, { type: 'image/png' }));
     try {
       const r = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as HTMLMetaElement)?.content ?? '' }, body: fd });
       if (!r.ok) { const t = await r.text(); throw new Error('Server ' + r.status + ': ' + t.slice(0, 200)); }
       const data = await r.json();
       if (!data.success) { setUploadMsg({ text: 'Upload failed: ' + (data.error ?? 'unknown'), type: 'error' }); return; }
       if (side === 'front') {
-        setFrontStatus(`${data.width}×${data.height} px`);
+        setFrontStatus(`${data.width}×${data.height} px · CR80`);
         setFrontUrl(data.url + '?t=' + Date.now());
-        setCanvasW(data.width);
-        setCanvasH(data.height);
-        setUploadMsg({ text: `Front image uploaded (${data.width}×${data.height} px). Canvas updated.`, type: 'success' });
+        setCanvasW(data.width); setCanvasH(data.height);
+        setUploadMsg({ text: `Front image cropped to CR80 (${data.width}×${data.height} px).`, type: 'success' });
       } else {
-        setBackStatus(`${data.width}×${data.height} px`);
+        setBackStatus(`${data.width}×${data.height} px · CR80`);
         setBackUrl(data.url + '?t=' + Date.now());
-        setBackCanvasW(data.width);
-        setBackCanvasH(data.height);
-        setUploadMsg({ text: `Back image uploaded (${data.width}×${data.height} px).`, type: 'success' });
+        setBackCanvasW(data.width); setBackCanvasH(data.height);
+        setUploadMsg({ text: `Back image cropped to CR80 (${data.width}×${data.height} px).`, type: 'success' });
       }
-      // auto-save silently
       doSave(true);
     } catch (err: any) {
       setUploadMsg({ text: 'Upload error: ' + err.message, type: 'error' });
-      if (side === 'front') setFrontStatus('Error');
-      else setBackStatus('Error');
+      if (side === 'front') setFrontStatus('Error'); else setBackStatus('Error');
     }
   };
+
+  const pickFile = (side: 'front' | 'back', file: File) => setCropState({ side, file });
 
   // ── Save ───────────────────────────────────────────────────────────────
 
@@ -459,35 +485,79 @@ export default function CardTemplatesEdit({
         )}
       </div>
 
-      {/* Upload bar */}
+      {/* Legacy migration banner */}
+      {isLegacy && (
+        <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 mb-5">
+          <p className="text-sm font-semibold text-amber-300">Legacy template — not CR80</p>
+          <p className="text-xs text-amber-200/80 mt-1 mb-3">
+            This template ({initCanvasW}×{initCanvasH} px) does not use the CR80 aspect ratio and would print distorted.
+            Convert it to CR80 — the background is centre-cropped and field positions are kept — then fine-tune and save.
+          </p>
+          <form method="POST" action={convertUrl}>
+            <input type="hidden" name="_token" value={(document.querySelector('meta[name=csrf-token]') as HTMLMetaElement)?.content ?? ''} />
+            <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-amber-950 text-sm font-semibold px-4 py-2 rounded-lg">
+              Convert to CR80
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Upload + orientation bar */}
       <div className="bg-dark-800 border border-slate-700/50 rounded-xl p-4 mb-5">
         <div className="flex flex-wrap items-center gap-6">
+          {/* Orientation lock */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">Orientation</span>
+            <div className="flex items-center gap-1">
+              <button type="button" disabled={isLegacy} onClick={() => switchOrientation('landscape')}
+                className={`text-xs px-3 py-1.5 rounded-md font-medium transition disabled:opacity-40 ${orientation === 'landscape' ? 'bg-primary-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'}`}>
+                ▭ Landscape
+              </button>
+              <button type="button" disabled={isLegacy} onClick={() => switchOrientation('portrait')}
+                className={`text-xs px-3 py-1.5 rounded-md font-medium transition disabled:opacity-40 ${orientation === 'portrait' ? 'bg-primary-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'}`}>
+                ▯ Portrait
+              </button>
+            </div>
+            <span className="text-[11px] text-slate-500">CR80 locked · {canvasW}×{canvasH} px</span>
+          </div>
+
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">Front</span>
             <input ref={frontFileRef} type="file" accept=".png,.jpg,.jpeg" className="hidden"
-              onChange={e => { if (e.target.files?.[0]) uploadImage('front', e.target.files[0]); e.target.value = ''; }} />
-            <button type="button" onClick={() => frontFileRef.current?.click()}
-              className="border border-slate-600 hover:border-primary-500 text-slate-300 text-sm px-3 py-1.5 rounded-lg transition">
-              Upload Image
+              onChange={e => { if (e.target.files?.[0]) pickFile('front', e.target.files[0]); e.target.value = ''; }} />
+            <button type="button" disabled={isLegacy} onClick={() => frontFileRef.current?.click()}
+              className="border border-slate-600 hover:border-primary-500 text-slate-300 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40">
+              Upload &amp; Crop
             </button>
             <span className="text-xs text-slate-500">{frontStatus}</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">Back</span>
             <input ref={backFileRef} type="file" accept=".png,.jpg,.jpeg" className="hidden"
-              onChange={e => { if (e.target.files?.[0]) uploadImage('back', e.target.files[0]); e.target.value = ''; }} />
-            <button type="button" onClick={() => backFileRef.current?.click()}
-              className="border border-slate-600 hover:border-primary-500 text-slate-300 text-sm px-3 py-1.5 rounded-lg transition">
-              Upload Image
+              onChange={e => { if (e.target.files?.[0]) pickFile('back', e.target.files[0]); e.target.value = ''; }} />
+            <button type="button" disabled={isLegacy} onClick={() => backFileRef.current?.click()}
+              className="border border-slate-600 hover:border-primary-500 text-slate-300 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40">
+              Upload &amp; Crop
             </button>
             <span className="text-xs text-slate-500">{backStatus}</span>
           </div>
-          <div className="flex-1 text-right text-xs text-slate-600">
-            Any size &amp; orientation — portrait or landscape. Uploaded image dimensions set the canvas.
+          <div className="flex-1 text-right text-[11px] text-slate-600">
+            The canvas is locked to the CR80 card ratio. Crop your artwork into the frame — it is never stretched.
           </div>
         </div>
         {uploadMsg && <div className={uploadMsgCls}>{uploadMsg.text}</div>}
       </div>
+
+      {cropState && (
+        <CropModal
+          file={cropState.file}
+          side={cropState.side}
+          canvasW={canvasW}
+          canvasH={canvasH}
+          onCancel={() => setCropState(null)}
+          onApply={blob => uploadBaked(cropState.side, blob)}
+        />
+      )}
 
       {/* Three-panel editor */}
       <div className="flex gap-4 items-start">

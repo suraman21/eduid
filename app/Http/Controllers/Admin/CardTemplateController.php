@@ -10,6 +10,7 @@ use App\Models\CardTemplateField;
 use App\Models\School;
 use App\Services\CardImageService;
 use App\Services\CardPrintService;
+use App\Services\CardTemplateNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -99,8 +100,16 @@ class CardTemplateController extends Controller
             'backUrl'     => $backPublicUrl,
             'uploadUrl'   => route('admin.card-template.upload', $school),
             'saveUrl'     => route('admin.card-template.save', $school),
+            'convertUrl'  => route('admin.card-template.convert', $school),
             'backUrl_exists' => $backExists,
             'schoolUrl'   => route('admin.schools.show', $school),
+            // Fixed CR80 design canvas — the editor locks to one of these.
+            'orientation' => $template?->orientation ?? ($canvasH > $canvasW ? 'portrait' : 'landscape'),
+            'isLegacy'    => $template ? $template->isLegacy() : false,
+            'cr80'        => [
+                'landscape' => ['w' => CardTemplate::CANVAS_LANDSCAPE_W, 'h' => CardTemplate::CANVAS_LANDSCAPE_H],
+                'portrait'  => ['w' => CardTemplate::CANVAS_PORTRAIT_W,  'h' => CardTemplate::CANVAS_PORTRAIT_H],
+            ],
         ]);
     }
 
@@ -125,6 +134,15 @@ class CardTemplateController extends Controller
             return response()->json(['success' => false, 'error' => 'Could not read image dimensions.'], 422);
         }
         [$origW, $origH] = $info;
+
+        // The editor bakes the designer's crop to the CR80 aspect before upload.
+        // Reject anything that is not CR80 so the canvas ratio can never drift.
+        if (! CardTemplate::isRatioCr80((int) $origW, (int) $origH)) {
+            return response()->json([
+                'success' => false,
+                'error'   => 'Background must be cropped to the CR80 aspect ratio (85.6 × 54 mm). Please re-crop in the editor.',
+            ], 422);
+        }
 
         // Load via GD — handles JPEG and PNG; re-encodes to PNG to strip EXIF metadata.
         // We do NOT resize: the designer's image dimensions define the canvas.
@@ -168,7 +186,11 @@ class CardTemplateController extends Controller
             try {
                 CardTemplate::where('school_id', $school->id)
                     ->where('template_type', 'student')
-                    ->update(['canvas_w' => $origW, 'canvas_h' => $origH]);
+                    ->update([
+                        'canvas_w'    => $origW,
+                        'canvas_h'    => $origH,
+                        'orientation' => $origH > $origW ? 'portrait' : 'landscape',
+                    ]);
             } catch (\Throwable $e) {
                 // Non-fatal — canvas_w/h columns may be pending migration.
             }
@@ -220,6 +242,16 @@ class CardTemplateController extends Controller
         $canvasW = (int) ($request->input('canvas_w') ?: CardTemplate::DEFAULT_W);
         $canvasH = (int) ($request->input('canvas_h') ?: CardTemplate::DEFAULT_H);
 
+        // CR80 is mandatory — the canvas aspect can never drift. The editor only
+        // ever submits a CR80 canvas; this is the server-side guarantee.
+        if (! CardTemplate::isRatioCr80($canvasW, $canvasH)) {
+            $msg = 'The card canvas must use the CR80 aspect ratio (85.6 × 54 mm). Re-crop the background in the editor.';
+
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 422)
+                : back()->with('error', $msg);
+        }
+
         $template = CardTemplate::updateOrCreate(
             ['school_id' => $school->id, 'template_type' => 'student'],
             [
@@ -229,6 +261,7 @@ class CardTemplateController extends Controller
                     ? "cards/{$school->id}/back.png" : null,
                 'canvas_w'         => $canvasW,
                 'canvas_h'         => $canvasH,
+                'orientation'      => $canvasH > $canvasW ? 'portrait' : 'landscape',
                 'is_active'        => true,
                 'created_by'       => auth()->id(),
             ]
@@ -286,6 +319,37 @@ class CardTemplateController extends Controller
         }
 
         return redirect()->route('admin.card-template.edit', $school)->with('success', $msg);
+    }
+
+    /**
+     * Auto-convert a legacy (non-CR80) template to the locked CR80 canvas:
+     * centre-crop the background and proportionally rescale field positions, then
+     * return to the editor for manual touch-up. Idempotent for CR80 templates.
+     */
+    public function convertLegacy(School $school, CardTemplateNormalizer $normalizer)
+    {
+        $template = CardTemplate::where('school_id', $school->id)
+            ->where('template_type', 'student')
+            ->first();
+
+        if (! $template) {
+            return back()->with('error', 'No template to convert.');
+        }
+
+        if (! $template->isLegacy()) {
+            return back()->with('success', 'Template already uses the CR80 aspect ratio.');
+        }
+
+        $orientation = $normalizer->convert($template);
+
+        AuditLog::createRecord(
+            $school->id, auth()->id(),
+            'card_template.converted_cr80', 'card_templates', $template->id, null,
+            ['orientation' => $orientation]
+        );
+
+        return redirect()->route('admin.card-template.edit', $school)
+            ->with('success', "Template converted to CR80 ({$orientation}). Fine-tune the crop and field positions, then save.");
     }
 
     /**

@@ -143,6 +143,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/',             [AdminCardTemplateController::class, 'edit'])->name('edit');
             Route::post('/upload',      [AdminCardTemplateController::class, 'uploadImage'])->name('upload');
             Route::post('/save',        [AdminCardTemplateController::class, 'saveFields'])->name('save');
+            Route::post('/convert',     [AdminCardTemplateController::class, 'convertLegacy'])->name('convert');
             Route::get('/image/{side}', [AdminCardTemplateController::class, 'serveImage'])->name('image');
         });
         // Generate print-ready cards (PDF or PNG ZIP) from a confirmed order + template
