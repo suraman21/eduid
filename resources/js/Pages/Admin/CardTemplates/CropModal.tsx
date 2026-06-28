@@ -22,6 +22,7 @@ export default function CropModal({
     const imgRef = useRef<HTMLImageElement | null>(null);
     const [url, setUrl] = useState('');
     const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
+    const [error, setError] = useState('');
     const [zoom, setZoom] = useState(1);
     const [tx, setTx] = useState(0);
     const [ty, setTy] = useState(0);
@@ -32,9 +33,21 @@ export default function CropModal({
         setUrl(u);
         const im = new Image();
         im.onload = () => { setNat({ w: im.naturalWidth, h: im.naturalHeight }); imgRef.current = im; };
+        im.onerror = () => setError('Could not load this image. Use a PNG or JPG under 10 MB.');
         im.src = u;
         return () => URL.revokeObjectURL(u);
     }, [file]);
+
+    if (error) {
+        return (
+            <Overlay>
+                <div className="bg-dark-800 border border-slate-700 rounded-xl p-5 w-[380px] text-center">
+                    <p className="text-sm text-red-400 mb-3">{error}</p>
+                    <button onClick={onCancel} className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 text-white rounded-lg">Close</button>
+                </div>
+            </Overlay>
+        );
+    }
 
     if (!nat) {
         return <Overlay><p className="text-slate-300 text-sm">Loading image…</p></Overlay>;

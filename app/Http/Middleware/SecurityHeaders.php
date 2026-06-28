@@ -68,7 +68,7 @@ class SecurityHeaders
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
+            "img-src 'self' data: blob:",
             "font-src 'self'",
             "connect-src 'self'",
             "object-src 'none'",

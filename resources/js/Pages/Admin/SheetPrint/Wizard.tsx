@@ -52,10 +52,18 @@ function csrf() {
 const STEPS = ['Students', 'Side', 'Sheet', 'Slots', 'Preview'];
 
 export default function Wizard({ order, school, template, students, sheetTemplates, openSheets }: Props) {
+    // Card orientation drives the default sheet: a portrait card must print on a
+    // portrait sheet so it stays vertical (never squished into a landscape slot).
+    const cardIsPortrait = template ? template.cardHmm > template.cardWmm : null;
+    const sheetIsPortrait = (t: SheetTemplate) => t.card_h_mm > t.card_w_mm;
+    const defaultSheet =
+        (cardIsPortrait !== null ? sheetTemplates.find(t => sheetIsPortrait(t) === cardIsPortrait) : undefined)
+        ?? sheetTemplates[0];
+
     const [step, setStep] = useState(1);
     const [selectedIds, setSelectedIds] = useState<number[]>(students.map(s => s.id));
     const [side, setSide] = useState<Side>('both');
-    const [sheetTemplateId, setSheetTemplateId] = useState<number | null>(sheetTemplates[0]?.id ?? null);
+    const [sheetTemplateId, setSheetTemplateId] = useState<number | null>(defaultSheet?.id ?? null);
     const [targetSheet, setTargetSheet] = useState<number | 'new'>('new');
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<{ front?: string; back?: string } | null>(null);
@@ -212,15 +220,29 @@ export default function Wizard({ order, school, template, students, sheetTemplat
 
                 {/* Step 3 — Sheet template */}
                 {step === 3 && (
-                    <Panel title="Choose sheet template">
+                    <Panel title="Choose sheet template" subtitle={cardIsPortrait !== null ? `This card is ${cardIsPortrait ? 'portrait' : 'landscape'} — pick a matching sheet so it isn't squished.` : undefined}>
                         <div className="grid sm:grid-cols-2 gap-3">
-                            {sheetTemplates.map(t => (
-                                <button key={t.id} onClick={() => { setSheetTemplateId(t.id); setTargetSheet('new'); }} className={`px-4 py-4 rounded-xl border text-left ${sheetTemplateId === t.id ? 'bg-purple-600/15 border-purple-500' : 'bg-white/[0.02] border-white/10'}`}>
-                                    <p className="font-semibold text-slate-100">{t.name}</p>
-                                    <p className="text-xs text-slate-500 mt-1">{t.columns}×{t.rows} · {t.slot_count} cards · {t.sheet_w_mm}×{t.sheet_h_mm}mm</p>
-                                </button>
-                            ))}
+                            {sheetTemplates.map(t => {
+                                const matches = cardIsPortrait === null || sheetIsPortrait(t) === cardIsPortrait;
+                                return (
+                                    <button key={t.id} onClick={() => { setSheetTemplateId(t.id); setTargetSheet('new'); }} className={`px-4 py-4 rounded-xl border text-left ${sheetTemplateId === t.id ? 'bg-purple-600/15 border-purple-500' : 'bg-white/[0.02] border-white/10'}`}>
+                                        <p className="font-semibold text-slate-100 flex items-center gap-2">
+                                            {t.name}
+                                            {matches
+                                                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-300">{sheetIsPortrait(t) ? 'Portrait' : 'Landscape'}</span>
+                                                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-300">orientation mismatch</span>}
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-1">{t.columns}×{t.rows} · {t.slot_count} cards · {t.sheet_w_mm}×{t.sheet_h_mm}mm</p>
+                                    </button>
+                                );
+                            })}
                         </div>
+                        {cardIsPortrait !== null && sheetTemplate && sheetIsPortrait(sheetTemplate) !== cardIsPortrait && (
+                            <div className="mt-3 flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <span>This sheet's slots are {sheetIsPortrait(sheetTemplate) ? 'portrait' : 'landscape'} but the card is {cardIsPortrait ? 'portrait' : 'landscape'}. The card would be distorted — choose the matching sheet.</span>
+                            </div>
+                        )}
                     </Panel>
                 )}
 
