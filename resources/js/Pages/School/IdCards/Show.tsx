@@ -6,6 +6,10 @@ import TemplateCard, { type CardTemplateData, type TemplateValues } from '@/Comp
 import type { PageProps } from '@/types';
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 
+// CR80 (85.6 mm) at ~96 CSS px/inch ≈ 324px — renders the preview close to the
+// real printed card size rather than the oversized earlier preview.
+const CARD_W = 324;
+
 function normHex(c: string | null | undefined) {
     const h = (c || '#6366f1').trim();
     return /^#[0-9a-fA-F]{6}$/.test(h) ? h : '#6366f1';
@@ -62,10 +66,24 @@ export default function Show({ student, school, template }: Props) {
                 </div>
             </div>
 
-            <div className="flex justify-center py-6">
-                {template
-                    ? <TemplateCard template={template} values={toValues(student, school)} displayWidth={380} accent={accent} preview />
-                    : <IdCard student={student} school={school} preview />}
+            <div className="flex flex-col items-center gap-3 py-6">
+                {template ? (
+                    <div className="flex flex-wrap items-start justify-center gap-6">
+                        <div className="flex flex-col items-center gap-2">
+                            <TemplateCard template={template} values={toValues(student, school)} displayWidth={CARD_W} side="front" accent={accent} preview />
+                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Front</span>
+                        </div>
+                        {template.backUrl && (
+                            <div className="flex flex-col items-center gap-2">
+                                <TemplateCard template={template} values={toValues(student, school)} displayWidth={CARD_W} side="back" accent={accent} preview />
+                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Back</span>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <IdCard student={student} school={school} preview />
+                )}
+                <p className="text-[11px] text-slate-400">Shown at actual card size · CR80 (85.6 × 54 mm)</p>
             </div>
 
             {/* Golden-rule explainer */}

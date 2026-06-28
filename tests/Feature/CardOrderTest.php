@@ -89,14 +89,50 @@ class CardOrderTest extends TestCase
 
     public function test_order_codes_are_unique_and_sequential(): void
     {
+        // Different students per order — a single student cannot be in two open
+        // orders at once (see test_cannot_order_for_student_with_ongoing_order).
         $s1 = $this->makeStudent('Abebe');
+        $s2 = $this->makeStudent('Bekele');
 
         $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'replacement', 'student_ids' => [$s1->id]]);
-        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'replacement', 'student_ids' => [$s1->id]]);
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'replacement', 'student_ids' => [$s2->id]]);
 
         $codes = CardOrder::withoutGlobalScope('school')->pluck('order_code')->all();
         $this->assertCount(2, $codes);
         $this->assertSame(count($codes), count(array_unique($codes)));
+    }
+
+    public function test_cannot_order_for_student_with_ongoing_order(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+
+        // First order succeeds and leaves the student in an open (pending) order.
+        $this->actingAs($this->admin)->post('/school/card-orders', [
+            'order_type' => 'replacement', 'student_ids' => [$s1->id],
+        ])->assertRedirect();
+
+        // Second order for the same student is blocked with an error, no new order.
+        $this->actingAs($this->admin)->post('/school/card-orders', [
+            'order_type' => 'replacement', 'student_ids' => [$s1->id],
+        ])->assertSessionHas('error');
+
+        $this->assertSame(1, CardOrder::withoutGlobalScope('school')->count());
+    }
+
+    public function test_can_reorder_after_previous_order_is_cancelled(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'replacement', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+        $this->actingAs($this->admin)->post("/school/card-orders/{$order->id}/cancel", ['cancel_reason' => 'x']);
+
+        // Cancelled is terminal, so the student is free to be ordered again.
+        $this->actingAs($this->admin)->post('/school/card-orders', [
+            'order_type' => 'replacement', 'student_ids' => [$s1->id],
+        ])->assertRedirect();
+
+        $this->assertSame(2, CardOrder::withoutGlobalScope('school')->count());
     }
 
     public function test_cannot_order_for_another_schools_student(): void

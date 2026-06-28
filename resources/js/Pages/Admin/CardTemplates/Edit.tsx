@@ -562,12 +562,12 @@ export default function CardTemplatesEdit({
         {showFinal && (frontUrl ? (
           <div className="flex flex-wrap gap-6 justify-center py-3">
             <div className="flex flex-col items-center gap-2">
-              <TemplateCard template={previewTemplate} values={previewValues} displayWidth={360} side="front" preview={false} />
+              <TemplateCard template={previewTemplate} values={previewValues} displayWidth={324} side="front" preview={false} />
               <span className="text-[11px] text-slate-500">Front</span>
             </div>
             {backUrl && (
               <div className="flex flex-col items-center gap-2">
-                <TemplateCard template={previewTemplate} values={previewValues} displayWidth={360} side="back" preview={false} />
+                <TemplateCard template={previewTemplate} values={previewValues} displayWidth={324} side="back" preview={false} />
                 <span className="text-[11px] text-slate-500">Back</span>
               </div>
             )}

@@ -93,8 +93,27 @@ class CardOrderController extends BaseSchoolController
 
         // Deduplicate and re-validate count server-side (never trust the form).
         $studentIds = array_values(array_unique(array_map('intval', $validated['student_ids'])));
-        $count      = count($studentIds);
-        $unit       = CardOrder::unitPrice($validated['order_type']);
+
+        // Block any student already sitting in a non-terminal order. A school must
+        // not be able to queue a second card for the same student while one is
+        // still pending/confirmed/printing/shipped — that would reprint and double-
+        // charge. The UI flags these, but this is the authoritative server guard.
+        $conflictIds = array_values(array_intersect($studentIds, $this->studentsInOpenOrders()));
+        if ($conflictIds) {
+            $names = Student::whereIn('id', $conflictIds)
+                ->orderBy('first_name')
+                ->get()
+                ->map(fn ($s) => $s->full_name)
+                ->all();
+            $list = implode(', ', array_slice($names, 0, 6)) . (count($names) > 6 ? '…' : '');
+
+            return back()->withInput()->with('error', count($conflictIds) === 1
+                ? "{$list} already has an ongoing card order. Wait until it is delivered, or cancel that order, before ordering another card for this student."
+                : "These students already have ongoing card orders: {$list}. Remove them from this order, or wait until their current orders are delivered or cancelled.");
+        }
+
+        $count = count($studentIds);
+        $unit  = CardOrder::unitPrice($validated['order_type']);
 
         $order = $this->createOrderAtomically([
             'ordered_by'    => auth()->id(),

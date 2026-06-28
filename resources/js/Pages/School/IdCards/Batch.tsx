@@ -6,6 +6,9 @@ import TemplateCard, { type CardTemplateData, type TemplateValues } from '@/Comp
 import type { PageProps } from '@/types';
 import { ArrowLeft } from 'lucide-react';
 
+// CR80 (85.6 mm) ≈ 324px at ~96 CSS px/inch — preview near the real card size.
+const CARD_W = 300;
+
 function normHex(c: string | null | undefined) {
     const h = (c || '#6366f1').trim();
     return /^#[0-9a-fA-F]{6}$/.test(h) ? h : '#6366f1';
@@ -64,11 +67,19 @@ export default function Batch({ students, school, template, cardOrder }: Props) 
             {students.length === 0 ? (
                 <div className="text-center py-16 text-slate-400 text-sm">No students found in this order.</div>
             ) : (
-                <div className="flex flex-wrap gap-6 justify-center">
+                <div className="flex flex-wrap gap-8 justify-center">
                     {students.map(s => (
-                        template
-                            ? <TemplateCard key={s.id} template={template} values={toValues(s, school)} displayWidth={340} accent={accent} preview />
-                            : <IdCard key={s.id} student={s} school={school} preview />
+                        template ? (
+                            <div key={s.id} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                                <TemplateCard template={template} values={toValues(s, school)} displayWidth={CARD_W} side="front" accent={accent} preview />
+                                {template.backUrl && (
+                                    <TemplateCard template={template} values={toValues(s, school)} displayWidth={CARD_W} side="back" accent={accent} preview />
+                                )}
+                                <span className="text-[11px] font-semibold text-slate-500">{s.full_name}</span>
+                            </div>
+                        ) : (
+                            <IdCard key={s.id} student={s} school={school} preview />
+                        )
                     ))}
                 </div>
             )}

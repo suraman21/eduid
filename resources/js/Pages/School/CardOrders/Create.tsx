@@ -42,14 +42,17 @@ export default function Create({ roster, classes, class_id, order_types }: Props
     const unitPrice = order_types.find(t => t.value === orderType)?.price ?? 0;
     const estimatedTotal = selectedIds.size * unitPrice;
 
-    const allChecked = roster.length > 0 && selectedIds.size === roster.length;
+    // Students already in a non-terminal order cannot be re-ordered.
+    const selectable = roster.filter(s => !s.in_open);
+    const allChecked = selectable.length > 0 && selectedIds.size === selectable.length;
     const someChecked = selectedIds.size > 0 && !allChecked;
 
     function toggleAll(checked: boolean) {
-        setSelectedIds(checked ? new Set(roster.map(s => s.id)) : new Set());
+        setSelectedIds(checked ? new Set(selectable.map(s => s.id)) : new Set());
     }
 
     function toggleOne(id: number) {
+        if (roster.find(s => s.id === id)?.in_open) return; // blocked — ongoing order
         setSelectedIds(prev => {
             const next = new Set(prev);
             next.has(id) ? next.delete(id) : next.add(id);
@@ -156,12 +159,13 @@ export default function Create({ roster, classes, class_id, order_types }: Props
                         </div>
                         <div className="divide-y divide-slate-50 max-h-[28rem] overflow-y-auto">
                             {roster.map(s => (
-                                <label key={s.id} className="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/70 transition">
+                                <label key={s.id} className={`px-5 py-3 flex items-center gap-3 transition ${s.in_open ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50/70'}`}>
                                     <input
                                         type="checkbox"
                                         checked={selectedIds.has(s.id)}
                                         onChange={() => toggleOne(s.id)}
-                                        className="rounded border-slate-300 flex-shrink-0"
+                                        disabled={s.in_open}
+                                        className="rounded border-slate-300 flex-shrink-0 disabled:cursor-not-allowed"
                                         style={{ accentColor: accent }}
                                     />
                                     <div
@@ -181,8 +185,8 @@ export default function Create({ roster, classes, class_id, order_types }: Props
                                             </span>
                                         )}
                                         {s.in_open && (
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 font-medium" title="Already in an open order">
-                                                In open order
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 font-medium" title="This student already has an ongoing card order">
+                                                Ongoing order
                                             </span>
                                         )}
                                     </div>
