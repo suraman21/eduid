@@ -95,7 +95,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-B2Lpn-gC.css",
+    "file": "assets/app-BjnKCTdm.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -934,7 +934,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-BA3v_pXu.js",
+    "file": "assets/app-CeOTVDxh.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1005,7 +1005,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-B2Lpn-gC.css"
+      "assets/app-BjnKCTdm.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",
