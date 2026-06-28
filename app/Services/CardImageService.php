@@ -180,37 +180,56 @@ class CardImageService
         }
 
         // Auto-select an Ethiopic-capable font whenever the text contains Ethiopic
-        // glyphs — Inter.ttf has no Ethiopic coverage, so Amharic names would render
-        // as blank boxes if we trusted the configured family alone.
+        // glyphs — the Latin base font has no Ethiopic coverage, so Amharic names
+        // would render as blank boxes if we trusted the configured family alone.
         $family = $field->font_family ?? 'Inter';
         if (preg_match('/\p{Ethiopic}/u', $text)) {
             $family = 'NotoSansEthiopic';
         }
-        $font     = $this->fontPath($family);
-        $fontSize = (int) ($field->font_size ?? 12);
-        $color    = $this->gdColor($canvas, $field->font_color ?? '#000000');
+        $bold  = ($field->font_weight ?? 'normal') === 'bold';
+        $font  = $this->fontPath($family, $bold);
+        $color = $this->gdColor($canvas, $field->font_color ?? '#000000');
 
-        $x  = $field->px_x;
-        $y  = $field->px_y + $fontSize; // GD baseline
-
-        // Horizontal alignment: measure text width and shift X.
-        if (in_array($field->text_align, ['center', 'right'], true) && $field->width_mm) {
-            $box   = imagettfbbox($fontSize, 0, $font, $text);
-            $tw    = abs($box[4] - $box[0]);
-            $fw    = $field->px_w ?? 0;
-            $x = match ($field->text_align) {
-                'center' => $x + (int) (($fw - $tw) / 2),
-                'right'  => $x + $fw - $tw,
-                default  => $x,
-            };
+        // The designer's font_size is in canvas PIXELS (same space as x/y/w/h).
+        // GD's imagettftext size is points at FreeType's DPI, which is not the
+        // same across hosts — so self-calibrate: choose the GD size that makes
+        // the glyph-box height equal the configured pixel size. The PNG then
+        // matches the on-screen TemplateCard regardless of the server's DPI, and
+        // a corrupt/unreadable font is skipped instead of aborting the job.
+        $targetPx = (float) ($field->font_size ?? 12);
+        $probe    = @imagettfbbox(100.0, 0, $font, 'Hg');
+        if ($probe === false) {
+            return;
         }
+        $probeH = abs($probe[1] - $probe[7]) ?: 100;
+        $gdSize = $targetPx * 100.0 / $probeH;
 
-        imagettftext($canvas, $fontSize, 0, $x, $y, $color, $font, $text);
+        // Measure the text at the chosen size to place it inside the field box.
+        $bbox   = @imagettfbbox($gdSize, 0, $font, $text) ?: [0, 0, 0, 0, 0, 0, 0, 0];
+        $textW  = abs($bbox[2] - $bbox[0]);
+        $textH  = abs($bbox[1] - $bbox[7]);
+        $ascent = -$bbox[7]; // baseline→top (bbox top y is negative)
 
-        // Faux-bold: Inter.ttf ships regular-only and GD has no synthetic weight, so
-        // emulate bold with a 1px horizontal over-draw (matches the PDF 'B' style).
-        if (($field->font_weight ?? 'normal') === 'bold') {
-            imagettftext($canvas, $fontSize, 0, $x + 1, $y, $color, $font, $text);
+        $boxX = $field->px_x;
+        $boxY = $field->px_y;
+        $boxW = $field->px_w ?: $textW;
+        $boxH = $field->px_h ?: $textH;
+
+        // Horizontal alignment (matches TemplateCard justifyContent) and vertical
+        // centering within the box (matches TemplateCard alignItems:center).
+        $x = match ($field->text_align) {
+            'center' => $boxX + (int) (($boxW - $textW) / 2),
+            'right'  => $boxX + (int) ($boxW - $textW),
+            default  => $boxX,
+        };
+        $y = $boxY + (int) (($boxH - $textH) / 2) + (int) $ascent;
+
+        @imagettftext($canvas, $gdSize, 0, $x, $y, $color, $font, $text);
+
+        // If bold was requested but only the regular face resolved (bold file
+        // missing), fake it with a 1px over-draw so weight is still conveyed.
+        if ($bold && ! str_contains($font, 'Bold')) {
+            @imagettftext($canvas, $gdSize, 0, $x + 1, $y, $color, $font, $text);
         }
     }
 
@@ -335,16 +354,25 @@ class CardImageService
         };
     }
 
-    private function fontPath(string $family): string
+    private function fontPath(string $family, bool $bold = false): string
     {
-        $map = [
-            'NotoSansEthiopic' => base_path('resources/fonts/NotoSansEthiopic.ttf'),
-            'Outfit'           => base_path('resources/fonts/Inter.ttf'),
-            'Inter'            => base_path('resources/fonts/Inter.ttf'),
-            'Roboto'           => base_path('resources/fonts/Inter.ttf'),
-        ];
-        $path = $map[$family] ?? '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf';
-        return file_exists($path) ? $path : base_path('resources/fonts/Inter.ttf');
+        $dir          = base_path('resources/fonts');
+        $latinRegular = "{$dir}/DejaVuSans.ttf";        // bundled, GD/FreeType-readable
+        $latin        = $bold ? "{$dir}/DejaVuSans-Bold.ttf" : $latinRegular;
+        $ethiopic     = "{$dir}/NotoSansEthiopic.ttf";  // Amharic coverage
+
+        // Inter / Roboto / Outfit (and anything unknown) → the Latin base font.
+        $path = $family === 'NotoSansEthiopic' ? $ethiopic : $latin;
+
+        // Never return a missing/unreadable path — fall through to fonts known to
+        // exist so a bad config (or a missing bold variant) can't crash the job.
+        foreach ([$path, $latinRegular, $ethiopic] as $candidate) {
+            if (is_file($candidate) && is_readable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $path;
     }
 
     private function gdColor(mixed $canvas, string $hex): int

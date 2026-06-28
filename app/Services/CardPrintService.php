@@ -363,11 +363,17 @@ class CardPrintService
 
         $rgb = $this->rgb($field->font_color ?? '#000000');
         $pdf->SetTextColor(...$rgb);
+
+        // CRITICAL: the designer's font_size is in canvas PIXELS (300 DPI), not
+        // points. Passing it straight to SetFont rendered text ~4× too large and
+        // overflowing the card. Convert px → pt (px / 300 * 72).
+        $sizePt = ((float) ($field->font_size ?? 10)) / 300 * 72;
+
         // Ethiopic text needs the embedded Noto font; Latin keeps helvetica + bold.
         if ($this->hasEthiopic($text)) {
-            $pdf->SetFont($this->amharicFont(), '', (int) ($field->font_size ?? 10));
+            $pdf->SetFont($this->amharicFont(), '', $sizePt);
         } else {
-            $pdf->SetFont('helvetica', $field->font_weight === 'bold' ? 'B' : '', (int) ($field->font_size ?? 10));
+            $pdf->SetFont('helvetica', $field->font_weight === 'bold' ? 'B' : '', $sizePt);
         }
         $pdf->SetXY($field->x_mm, $field->y_mm);
         $w = $field->width_mm ?? 0;
