@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\Admin\CardOrderController as AdminCardOrderController;
+use App\Http\Controllers\Admin\SheetPrintController as AdminSheetPrintController;
 use App\Http\Controllers\Admin\CardTemplateController as AdminCardTemplateController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
@@ -161,7 +162,13 @@ Route::middleware(['auth'])->group(function () {
             // Client-side print view (browser Save-as-PDF) + its photo source.
             Route::get('/{cardOrder}/print', [AdminCardOrderController::class, 'printView'])->name('print');
             Route::get('/{cardOrder}/student-photo/{student}', [AdminCardOrderController::class, 'studentPhoto'])->name('student-photo');
+            // Professional multi-up sheet printing wizard.
+            Route::get('/{cardOrder}/sheet-print', [AdminSheetPrintController::class, 'wizard'])->name('sheet-print.wizard');
+            Route::post('/{cardOrder}/sheet-print/generate', [AdminSheetPrintController::class, 'generate'])->name('sheet-print.generate');
         });
+
+        // Sheet PDF download (most-recent front/back for a sheet).
+        Route::get('/print-sheets/{printSheet}/download/{side}', [AdminSheetPrintController::class, 'download'])->name('admin.sheet-print.download');
     });
 
     // School User Group

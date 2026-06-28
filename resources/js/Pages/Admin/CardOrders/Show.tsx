@@ -203,17 +203,25 @@ export default function Show({ order, students }: Props) {
                             Render all cards using the school's configured template. High-quality files for the PVC printer — never shared with the school.
                         </p>
 
-                        {/* Recommended: client-side print (always live data, no server file). */}
+                        {/* Recommended: professional multi-up A4 sheet printing (slots, calibration). */}
+                        <a
+                            href={`/admin/card-orders/${order.id}/sheet-print`}
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition mr-2"
+                        >
+                            Professional Print (A4 Sheet) →
+                        </a>
+
+                        {/* Quick client-side proof print (always live data, no server file). */}
                         <a
                             href={`/admin/card-orders/${order.id}/print`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition"
                         >
-                            Print Cards (PDF) →
+                            Quick Proof (PDF) →
                         </a>
                         <p className="text-[11px] text-slate-500 mt-2 mb-4">
-                            Opens a print view sized to the exact card; use your browser’s “Save as PDF”. Always reflects current data — no stale file, nothing stored on the server.
+                            <strong className="text-slate-400">Professional Print</strong> composes cards onto an A4 PVC sheet with slot tracking. <strong className="text-slate-400">Quick Proof</strong> opens a single-card print view for a fast check.
                         </p>
 
                         <p className="text-[11px] text-slate-500 mb-2 uppercase tracking-wider">Server-generated files (fallback)</p>
