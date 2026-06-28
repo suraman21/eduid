@@ -35,5 +35,27 @@ class SheetTemplateSeeder extends Seeder
                 'is_active'      => true,
             ]
         );
+
+        // A4 holding 9 PORTRAIT CR80 cards as 3 columns × 3 rows, centred — for
+        // portrait card designs (e.g. membership cards). Portrait CR80 = 53.98w
+        // × 85.6h. Horizontal: 10 + 53.98 + 14.03 + 53.98 + 14.03 + 53.98 + 10 = 210
+        // Vertical: 10 + 3×85.6 + 2×10.1 + 10 = 297
+        SheetTemplate::updateOrCreate(
+            ['key' => 'a4-portrait-9up'],
+            [
+                'name'           => 'A4 PVC Portrait (9 Cards)',
+                'sheet_w_mm'     => 210,
+                'sheet_h_mm'     => 297,
+                'columns'        => 3,
+                'rows'           => 3,
+                'card_w_mm'      => 53.98,
+                'card_h_mm'      => 85.6,
+                'margin_top_mm'  => 10,
+                'margin_left_mm' => 10,
+                'h_spacing_mm'   => 14.03,
+                'v_spacing_mm'   => 10.1,
+                'is_active'      => true,
+            ]
+        );
     }
 }

@@ -73,7 +73,7 @@ class SheetPrintControllerTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/SheetPrint/Wizard', false)
                 ->has('students', 1)
-                ->has('sheetTemplates', 1));
+                ->has('sheetTemplates', 2));
     }
 
     public function test_school_admin_cannot_open_the_wizard(): void

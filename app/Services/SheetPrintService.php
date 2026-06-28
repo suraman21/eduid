@@ -67,7 +67,9 @@ class SheetPrintService
 
             $pdf->StartTransform();
             $pdf->Translate($pos['x'] + ($offset['x'] ?? 0), $pos['y'] + ($offset['y'] ?? 0));
-            $this->cards->drawAnyCardSide($pdf, $student, $school, $template, $side);
+            // Render the card at the slot's exact physical size (CR80) so every
+            // design fills its slot regardless of the source canvas resolution.
+            $this->cards->drawAnyCardSide($pdf, $student, $school, $template, $side, $sheet->card_w_mm, $sheet->card_h_mm);
             $pdf->StopTransform();
         }
 

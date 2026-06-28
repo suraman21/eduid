@@ -321,16 +321,22 @@ class CardPrintService
      * has no back face, so a branded 'back' is intentionally blank. Used by the
      * sheet engine so every school can be composed onto a multi-up sheet.
      */
-    public function drawAnyCardSide(TCPDF $pdf, Student $student, School $school, ?CardTemplate $template, string $side): void
+    public function drawAnyCardSide(TCPDF $pdf, Student $student, School $school, ?CardTemplate $template, string $side, ?float $targetW = null, ?float $targetH = null): void
     {
         if ($template) {
-            $this->drawCardSide($pdf, $student, $school, $template, $side);
+            $this->drawCardSide($pdf, $student, $school, $template, $side, $targetW, $targetH);
 
             return;
         }
 
         if ($side === 'front') {
+            // Branded fallback is authored at CR80 landscape; scale to the slot.
+            $sx = (($targetW ?? self::CARD_W) / self::CARD_W) * 100;
+            $sy = (($targetH ?? self::CARD_H) / self::CARD_H) * 100;
+            $pdf->StartTransform();
+            $pdf->Scale($sx, $sy, 0, 0);
             $this->drawCard($pdf, $student, $school);
+            $pdf->StopTransform();
         }
     }
 
@@ -341,19 +347,33 @@ class CardPrintService
      * TCPDF Translate transform and the whole card lands in the right slot, with
      * absolutely no scaling (every field keeps its exact mm coordinates).
      *
+     * The design is authored in a canvas coordinate space (px ÷ 300 DPI = native
+     * mm). We draw the background and fields in that native space, then scale the
+     * whole card onto the PHYSICAL target size (CR80 by default, or the slot size
+     * passed by the sheet engine) via a single TCPDF transform. This is what
+     * stops a high-resolution template from printing at near-A4 size.
+     *
      * @param  string  $side  'front' | 'back'
      */
-    public function drawCardSide(TCPDF $pdf, Student $student, School $school, CardTemplate $template, string $side): void
+    public function drawCardSide(TCPDF $pdf, Student $student, School $school, CardTemplate $template, string $side, ?float $targetW = null, ?float $targetH = null): void
     {
-        $cardW = $template->cardWMm();
-        $cardH = $template->cardHMm();
+        $nativeW = $template->nativeWMm();
+        $nativeH = $template->nativeHMm();
+        $targetW ??= $template->cardWMm();
+        $targetH ??= $template->cardHMm();
+
+        $sx = $nativeW > 0 ? ($targetW / $nativeW) * 100 : 100;
+        $sy = $nativeH > 0 ? ($targetH / $nativeH) * 100 : 100;
+
+        $pdf->StartTransform();
+        $pdf->Scale($sx, $sy, 0, 0);
 
         $bgPath = $side === 'back'
             ? ($template->back_image_path ? $this->diskPathFor($template->back_image_path) : null)
             : $this->diskPathFor($template->front_image_path);
 
         if ($bgPath) {
-            $pdf->Image($bgPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
+            $pdf->Image($bgPath, 0, 0, $nativeW, $nativeH, '', '', '', true, 300, '', false, false, 0);
         }
 
         $fields = $template->fields->filter(fn ($f) => $side === 'back'
@@ -364,6 +384,8 @@ class CardPrintService
         foreach ($fields as $field) {
             $this->drawTemplateField($pdf, $field, $student, $school);
         }
+
+        $pdf->StopTransform();
     }
 
     /**

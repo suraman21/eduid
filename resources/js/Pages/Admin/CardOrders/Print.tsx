@@ -45,9 +45,11 @@ export default function Print({ order, school, template, cards }: Props) {
 
     const t = template;
     const frontPx = (t.cardWmm / MM_PER_IN) * CSS_DPI;
-    const backWmm = (t.backW ?? t.canvasW) / 300 * MM_PER_IN;
-    const backHmm = (t.backH ?? t.canvasH) / 300 * MM_PER_IN;
-    const backPx = (backWmm / MM_PER_IN) * CSS_DPI;
+    // Back prints at the same physical CR80 size as the front (cardWmm/cardHmm
+    // are the true card size, not the canvas-pixel size).
+    const backWmm = t.cardWmm;
+    const backHmm = t.cardHmm;
+    const backPx = frontPx;
 
     const toValues = (c: CardData): TemplateValues => ({
         full_name: c.full_name,
