@@ -53,7 +53,9 @@ class AuthTest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        $response->assertSee('EduID');
+        // The marketing page is an Inertia/React component — its visible text is
+        // client-rendered, so assert on the resolved component, not server HTML.
+        $response->assertInertia(fn ($page) => $page->component('Welcome', false));
     }
 
     /**

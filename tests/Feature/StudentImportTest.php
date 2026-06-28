@@ -53,6 +53,12 @@ class StudentImportTest extends TestCase
         return new UploadedFile($path, 'students.csv', 'text/csv', null, true);
     }
 
+    /** Extract Inertia props from a full-page (non-XHR) Inertia response. */
+    private function props($response): array
+    {
+        return $response->viewData('page')['props'] ?? [];
+    }
+
     public function test_valid_csv_imports_students_with_class_and_guardian(): void
     {
         $csv = "first_name,last_name,gender,grade,section,date_of_birth,guardian_name,guardian_phone,guardian_relationship\n"
@@ -62,7 +68,7 @@ class StudentImportTest extends TestCase
             ->post('/school/students/import', ['csv_file' => $this->upload($csv)]);
         $preview->assertOk();
 
-        $tmpKey = $preview->viewData('tmpKey');
+        $tmpKey = $this->props($preview)['tmpKey'];
         $this->assertNotEmpty($tmpKey);
 
         $this->actingAs($this->admin)
@@ -89,13 +95,13 @@ class StudentImportTest extends TestCase
             ->post('/school/students/import', ['csv_file' => $this->upload($csv)]);
         $preview->assertOk();
 
-        $results = collect($preview->viewData('preview'));
+        $results = collect($this->props($preview)['preview']);
         $this->assertTrue($results[0]['valid']);
         $this->assertFalse($results[1]['valid']);
 
         // Confirm imports only the valid row.
         $this->actingAs($this->admin)
-            ->post('/school/students/import/confirm', ['tmp_key' => $preview->viewData('tmpKey')]);
+            ->post('/school/students/import/confirm', ['tmp_key' => $this->props($preview)['tmpKey']]);
 
         $this->assertSame(1, Student::withoutGlobalScope('school')->count());
     }
@@ -112,7 +118,7 @@ class StudentImportTest extends TestCase
             ->post('/school/students/import', ['csv_file' => $this->upload($csv)]);
         $preview->assertOk();
 
-        $results = collect($preview->viewData('preview'));
+        $results = collect($this->props($preview)['preview']);
         $this->assertTrue($results[0]['valid']);
         $this->assertFalse($results[1]['valid']);
     }

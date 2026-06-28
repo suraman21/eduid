@@ -43,7 +43,9 @@ class PasswordResetTest extends TestCase
 
     public function test_forgot_password_form_is_reachable(): void
     {
-        $this->get('/forgot-password')->assertStatus(200)->assertSee('Reset Password');
+        // Inertia/React page — assert the resolved component, not server HTML text.
+        $this->get('/forgot-password')->assertStatus(200)
+            ->assertInertia(fn ($page) => $page->component('Auth/ForgotPassword', false));
     }
 
     public function test_requesting_a_code_stores_a_hashed_otp_and_sends_mail(): void
