@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Models\SchoolClass;
 use App\Models\Student;
+use Illuminate\Support\Facades\Storage;
 
 class ClassController extends BaseApiController
 {
@@ -61,5 +62,34 @@ class ClassController extends BaseApiController
             'academic_year' => $this->currentSchool()->academic_year,
             'students'      => $students,
         ], 200);
+    }
+
+    /**
+     * Serve a student's photo for offline caching by the mobile app.
+     * Scoped: the student must belong to a class the user can access.
+     */
+    public function studentPhoto(SchoolClass $class, Student $student)
+    {
+        if (! $this->canAccessClass($class->id)) {
+            return response()->json(['message' => 'You are not assigned to this class.'], 403);
+        }
+
+        if ((int) $student->class_id !== $class->id || $student->status !== 'active') {
+            abort(404);
+        }
+
+        if (! $student->photo_path) {
+            abort(404);
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($student->photo_path)) {
+                return Storage::disk($disk)->response($student->photo_path, null, [
+                    'Cache-Control' => 'private, max-age=86400',
+                ]);
+            }
+        }
+
+        abort(404);
     }
 }

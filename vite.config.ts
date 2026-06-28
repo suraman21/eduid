@@ -5,8 +5,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
     plugins: [
         laravel({
-            // app.js — legacy Blade pages (gradually migrated away).
-            // app.tsx — Inertia/React entry for converted pages.
             input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/app.tsx'],
             refresh: true,
         }),
@@ -15,6 +13,17 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': '/resources/js',
+        },
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom', '@inertiajs/react'],
+                    'vendor-motion': ['framer-motion'],
+                    'vendor-ui': ['@headlessui/react', 'lucide-react'],
+                },
+            },
         },
     },
 });

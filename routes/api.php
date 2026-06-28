@@ -57,6 +57,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:mobile'])->group(func
     // Classes + roster the app caches for offline use.
     Route::get('/classes', [ClassController::class, 'index'])->name('api.classes.index');
     Route::get('/classes/{class}/students', [ClassController::class, 'students'])->name('api.classes.students');
+    Route::get('/classes/{class}/students/{student}/photo', [ClassController::class, 'studentPhoto'])->name('api.classes.student-photo');
 
     // Online QR verification + offline attendance sync.
     Route::post('/attendance/verify-qr', [AttendanceController::class, 'verifyQr'])->name('api.attendance.verify');
