@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\School;
 
+use App\Exceptions\OngoingOrderConflict;
 use App\Models\AuditLog;
 use App\Models\CardOrder;
+use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Database\QueryException;
@@ -93,36 +95,25 @@ class CardOrderController extends BaseSchoolController
 
         // Deduplicate and re-validate count server-side (never trust the form).
         $studentIds = array_values(array_unique(array_map('intval', $validated['student_ids'])));
+        $count      = count($studentIds);
+        $unit       = CardOrder::unitPrice($validated['order_type']);
 
-        // Block any student already sitting in a non-terminal order. A school must
-        // not be able to queue a second card for the same student while one is
-        // still pending/confirmed/printing/shipped — that would reprint and double-
-        // charge. The UI flags these, but this is the authoritative server guard.
-        $conflictIds = array_values(array_intersect($studentIds, $this->studentsInOpenOrders()));
-        if ($conflictIds) {
-            $names = Student::whereIn('id', $conflictIds)
-                ->orderBy('first_name')
-                ->get()
-                ->map(fn ($s) => $s->full_name)
-                ->all();
-            $list = implode(', ', array_slice($names, 0, 6)) . (count($names) > 6 ? '…' : '');
-
-            return back()->withInput()->with('error', count($conflictIds) === 1
-                ? "{$list} already has an ongoing card order. Wait until it is delivered, or cancel that order, before ordering another card for this student."
-                : "These students already have ongoing card orders: {$list}. Remove them from this order, or wait until their current orders are delivered or cancelled.");
+        // The duplicate-student guard runs INSIDE the order transaction under a
+        // school-row lock (see createOrderAtomically) so the check and the insert
+        // are atomic — two simultaneous submits for the same student cannot both
+        // succeed. A friendly, student-named message is built from the conflict.
+        try {
+            $order = $this->createOrderAtomically([
+                'ordered_by'    => auth()->id(),
+                'student_ids'   => $studentIds,
+                'student_count' => $count,
+                'order_type'    => $validated['order_type'],
+                'status'        => 'pending',
+                'amount_etb'    => $unit * $count,
+            ]);
+        } catch (OngoingOrderConflict $e) {
+            return back()->withInput()->with('error', $this->ongoingOrderMessage($e->studentIds));
         }
-
-        $count = count($studentIds);
-        $unit  = CardOrder::unitPrice($validated['order_type']);
-
-        $order = $this->createOrderAtomically([
-            'ordered_by'    => auth()->id(),
-            'student_ids'   => $studentIds,
-            'student_count' => $count,
-            'order_type'    => $validated['order_type'],
-            'status'        => 'pending',
-            'amount_etb'    => $unit * $count,
-        ]);
 
         AuditLog::log('card_order.created', 'card_orders', $order->id, null, [
             'order_code'    => $order->order_code,
@@ -213,7 +204,20 @@ class CardOrderController extends BaseSchoolController
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
             try {
-                return DB::transaction(function () use ($attributes, $prefix) {
+                return DB::transaction(function () use ($attributes, $prefix, $school) {
+                    // Lock the school row so concurrent orders for THIS school
+                    // serialize: the conflict re-check below then sees any order a
+                    // racing request just committed.
+                    School::whereKey($school->id)->lockForUpdate()->first();
+
+                    $conflicts = array_values(array_intersect(
+                        $attributes['student_ids'],
+                        $this->studentsInOpenOrders()
+                    ));
+                    if ($conflicts) {
+                        throw new OngoingOrderConflict($conflicts);
+                    }
+
                     $seq = CardOrder::withoutGlobalScope('school')
                         ->where('order_code', 'like', $prefix . '%')
                         ->count() + 1;
@@ -236,6 +240,25 @@ class CardOrderController extends BaseSchoolController
         $attributes['order_code'] = $prefix . strtoupper(\Illuminate\Support\Str::random(5));
 
         return CardOrder::create($attributes);
+    }
+
+    /**
+     * Friendly, student-named message for an ongoing-order conflict.
+     *
+     * @param int[] $ids
+     */
+    private function ongoingOrderMessage(array $ids): string
+    {
+        $names = Student::whereIn('id', $ids)
+            ->orderBy('first_name')
+            ->get()
+            ->map(fn ($s) => $s->full_name)
+            ->all();
+        $list = implode(', ', array_slice($names, 0, 6)) . (count($names) > 6 ? '…' : '');
+
+        return count($ids) === 1
+            ? "{$list} already has an ongoing card order. Wait until it is delivered, or cancel that order, before ordering another card for this student."
+            : "These students already have ongoing card orders: {$list}. Remove them from this order, or wait until their current orders are delivered or cancelled.";
     }
 
     /**

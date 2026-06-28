@@ -13,6 +13,13 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
+     * A valid bcrypt hash used only to normalise login timing when no matching
+     * user exists, so an attacker cannot tell (via response time) whether an
+     * email is registered for a school. It never matches any real password.
+     */
+    private const TIMING_HASH = '$2y$12$97I7wAJnTzR1.oqSUdEtTOSQYZVN4RuXxYQd2h0tR5VwFs72tWDO.';
+
+    /**
      * Handle API login and issue Sanctum token.
      */
     public function login(Request $request)
@@ -45,6 +52,12 @@ class AuthController extends Controller
             ->first();
 
         if (!$user) {
+            // Run a dummy verify so the no-such-user path costs the same as a
+            // real bcrypt check — closes the timing side-channel for email
+            // enumeration. (Messages are already identical to the wrong-password
+            // path below.)
+            Hash::check($request->password, self::TIMING_HASH);
+
             return response()->json([
                 'message' => 'These credentials do not match our records.'
             ], 401);

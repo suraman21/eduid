@@ -47,9 +47,19 @@ class CardPrintService
     private function amharicFont(): string
     {
         if ($this->amharicFont === null) {
-            $this->amharicFont = \TCPDF_FONTS::addTTFfont(
-                base_path('resources/fonts/NotoSansEthiopic.ttf'), 'TrueTypeUnicode', '', 32
-            ) ?: 'helvetica';
+            // addTTFfont converts the TTF into TCPDF's cache dir on first use. On
+            // locked-down shared hosting that dir can be read-only, which would
+            // otherwise throw mid-PDF and fail the whole print job. Degrade to
+            // helvetica (Latin-only) instead — Amharic won't render, but the card
+            // still prints. Cached either way so we only attempt the write once.
+            try {
+                $this->amharicFont = \TCPDF_FONTS::addTTFfont(
+                    base_path('resources/fonts/NotoSansEthiopic.ttf'), 'TrueTypeUnicode', '', 32
+                ) ?: 'helvetica';
+            } catch (\Throwable $e) {
+                report($e);
+                $this->amharicFont = 'helvetica';
+            }
         }
 
         return $this->amharicFont;
