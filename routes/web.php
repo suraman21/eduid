@@ -62,8 +62,8 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-// Lead capture / Contact form
-Route::post('/contact', [LeadController::class, 'store'])->name('contact.store');
+// Lead capture / Contact form (public — throttled against lead-spam).
+Route::post('/contact', [LeadController::class, 'store'])->middleware('throttle:contact')->name('contact.store');
 
 // ── Auth Routes ───────────────────────────────────────────────
 

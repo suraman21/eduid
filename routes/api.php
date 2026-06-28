@@ -45,7 +45,7 @@ Route::prefix('v1')->group(function () {
 });
 
 // ── Protected Endpoints (Requires Sanctum Token) ─────────────────
-Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:mobile'])->group(function () {
 
     // Get current authenticated user details
     Route::get('/auth/me', [AuthController::class, 'me'])->name('api.me');

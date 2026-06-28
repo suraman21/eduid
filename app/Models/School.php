@@ -39,6 +39,16 @@ class School extends Model
         'onboarding_completed_at',
     ];
 
+    /**
+     * Never serialize the QR-signing secret. Every student QR token is an
+     * HMAC keyed by this value, so it must never reach JSON/Inertia/the client —
+     * leaking it would let anyone forge scannable cards. Hidden here as a hard
+     * backstop even if a controller accidentally returns a raw School model.
+     */
+    protected $hidden = [
+        'hmac_secret',
+    ];
+
     protected function casts(): array
     {
         return [
