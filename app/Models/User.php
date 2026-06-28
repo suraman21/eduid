@@ -29,11 +29,15 @@ class User extends Authenticatable
         'is_coordinator',
         'can_record_staff_attendance',
         'can_login',
+        'pin_hash',
+        'pin_failed_count',
+        'pin_locked_until',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'pin_hash',
     ];
 
     protected function casts(): array
@@ -49,6 +53,8 @@ class User extends Authenticatable
             'is_coordinator'              => 'boolean',
             'can_record_staff_attendance' => 'boolean',
             'can_login'                   => 'boolean',
+            'pin_failed_count'            => 'integer',
+            'pin_locked_until'            => 'datetime',
         ];
     }
 
@@ -134,6 +140,32 @@ class User extends Authenticatable
             'locked_until'       => null,
             'last_login_at'      => now(),
         ]);
+    }
+
+    // ── PIN Auth (mobile app) ──────────────────────────────────
+
+    public function hasPin(): bool
+    {
+        return ! empty($this->pin_hash);
+    }
+
+    public function isPinLocked(): bool
+    {
+        return $this->pin_locked_until && $this->pin_locked_until->isFuture();
+    }
+
+    public function incrementPinFailures(): void
+    {
+        $this->increment('pin_failed_count');
+
+        if ($this->pin_failed_count >= 5) {
+            $this->update(['pin_locked_until' => now()->addMinutes(30)]);
+        }
+    }
+
+    public function resetPinFailures(): void
+    {
+        $this->update(['pin_failed_count' => 0, 'pin_locked_until' => null]);
     }
 
     // ── Relationships ──────────────────────────────────────────

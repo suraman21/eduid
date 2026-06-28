@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentGrade;
 use App\Models\Term;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -201,6 +202,10 @@ class ReportCardController extends BaseSchoolController
             'final'   => 'Final (' . round($finW * 100) . '%)',
         ];
 
+        if ($request->query('format') === 'csv') {
+            return $this->exportCsv($student, $term, $classSubjects, $subjectRows, $termAvg, $rank, $classSize, $caW, $midW, $finW);
+        }
+
         return Inertia::render('School/ReportCards/Show', [
             'student' => [
                 'id'          => $student->id,
@@ -226,6 +231,176 @@ class ReportCardController extends BaseSchoolController
                 'letter' => $row['letter'],
             ], $subjectRows),
             'generated_at' => now()->format('M d, Y'),
+        ]);
+    }
+
+    /**
+     * Gradebook CSV export for a class/term. No extra PHP dependency — just
+     * fputcsv to a temp stream. Works on cPanel shared hosting.
+     */
+    public function exportGradebook(Request $request)
+    {
+        $this->requireAdmin();
+
+        $filters = $request->validate([
+            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $this->schoolId())],
+            'term_id'  => ['required', Rule::exists('terms', 'id')->where('school_id', $this->schoolId())],
+        ]);
+
+        $class = SchoolClass::findOrFail($filters['class_id']);
+        $term  = Term::findOrFail($filters['term_id']);
+        $school = $this->currentSchool();
+
+        $students = Student::where('class_id', $class->id)
+            ->where('status', 'active')
+            ->orderBy('first_name')
+            ->get();
+
+        $subjects = ClassSubject::where('class_id', $class->id)
+            ->with('subject')
+            ->get();
+
+        $allGrades = StudentGrade::where('class_id', $class->id)
+            ->where('term_id', $term->id)
+            ->where('status', 'published')
+            ->get()
+            ->groupBy('student_id');
+
+        $config = AssessmentConfig::where('school_id', $this->schoolId())
+            ->where('academic_year', $term->academic_year)
+            ->whereNull('grade_level')
+            ->first();
+
+        $caW  = $config ? (float) $config->ca_weight / 100 : 0.40;
+        $midW = $config ? (float) $config->midterm_weight / 100 : 0.20;
+        $finW = $config ? (float) $config->final_weight / 100 : 0.40;
+
+        $scales = GradingScale::orderByDesc('min_score')->get();
+
+        $header = ['#', 'Student Name', 'UID'];
+        foreach ($subjects as $cs) {
+            $name = $cs->subject->name;
+            $header[] = "{$name} CA";
+            $header[] = "{$name} Mid";
+            $header[] = "{$name} Final";
+            $header[] = "{$name} Total";
+            $header[] = "{$name} Grade";
+        }
+        $header[] = 'Average';
+        $header[] = 'Rank';
+
+        $rows = [];
+        foreach ($students as $student) {
+            $sg = $allGrades[$student->id] ?? collect();
+            $row = [$student->full_name, $student->uid];
+            $totals = [];
+
+            foreach ($subjects as $cs) {
+                $byType = $sg->where('subject_id', $cs->subject_id)->keyBy('assessment_type');
+                $ca  = $byType['ca'] ?? null;
+                $mid = $byType['midterm'] ?? null;
+                $fin = $byType['final'] ?? null;
+
+                $row[] = $ca ? (float) $ca->score : '';
+                $row[] = $mid ? (float) $mid->score : '';
+                $row[] = $fin ? (float) $fin->score : '';
+
+                $total = null;
+                $letter = '';
+                if ($ca && $mid && $fin) {
+                    $total = round(
+                        ((float) $ca->score / (float) $ca->max_score * 100) * $caW +
+                        ((float) $mid->score / (float) $mid->max_score * 100) * $midW +
+                        ((float) $fin->score / (float) $fin->max_score * 100) * $finW,
+                        1
+                    );
+                    $letter = $scales->first(fn ($s) => $s->matches($total))?->label ?? '';
+                }
+
+                $row[] = $total ?? '';
+                $row[] = $letter;
+                if ($total !== null) $totals[] = $total;
+            }
+
+            $avg = count($totals) > 0 ? round(array_sum($totals) / count($totals), 1) : null;
+            $row[] = $avg ?? '';
+            $row[] = null;
+
+            $rows[] = ['data' => $row, 'avg' => $avg];
+        }
+
+        usort($rows, function ($a, $b) {
+            if ($a['avg'] === null && $b['avg'] === null) return 0;
+            if ($a['avg'] === null) return 1;
+            if ($b['avg'] === null) return -1;
+            return $b['avg'] <=> $a['avg'];
+        });
+
+        $rank = 0;
+        $prevAvg = null;
+        $pos = 0;
+        foreach ($rows as &$r) {
+            $pos++;
+            if ($r['avg'] === null) continue;
+            if ($r['avg'] !== $prevAvg) $rank = $pos;
+            $r['data'][count($r['data']) - 1] = $rank;
+            $prevAvg = $r['avg'];
+        }
+        unset($r);
+
+        $stream = fopen('php://temp', 'r+');
+        fprintf($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, $header);
+        $num = 0;
+        foreach ($rows as $r) {
+            fputcsv($stream, array_merge([++$num], $r['data']));
+        }
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+
+        $filename = "{$class->display_name}-{$term->name}-gradebook.csv";
+
+        return Response::make($csv, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    private function exportCsv($student, $term, $classSubjects, $subjectRows, $termAvg, $rank, $classSize, $caW, $midW, $finW)
+    {
+        $header = ['Subject', 'CA', 'CA Max', 'Midterm', 'Midterm Max', 'Final', 'Final Max', 'Total', 'Grade'];
+        $stream = fopen('php://temp', 'r+');
+        fprintf($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, ["Report Card - {$student->full_name} ({$student->uid})"]);
+        fputcsv($stream, ["Term: {$term->name} ({$term->academic_year})"]);
+        fputcsv($stream, ["Average: {$termAvg}", "Rank: {$rank}/{$classSize}"]);
+        fputcsv($stream, []);
+        fputcsv($stream, $header);
+
+        foreach ($subjectRows as $row) {
+            fputcsv($stream, [
+                $row['subject']->name,
+                $row['ca'] ? (float) $row['ca']->score : '',
+                $row['ca'] ? (float) $row['ca']->max_score : '',
+                $row['midterm'] ? (float) $row['midterm']->score : '',
+                $row['midterm'] ? (float) $row['midterm']->max_score : '',
+                $row['final'] ? (float) $row['final']->score : '',
+                $row['final'] ? (float) $row['final']->max_score : '',
+                $row['total'] ?? '',
+                $row['letter'] ?? '',
+            ]);
+        }
+
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+
+        $filename = "{$student->uid}-{$term->name}-report-card.csv";
+
+        return Response::make($csv, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 }

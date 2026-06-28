@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\GradeController;
+use App\Http\Controllers\Api\V1\ScheduleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,11 +55,22 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:mobile'])->group(func
     // Authentication Logout
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.logout');
 
+    // PIN auth (quick app unlock)
+    Route::post('/auth/pin/set', [AuthController::class, 'setPin'])->name('api.pin.set');
+    Route::post('/auth/pin/verify', [AuthController::class, 'verifyPin'])->name('api.pin.verify');
+
     // ── Mobile scanner / attendance (Flutter app) ────────────────
     // Classes + roster the app caches for offline use.
     Route::get('/classes', [ClassController::class, 'index'])->name('api.classes.index');
     Route::get('/classes/{class}/students', [ClassController::class, 'students'])->name('api.classes.students');
     Route::get('/classes/{class}/students/{student}/photo', [ClassController::class, 'studentPhoto'])->name('api.classes.student-photo');
+
+    // Grades for a class (teacher view)
+    Route::get('/classes/{class}/grades', [GradeController::class, 'grades'])->name('api.classes.grades');
+
+    // Schedule / timetable
+    Route::get('/schedule/today', [ScheduleController::class, 'today'])->name('api.schedule.today');
+    Route::get('/schedule/week', [ScheduleController::class, 'week'])->name('api.schedule.week');
 
     // Online QR verification + offline attendance sync.
     Route::post('/attendance/verify-qr', [AttendanceController::class, 'verifyQr'])->name('api.attendance.verify');

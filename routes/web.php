@@ -225,6 +225,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Report Cards (web-viewable, print-friendly — no server-side PDF)
         Route::get('/report-cards',           [SchoolReportCardController::class, 'index'])->name('school.report-cards.index');
+        Route::get('/report-cards/export',    [SchoolReportCardController::class, 'exportGradebook'])->name('school.report-cards.export');
         Route::get('/report-cards/{student}', [SchoolReportCardController::class, 'show'])->name('school.report-cards.show');
 
         // Guardians (nested under a student)

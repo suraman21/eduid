@@ -169,6 +169,83 @@ class AuthController extends Controller
     }
 
     /**
+     * Set or update the user's 4-digit PIN for quick app unlock.
+     * Requires current password for security.
+     */
+    public function setPin(Request $request)
+    {
+        $request->validate([
+            'pin'      => ['required', 'string', 'regex:/^\d{4}$/'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Incorrect password.'], 403);
+        }
+
+        $user->update([
+            'pin_hash'         => Hash::make($request->pin),
+            'pin_failed_count' => 0,
+            'pin_locked_until' => null,
+        ]);
+
+        return response()->json(['message' => 'PIN set successfully.'], 200);
+    }
+
+    /**
+     * Verify the user's PIN for quick app unlock. 5 failures → 30 min lock →
+     * full re-auth required.
+     */
+    public function verifyPin(Request $request)
+    {
+        $request->validate([
+            'pin' => ['required', 'string', 'regex:/^\d{4}$/'],
+        ]);
+
+        $user = $request->user();
+
+        if (! $user->hasPin()) {
+            return response()->json(['message' => 'No PIN configured.'], 422);
+        }
+
+        if ($user->isPinLocked()) {
+            $user->currentAccessToken()->delete();
+            return response()->json([
+                'message' => 'PIN locked. Please log in again with your password.',
+                'locked'  => true,
+            ], 423);
+        }
+
+        if (! Hash::check($request->pin, $user->pin_hash)) {
+            $user->incrementPinFailures();
+
+            if ($user->isPinLocked()) {
+                $user->currentAccessToken()->delete();
+                AuditLog::safeRecord(
+                    $user->school_id, $user->id,
+                    'api.pin_lockout', 'users', $user->id, null,
+                    ['ip' => $request->ip()]
+                );
+                return response()->json([
+                    'message'    => 'Too many failed PIN attempts. Please log in again.',
+                    'locked'     => true,
+                ], 423);
+            }
+
+            return response()->json([
+                'message'          => 'Incorrect PIN.',
+                'attempts_remaining' => 5 - $user->pin_failed_count,
+            ], 401);
+        }
+
+        $user->resetPinFailures();
+
+        return response()->json(['message' => 'PIN verified.'], 200);
+    }
+
+    /**
      * Log the user out (revoke current token).
      */
     public function logout(Request $request)

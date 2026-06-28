@@ -116,15 +116,107 @@ every retry** — this is what makes re-sending safe.
 
 ---
 
+### `GET /classes/{class_id}/students/{student_id}/photo`
+
+Download a student's photo for offline caching. The student must belong to the
+given class, be `active`, and have a photo on file.
+
+**Response:** Raw image bytes (`image/jpeg` or `image/png`) with
+`Cache-Control: private, max-age=86400`.
+
+**Errors:** `403` class not assigned · `404` student not in class / no photo.
+
+**Offline strategy:** After caching the roster, loop over students where
+`has_photo: true` and fetch each photo. Store locally keyed by `student_id`.
+
+---
+
+## PIN Authentication (quick unlock)
+
+### `POST /auth/pin/set`  (auth)
+Set or update the user's 4-digit PIN. Requires current password.
+```json
+{ "pin": "1234", "password": "current-password" }
+```
+`200` success · `403` wrong password · `422` invalid PIN format.
+
+### `POST /auth/pin/verify`  (auth)
+Verify PIN for quick app unlock. 5 failures → lock + token revocation → full
+re-auth required.
+```json
+{ "pin": "1234" }
+```
+`200` verified · `401` wrong PIN (includes `attempts_remaining`) ·
+`422` no PIN configured · `423` locked (token revoked, must re-login).
+
+---
+
+## Grades
+
+### `GET /classes/{class_id}/grades`  (auth)
+Gradebook for a class. Optional `?term_id=X` (defaults to current term).
+`403` if teacher not assigned to class.
+```json
+{
+  "class": { "id": 5, "name": "Grade 10 - A" },
+  "term": { "id": 1, "name": "Term 1", "academic_year": "2018 E.C." },
+  "weights": { "ca": 40, "midterm": 20, "final": 40 },
+  "students": [
+    {
+      "student_id": 88, "student_uid": "AIA-12345", "full_name": "Abebe Girma",
+      "subjects": [
+        {
+          "subject_id": 3, "subject_name": "Math",
+          "ca": { "score": 35, "max": 40 },
+          "midterm": { "score": 18, "max": 20 },
+          "final": { "score": 38, "max": 40 },
+          "total": 91.0, "letter": "A"
+        }
+      ],
+      "term_avg": 91.0, "rank": 1
+    }
+  ]
+}
+```
+
+---
+
+## Schedule / Timetable
+
+### `GET /schedule/today`  (auth)
+Today's periods for the teacher. Each period shows the entry (class, subject,
+room) if the teacher is assigned, or `null` for free/break periods.
+```json
+{
+  "day_of_week": 1,
+  "date": "2026-06-28",
+  "schedule": [
+    {
+      "period_id": 1, "label": "Period 1",
+      "start_time": "08:00:00", "end_time": "08:45:00", "is_break": false,
+      "entry": { "class_name": "Grade 5 - A", "class_id": 3, "subject_name": "Math", "room": "A101" }
+    },
+    { "period_id": 2, "label": "Break", "start_time": "08:45:00", "end_time": "09:00:00", "is_break": true, "entry": null }
+  ]
+}
+```
+
+### `GET /schedule/week`  (auth)
+Full weekly schedule. Cache for offline display.
+```json
+{ "week": [ { "day": 1, "periods": [ /* same shape as today */ ] }, /* ... days 1-7 */ ] }
+```
+
+---
+
 ## Error envelope & conventions
 - `401` → token missing/expired → route the user back to login.
 - `403` → not permitted (e.g. class not assigned, account/school deactivated).
 - `422` → validation error (Laravel shape: `{ "message": "...", "errors": { field: [..] } }`).
+- `423` → PIN locked — token revoked, must re-authenticate with password.
 - `429` → backoff using `Retry-After`.
 - `verify-qr` deliberately returns `200` with `valid:false` rather than a 4xx,
   so the scanner UI handles invalid cards inline.
 
 ## Not yet in the API (build server-side first if the app needs them)
-- Pushing the student photo bytes to the app (only `has_photo` is exposed today;
-  add a tokened photo endpoint if the app must render faces offline).
 - Staff (teacher) attendance capture, if that becomes an app feature.
