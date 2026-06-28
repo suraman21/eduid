@@ -30,6 +30,8 @@ function toValues(student: CardStudent, school: CardSchool): TemplateValues {
         full_name_am:  student.full_name_am,
         uid:           student.uid,
         class_name:    student.class_name,
+        date_of_birth: student.date_of_birth,
+        blood_type:    student.blood_type,
         academic_year: school.academic_year ?? undefined,
         school_name:   school.name,
         photo_url:     student.photo_url,

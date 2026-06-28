@@ -67,6 +67,19 @@ class CardTemplateTest extends TestCase
         $response->assertInertia(fn ($page) => $page->component('Admin/CardTemplates/Edit', false));
     }
 
+    public function test_designer_exposes_dob_and_blood_type_fields(): void
+    {
+        $response = $this->actingAs($this->superAdmin)
+            ->get(route('admin.card-template.edit', $this->school));
+
+        $response->assertOk();
+        // Schools wanted DOB / blood type on cards — the designer must offer them
+        // as placeable fields (they resolve in the PNG, PDF and on-screen render).
+        $response->assertInertia(fn ($page) => $page
+            ->where('fieldLabels.date_of_birth', 'Date of Birth')
+            ->where('fieldLabels.blood_type', 'Blood Type'));
+    }
+
     public function test_school_admin_cannot_access_template_editor(): void
     {
         $response = $this->actingAs($this->schoolAdmin)

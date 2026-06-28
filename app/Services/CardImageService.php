@@ -328,6 +328,8 @@ class CardImageService
             'section'       => $student->schoolClass?->section ?? '',
             'academic_year' => $school->academic_year,
             'school_name'   => $school->name,
+            'date_of_birth' => $student->date_of_birth?->format('M d, Y') ?? '',
+            'blood_type'    => $student->blood_type ?? '',
             'custom_1', 'custom_2', 'custom_3' => (string) ($customValue ?? ''),
             default         => '',
         };

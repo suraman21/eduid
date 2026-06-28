@@ -33,6 +33,8 @@ class CardTemplateController extends Controller
         'uid'           => 'Student UID',
         'grade_class'   => 'Grade / Class',
         'section'       => 'Section',
+        'date_of_birth' => 'Date of Birth',
+        'blood_type'    => 'Blood Type',
         'academic_year' => 'Academic Year',
         'school_name'   => 'School Name',
         'custom_1'      => 'Custom Text 1',

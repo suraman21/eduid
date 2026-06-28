@@ -50,6 +50,8 @@ export interface TemplateValues {
     uid?: string;
     class_name?: string | null;   // grade_class
     section?: string | null;
+    date_of_birth?: string | null;
+    blood_type?: string | null;
     academic_year?: string | null;
     school_name?: string;
     photo_url?: string | null;
@@ -70,6 +72,8 @@ function textValue(field: TemplateField, values: TemplateValues): string {
         case 'uid':           return values.uid ?? '';
         case 'grade_class':   return values.class_name ?? '';
         case 'section':       return values.section ?? '';
+        case 'date_of_birth': return values.date_of_birth ?? '';
+        case 'blood_type':    return values.blood_type ?? '';
         case 'academic_year': return values.academic_year ?? '';
         case 'school_name':   return values.school_name ?? '';
         case 'custom_1':
