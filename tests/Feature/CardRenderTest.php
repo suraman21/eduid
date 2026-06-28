@@ -121,4 +121,40 @@ class CardRenderTest extends TestCase
         // A real one-card PDF is comfortably over 1 KB.
         $this->assertGreaterThan(1000, Storage::disk('local')->size($path));
     }
+
+    public function test_pdf_template_text_is_size_controlled(): void
+    {
+        Storage::fake('local');
+        // Field font_size of 40px on a tight 8mm-tall box must NOT render as 40pt
+        // (the gigantic-text bug). Box-fitting caps it to the box height.
+        $this->makeTemplate();
+        $order = $this->makeOrder();
+
+        $pdf  = Storage::disk('local')->get(app(CardPrintService::class)->generate($order));
+        $sizes = $this->tfSizes($pdf);
+
+        $this->assertNotEmpty($sizes, 'no text font operators found in the PDF');
+        // 8mm box → cap ≈ 22.7pt; designer 40px → 9.6pt. Nothing should be huge.
+        $this->assertLessThan(25.0, max($sizes), 'template text font size exceeded the field box');
+    }
+
+    /** Extract every "/F<n> <size> Tf" font size from a (possibly compressed) PDF. */
+    private function tfSizes(string $raw): array
+    {
+        $sizes = [];
+        if (preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $raw, $m)) {
+            foreach ($m[1] as $stream) {
+                $data = @gzuncompress($stream);
+                if ($data === false) {
+                    $data = $stream;
+                }
+                if (preg_match_all('/\/F\d+\s+([0-9.]+)\s+Tf/', $data, $mm)) {
+                    foreach ($mm[1] as $v) {
+                        $sizes[] = (float) $v;
+                    }
+                }
+            }
+        }
+        return $sizes;
+    }
 }

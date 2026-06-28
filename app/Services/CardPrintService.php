@@ -364,21 +364,37 @@ class CardPrintService
         $rgb = $this->rgb($field->font_color ?? '#000000');
         $pdf->SetTextColor(...$rgb);
 
-        // CRITICAL: the designer's font_size is in canvas PIXELS (300 DPI), not
-        // points. Passing it straight to SetFont rendered text ~4× too large and
-        // overflowing the card. Convert px → pt (px / 300 * 72).
-        $sizePt = ((float) ($field->font_size ?? 10)) / 300 * 72;
+        $isEth = $this->hasEthiopic($text);
+        $family = $isEth ? $this->amharicFont() : 'helvetica';
+        $style  = (! $isEth && $field->font_weight === 'bold') ? 'B' : '';
 
-        // Ethiopic text needs the embedded Noto font; Latin keeps helvetica + bold.
-        if ($this->hasEthiopic($text)) {
-            $pdf->SetFont($this->amharicFont(), '', $sizePt);
-        } else {
-            $pdf->SetFont('helvetica', $field->font_weight === 'bold' ? 'B' : '', $sizePt);
+        $boxW = (float) ($field->width_mm ?? 0);
+        $boxH = (float) ($field->height_mm ?? 0);
+
+        // Size the font so the text always FITS the field box the designer drew.
+        // Start from the designer's intended size (font_size is canvas PIXELS at
+        // 300 DPI → points), then clamp to the box height and shrink to the box
+        // width. This keeps the output controlled no matter what size is stored,
+        // so text can never balloon past its box (the gigantic-text bug).
+        $sizePt = ((float) ($field->font_size ?? 10)) / 300 * 72;
+        if ($boxH > 0) {
+            $sizePt = min($sizePt, $boxH / 25.4 * 72); // em that fills the box height
         }
+        $sizePt = max(4.0, $sizePt);
+
+        $pdf->SetFont($family, $style, $sizePt);
+
+        // Shrink-to-fit width: reduce until the string fits the box (or floor).
+        if ($boxW > 0) {
+            $guard = 0;
+            while ($pdf->GetStringWidth($text) > $boxW && $sizePt > 4.0 && $guard++ < 60) {
+                $sizePt -= 0.5;
+                $pdf->SetFont($family, $style, $sizePt);
+            }
+        }
+
         $pdf->SetXY($field->x_mm, $field->y_mm);
-        $w = $field->width_mm ?? 0;
-        $h = $field->height_mm ?? 0;
-        $pdf->Cell($w, $h, $text, 0, 0, strtoupper(substr($field->text_align ?? 'L', 0, 1)));
+        $pdf->Cell($boxW, $boxH, $text, 0, 0, strtoupper(substr($field->text_align ?? 'L', 0, 1)));
     }
 
     private function drawTemplatePhoto(TCPDF $pdf, CardTemplateField $field, Student $student): void
