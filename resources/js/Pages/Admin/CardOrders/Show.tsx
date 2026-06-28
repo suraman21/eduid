@@ -202,11 +202,26 @@ export default function Show({ order, students }: Props) {
                         <p className="text-xs text-slate-500 mb-4">
                             Render all cards using the school's configured template. High-quality files for the PVC printer — never shared with the school.
                         </p>
+
+                        {/* Recommended: client-side print (always live data, no server file). */}
+                        <a
+                            href={`/admin/card-orders/${order.id}/print`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition"
+                        >
+                            Print Cards (PDF) →
+                        </a>
+                        <p className="text-[11px] text-slate-500 mt-2 mb-4">
+                            Opens a print view sized to the exact card; use your browser’s “Save as PDF”. Always reflects current data — no stale file, nothing stored on the server.
+                        </p>
+
+                        <p className="text-[11px] text-slate-500 mb-2 uppercase tracking-wider">Server-generated files (fallback)</p>
                         <div className="flex items-center gap-3">
                             <form method="POST" action={`/admin/card-orders/${order.id}/generate`}>
                                 <input type="hidden" name="_token" value={csrf()} />
                                 <input type="hidden" name="format" value="pdf" />
-                                <button type="submit" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+                                <button type="submit" className="border border-white/10 hover:border-white/30 text-slate-300 text-sm px-4 py-2 rounded-lg transition">
                                     Download PDF
                                 </button>
                             </form>

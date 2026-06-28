@@ -58,6 +58,46 @@ class CardOrderTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_can_open_client_side_print_view(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+
+        $response = $this->actingAs($this->superAdmin)->get("/admin/card-orders/{$order->id}/print");
+
+        $response->assertOk();
+        // Renders the client-side print component; tokens are minted so the QR is valid.
+        $response->assertInertia(fn ($page) => $page
+            ->component('Admin/CardOrders/Print', false)
+            ->has('cards', 1)
+            ->where('cards.0.uid', $s1->uid));
+        $this->assertNotEmpty($s1->fresh()->qr_token);
+    }
+
+    public function test_school_admin_cannot_open_admin_print_view(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+
+        // Golden Rule: schools never reach the print-ready admin view.
+        $this->actingAs($this->admin)->get("/admin/card-orders/{$order->id}/print")->assertForbidden();
+    }
+
+    public function test_student_photo_route_is_scoped_to_the_order(): void
+    {
+        $s1 = $this->makeStudent('Abebe');
+        $this->actingAs($this->admin)->post('/school/card-orders', ['order_type' => 'annual_renewal', 'student_ids' => [$s1->id]]);
+        $order = CardOrder::withoutGlobalScope('school')->first();
+
+        // A student NOT in the order 404s rather than leaking another photo.
+        $other = $this->makeStudent('Kebede');
+        $this->actingAs($this->superAdmin)
+            ->get("/admin/card-orders/{$order->id}/student-photo/{$other->id}")
+            ->assertNotFound();
+    }
+
     public function test_admin_can_create_card_order_with_confirmation_code(): void
     {
         $s1 = $this->makeStudent('Abebe');

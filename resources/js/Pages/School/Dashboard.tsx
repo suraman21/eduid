@@ -34,11 +34,29 @@ interface School {
     max_students: number;
 }
 
+interface CardOrderRow {
+    id: number;
+    order_code: string;
+    student_count: number;
+    status: string;
+    created_at: string;
+}
 interface Props {
     stats: Stats;
     school: School;
     recent_students: Student[];
+    recent_orders: CardOrderRow[];
 }
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+    pending: 'Ordered', confirmed: 'Confirmed', printing: 'Printing',
+    shipped: 'Shipping', delivered: 'Delivered', cancelled: 'Cancelled',
+};
+const ORDER_STATUS_COLORS: Record<string, string> = {
+    pending: 'bg-amber-50 text-amber-600', confirmed: 'bg-blue-50 text-blue-600',
+    printing: 'bg-indigo-50 text-indigo-600', shipped: 'bg-purple-50 text-purple-600',
+    delivered: 'bg-green-50 text-green-600', cancelled: 'bg-red-50 text-red-500',
+};
 
 /* ── colour helpers ─────────────────────────────────────────── */
 function normHex(c: string | null | undefined) {
@@ -105,7 +123,7 @@ function StatTile({
     );
 }
 
-export default function Dashboard({ stats, school, recent_students }: Props) {
+export default function Dashboard({ stats, school, recent_students, recent_orders }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
     const user = props.auth?.user;
@@ -219,6 +237,31 @@ export default function Dashboard({ stats, school, recent_students }: Props) {
                                     <span className="text-xs text-slate-400">{label}</span>
                                     <span className="text-xs font-bold text-slate-700">{value}</span>
                                 </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    {/* card orders + fulfilment status */}
+                    <Card className="overflow-hidden">
+                        <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
+                            <p className="text-sm font-bold text-slate-800">Card Orders</p>
+                            <Link href="/school/card-orders" className="text-xs font-bold flex items-center gap-1" style={{ color: accent }}>
+                                View all <ArrowRight className="w-3 h-3" />
+                            </Link>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                            {recent_orders.length === 0 ? (
+                                <div className="px-5 py-8 text-center text-xs text-slate-400">No card orders yet</div>
+                            ) : recent_orders.map(o => (
+                                <Link key={o.id} href={`/school/card-orders/${o.id}`} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-mono font-bold text-slate-700 truncate">{o.order_code}</p>
+                                        <p className="text-[11px] text-slate-400">{o.student_count} card{o.student_count !== 1 ? 's' : ''} · {o.created_at}</p>
+                                    </div>
+                                    <span className={`flex-shrink-0 ml-2 text-[10px] px-2 py-0.5 rounded-full font-bold ${ORDER_STATUS_COLORS[o.status] ?? 'bg-slate-100 text-slate-500'}`}>
+                                        {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                                    </span>
+                                </Link>
                             ))}
                         </div>
                     </Card>

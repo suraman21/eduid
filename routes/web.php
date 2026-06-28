@@ -158,6 +158,9 @@ Route::middleware(['auth'])->group(function () {
             // Print-ready PDF (TCPDF, server-side only, Super Admin only).
             Route::post('/{cardOrder}/print-file/regenerate', [AdminCardOrderController::class, 'regeneratePrintFile'])->name('print-file.regenerate');
             Route::get('/{cardOrder}/print-file',  [AdminCardOrderController::class, 'downloadPrintFile'])->name('print-file');
+            // Client-side print view (browser Save-as-PDF) + its photo source.
+            Route::get('/{cardOrder}/print', [AdminCardOrderController::class, 'printView'])->name('print');
+            Route::get('/{cardOrder}/student-photo/{student}', [AdminCardOrderController::class, 'studentPhoto'])->name('student-photo');
         });
     });
 

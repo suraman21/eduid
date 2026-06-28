@@ -12,7 +12,19 @@ function alpha(hexColor: string, a: number) {
     return `${normHex(hexColor)}${Math.round(a * 255).toString(16).padStart(2, '0')}`;
 }
 
-const STEPS = ['Pending', 'Confirmed', 'Printing', 'Shipped', 'Delivered'];
+// School-facing labels for the fulfilment lifecycle. Index i maps to the
+// backend status order [pending, confirmed, printing, shipped, delivered].
+const STEPS = ['Ordered', 'Confirmed', 'Printing', 'Shipping', 'Delivered'];
+
+const STATUS_LABELS: Record<string, string> = {
+    pending: 'Ordered', confirmed: 'Confirmed', printing: 'Printing',
+    shipped: 'Shipping', delivered: 'Delivered', cancelled: 'Cancelled',
+};
+const STATUS_PILL: Record<string, string> = {
+    pending: 'bg-amber-50 text-amber-600', confirmed: 'bg-blue-50 text-blue-600',
+    printing: 'bg-indigo-50 text-indigo-600', shipped: 'bg-purple-50 text-purple-600',
+    delivered: 'bg-green-50 text-green-600', cancelled: 'bg-red-50 text-red-500',
+};
 
 interface Order {
     id: number;
@@ -62,7 +74,12 @@ export default function Show({ order, students }: Props) {
 
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">{order.order_code}</h1>
+                    <div className="flex items-center gap-2.5">
+                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">{order.order_code}</h1>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${STATUS_PILL[order.status] ?? 'bg-slate-100 text-slate-500'}`}>
+                            {STATUS_LABELS[order.status] ?? order.status}
+                        </span>
+                    </div>
                     <p className="text-sm text-slate-400 mt-1 capitalize">{order.order_type.replace(/_/g, ' ')} · {order.student_count} cards</p>
                 </div>
                 <Link href="/school/card-orders" className="flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition">

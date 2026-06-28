@@ -32,8 +32,18 @@ class DashboardController extends BaseSchoolController
             'created_at_human' => $s->created_at->diffForHumans(),
         ]);
 
+        // Recent card orders so a school can see fulfilment status at a glance.
+        $recentOrders = CardOrder::latest()->take(5)->get()->map(fn ($o) => [
+            'id'            => $o->id,
+            'order_code'    => $o->order_code,
+            'student_count' => $o->student_count,
+            'status'        => $o->status,
+            'created_at'    => $o->created_at->format('M d, Y'),
+        ]);
+
         return Inertia::render('School/Dashboard', [
             'stats'           => $stats,
+            'recent_orders'   => $recentOrders,
             'school'          => [
                 'name'                  => $school->name,
                 'academic_year'         => $school->academic_year,

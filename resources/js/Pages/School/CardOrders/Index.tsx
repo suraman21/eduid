@@ -21,6 +21,12 @@ const STATUS_COLORS: Record<string, string> = {
     cancelled: 'bg-red-50 text-red-500',
 };
 
+// School-facing labels (the backend keeps pending/confirmed/shipped internally).
+const STATUS_LABELS: Record<string, string> = {
+    pending: 'Ordered', confirmed: 'Confirmed', printing: 'Printing',
+    shipped: 'Shipping', delivered: 'Delivered', cancelled: 'Cancelled',
+};
+
 interface Order {
     id: number;
     order_code: string;
@@ -100,8 +106,8 @@ export default function Index({ orders }: Props) {
                                     <td className="px-5 py-3 text-center text-slate-600">{order.student_count}</td>
                                     <td className="px-5 py-3 text-right text-slate-600">{order.amount_etb.toLocaleString()} ETB</td>
                                     <td className="px-5 py-3 text-center">
-                                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold capitalize ${STATUS_COLORS[order.status] ?? 'bg-slate-100 text-slate-500'}`}>
-                                            {order.status}
+                                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${STATUS_COLORS[order.status] ?? 'bg-slate-100 text-slate-500'}`}>
+                                            {STATUS_LABELS[order.status] ?? order.status}
                                         </span>
                                     </td>
                                     <td className="px-5 py-3 text-slate-500">{order.created_at}</td>
