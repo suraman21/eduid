@@ -124,9 +124,9 @@ class CardPrintService
      * Make sure the student carries a valid HMAC token for the current academic
      * year before it is rendered into the QR code. Promotion normally mints
      * these; this is a safety net so a freshly-added student still prints a
-     * scannable card.
+     * scannable card. Public so the sheet (multi-up) engine can reuse it.
      */
-    private function ensureToken(Student $student, School $school): void
+    public function ensureToken(Student $student, School $school): void
     {
         if (empty($student->qr_token) || $student->qr_token_year !== $school->academic_year) {
             $this->qr->generate($student, $school);
@@ -298,34 +298,71 @@ class CardPrintService
     /**
      * Template-based card rendering: draw the designer's background image then
      * overlay each configured field at its mm coordinates.
+     *
+     * Single-card path: front on the current page, back (if configured) on a
+     * second page. The actual per-side drawing is delegated to drawCardSide so
+     * the sheet (multi-up) engine can reuse the exact same rendering.
      */
     private function drawCardFromTemplate(TCPDF $pdf, Student $student, School $school, CardTemplate $template): void
+    {
+        $this->drawCardSide($pdf, $student, $school, $template, 'front');
+
+        // BACK page only when a back image is configured. Back-side fields are
+        // overlaid on this second page so they are never dropped (BUG-001).
+        if ($template->back_image_path && $this->diskPathFor($template->back_image_path)) {
+            $pdf->AddPage();
+            $this->drawCardSide($pdf, $student, $school, $template, 'back');
+        }
+    }
+
+    /**
+     * Draw one card side at the current origin, using the school's template when
+     * it has one or the built-in branded layout otherwise. The branded design
+     * has no back face, so a branded 'back' is intentionally blank. Used by the
+     * sheet engine so every school can be composed onto a multi-up sheet.
+     */
+    public function drawAnyCardSide(TCPDF $pdf, Student $student, School $school, ?CardTemplate $template, string $side): void
+    {
+        if ($template) {
+            $this->drawCardSide($pdf, $student, $school, $template, $side);
+
+            return;
+        }
+
+        if ($side === 'front') {
+            $this->drawCard($pdf, $student, $school);
+        }
+    }
+
+    /**
+     * Draw ONE side of a card at the current origin (0,0) — no page management.
+     *
+     * This is the unit the sheet engine composes: wrap a call to this in a
+     * TCPDF Translate transform and the whole card lands in the right slot, with
+     * absolutely no scaling (every field keeps its exact mm coordinates).
+     *
+     * @param  string  $side  'front' | 'back'
+     */
+    public function drawCardSide(TCPDF $pdf, Student $student, School $school, CardTemplate $template, string $side): void
     {
         $cardW = $template->cardWMm();
         $cardH = $template->cardHMm();
 
-        // ── FRONT page ── background + fields assigned to the front side.
-        $bgPath = $this->diskPathFor($template->front_image_path);
+        $bgPath = $side === 'back'
+            ? ($template->back_image_path ? $this->diskPathFor($template->back_image_path) : null)
+            : $this->diskPathFor($template->front_image_path);
+
         if ($bgPath) {
             $pdf->Image($bgPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
         }
 
-        $frontFields = $template->fields->filter(fn ($f) => ($f->side ?? 'front') !== 'back');
-        foreach ($frontFields as $field) {
+        $fields = $template->fields->filter(fn ($f) => $side === 'back'
+            ? ($f->side ?? 'front') === 'back'
+            : ($f->side ?? 'front') !== 'back'
+        );
+
+        foreach ($fields as $field) {
             $this->drawTemplateField($pdf, $field, $student, $school);
-        }
-
-        // ── BACK page ── only when a back image is configured. Back-side fields
-        // are overlaid on this second page so they are never dropped (BUG-001).
-        $backPath = $template->back_image_path ? $this->diskPathFor($template->back_image_path) : null;
-        if ($backPath) {
-            $pdf->AddPage();
-            $pdf->Image($backPath, 0, 0, $cardW, $cardH, '', '', '', true, 300, '', false, false, 0);
-
-            $backFields = $template->fields->filter(fn ($f) => ($f->side ?? 'front') === 'back');
-            foreach ($backFields as $field) {
-                $this->drawTemplateField($pdf, $field, $student, $school);
-            }
         }
     }
 
