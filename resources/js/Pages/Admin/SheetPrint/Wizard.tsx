@@ -227,16 +227,13 @@ export default function Wizard({ order, school, template, students, sheetTemplat
                                 return (
                                     <button
                                         key={t.id}
-                                        disabled={!matches}
-                                        title={matches ? undefined : `This sheet is ${sheetIsPortrait(t) ? 'portrait' : 'landscape'} but the card is ${cardIsPortrait ? 'portrait' : 'landscape'}.`}
-                                        onClick={() => { if (matches) { setSheetTemplateId(t.id); setTargetSheet('new'); } }}
-                                        className={`px-4 py-4 rounded-xl border text-left transition ${!matches ? 'opacity-40 cursor-not-allowed bg-white/[0.01] border-white/5' : sheetTemplateId === t.id ? 'bg-purple-600/15 border-purple-500' : 'bg-white/[0.02] border-white/10 hover:border-white/30'}`}
+                                        onClick={() => { setSheetTemplateId(t.id); setTargetSheet('new'); }}
+                                        className={`px-4 py-4 rounded-xl border text-left transition ${sheetTemplateId === t.id ? 'bg-purple-600/15 border-purple-500' : 'bg-white/[0.02] border-white/10 hover:border-white/30'}`}
                                     >
                                         <p className="font-semibold text-slate-100 flex items-center gap-2">
                                             {t.name}
-                                            {matches
-                                                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-300">{sheetIsPortrait(t) ? 'Portrait' : 'Landscape'}</span>
-                                                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">wrong orientation</span>}
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-300">{sheetIsPortrait(t) ? 'Portrait slots' : 'Landscape slots'}</span>
+                                            {!matches && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-300">card rotated 90° to fit</span>}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-1">{t.columns}×{t.rows} · {t.slot_count} cards · {t.sheet_w_mm}×{t.sheet_h_mm}mm</p>
                                     </button>
@@ -244,9 +241,9 @@ export default function Wizard({ order, school, template, students, sheetTemplat
                             })}
                         </div>
                         {cardIsPortrait !== null && sheetTemplate && sheetIsPortrait(sheetTemplate) !== cardIsPortrait && (
-                            <div className="mt-3 flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                            <div className="mt-3 flex items-start gap-2 text-sm text-blue-300 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                <span>This sheet's slots are {sheetIsPortrait(sheetTemplate) ? 'portrait' : 'landscape'} but the card is {cardIsPortrait ? 'portrait' : 'landscape'}. The card would be distorted — choose the matching sheet.</span>
+                                <span>The card is {cardIsPortrait ? 'portrait' : 'landscape'} and this sheet has {sheetIsPortrait(sheetTemplate) ? 'portrait' : 'landscape'} slots. Each card will be <strong>rotated 90° to fit</strong> — no distortion. Pick the matching-orientation sheet if you’d rather not rotate.</span>
                             </div>
                         )}
                     </Panel>

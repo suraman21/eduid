@@ -72,16 +72,10 @@ class CardTemplateController extends Controller
         $canvasW = $template?->canvasW() ?? CardTemplate::DEFAULT_W;
         $canvasH = $template?->canvasH() ?? CardTemplate::DEFAULT_H;
 
-        $frontPublicUrl = Storage::disk('public')->exists("card_previews/{$school->id}/front.png")
-            ? Storage::disk('public')->url("card_previews/{$school->id}/front.png")
-            : (($template && Storage::disk('local')->exists("cards/{$school->id}/front.png"))
-                ? route('admin.card-template.image', [$school, 'front'])
-                : null);
+        $frontPublicUrl = $this->bustedTemplateUrl($school, 'front');
 
         $backExists = $template && Storage::disk('local')->exists("cards/{$school->id}/back.png");
-        $backPublicUrl = Storage::disk('public')->exists("card_previews/{$school->id}/back.png")
-            ? Storage::disk('public')->url("card_previews/{$school->id}/back.png")
-            : ($backExists ? route('admin.card-template.image', [$school, 'back']) : null);
+        $backPublicUrl = $this->bustedTemplateUrl($school, 'back');
 
         $backInfo = $backExists ? @getimagesize(Storage::disk('local')->path("cards/{$school->id}/back.png")) : null;
         $backW    = $backInfo ? $backInfo[0] : $canvasW;
@@ -111,6 +105,24 @@ class CardTemplateController extends Controller
                 'portrait'  => ['w' => CardTemplate::CANVAS_PORTRAIT_W,  'h' => CardTemplate::CANVAS_PORTRAIT_H],
             ],
         ]);
+    }
+
+    /**
+     * Resolve a cache-busted URL for a side's background. The ?v=<mtime> changes
+     * whenever the artwork is replaced, so the editor never shows a stale cached
+     * image on revisit (the URL is otherwise static).
+     */
+    private function bustedTemplateUrl(School $school, string $side): ?string
+    {
+        $public = "card_previews/{$school->id}/{$side}.png";
+        if (Storage::disk('public')->exists($public)) {
+            return Storage::disk('public')->url($public).'?v='.Storage::disk('public')->lastModified($public);
+        }
+        $local = "cards/{$school->id}/{$side}.png";
+        if (Storage::disk('local')->exists($local)) {
+            return route('admin.card-template.image', [$school, $side]).'?v='.Storage::disk('local')->lastModified($local);
+        }
+        return null;
     }
 
     /**

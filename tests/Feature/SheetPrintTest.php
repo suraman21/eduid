@@ -113,4 +113,45 @@ class SheetPrintTest extends TestCase
         $this->assertNotEmpty($s1->fresh()->qr_token);
         $this->assertNotEmpty($s2->fresh()->qr_token);
     }
+
+    public function test_portrait_card_on_landscape_sheet_renders_rotated(): void
+    {
+        // Landscape A4 sheet (slots 85.6×54) + a portrait card template (638×1011):
+        // the engine must rotate the card 90° to fit, producing a valid PDF rather
+        // than erroring or distorting.
+        $sheet = $this->seedSheet(); // a4-10up (landscape slots)
+
+        $school = School::create([
+            'name' => 'Beta', 'code' => 'BETA', 'is_active' => true,
+            'plan_tier' => 'premium', 'max_students' => 100, 'max_teachers' => 10,
+            'hmac_secret' => 'secret', 'academic_year' => '2018 E.C.',
+            'subscription_status' => 'active',
+        ]);
+
+        $admin = \App\Models\User::create([
+            'name' => 'Super', 'email' => 'super-rot@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'super_admin', 'school_id' => null, 'is_active' => true,
+        ]);
+        $template = \App\Models\CardTemplate::withoutGlobalScopes()->create([
+            'school_id' => $school->id, 'template_type' => 'student', 'name' => 'Portrait',
+            'canvas_w' => 638, 'canvas_h' => 1011, 'orientation' => 'portrait',
+            'is_active' => true, 'front_image_path' => "cards/{$school->id}/front.png",
+            'created_by' => $admin->id,
+        ]);
+        $this->assertTrue($template->cardHMm() > $template->cardWMm()); // portrait
+
+        $s1 = Student::withoutGlobalScope('school')->create([
+            'school_id' => $school->id, 'uid' => 'BETA001',
+            'first_name' => 'Chaltu', 'last_name' => 'Test', 'gender' => 'female',
+            'status' => 'active', 'enrollment_date' => today(),
+        ]);
+
+        $bytes = app(SheetPrintService::class)->render(
+            $sheet, $template, $school, [['slot' => 1, 'student' => $s1]], 'front'
+        );
+
+        $this->assertStringStartsWith('%PDF', $bytes);
+        $this->assertGreaterThan(1000, strlen($bytes));
+    }
 }

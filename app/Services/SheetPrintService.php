@@ -55,6 +55,21 @@ class SheetPrintService
 
         $positions = $sheet->slotPositions();
 
+        // The card's true physical size (CR80, oriented to the design). When the
+        // card orientation differs from the slot orientation, the card is ROTATED
+        // 90° to fit the slot — never squished. This lets a portrait card be
+        // designed upright and laid into landscape slots without distortion.
+        $cardW = $template ? $template->cardWMm() : 85.6;
+        $cardH = $template ? $template->cardHMm() : 54.0;
+        $cardPortrait = $cardH > $cardW;
+        $slotPortrait = $sheet->card_h_mm > $sheet->card_w_mm;
+        $rotate = $cardPortrait !== $slotPortrait;
+
+        $offX = $offset['x'] ?? 0;
+        $offY = $offset['y'] ?? 0;
+        $sw = $sheet->card_w_mm;
+        $sh = $sheet->card_h_mm;
+
         foreach ($assignments as $a) {
             $pos = $positions[$a['slot']] ?? null;
             if (! $pos) {
@@ -66,10 +81,21 @@ class SheetPrintService
             $this->cards->ensureToken($student, $school);
 
             $pdf->StartTransform();
-            $pdf->Translate($pos['x'] + ($offset['x'] ?? 0), $pos['y'] + ($offset['y'] ?? 0));
-            // Render the card at the slot's exact physical size (CR80) so every
-            // design fills its slot regardless of the source canvas resolution.
-            $this->cards->drawAnyCardSide($pdf, $student, $school, $template, $side, $sheet->card_w_mm, $sheet->card_h_mm);
+
+            if ($rotate) {
+                // Rotate the card 90° about the slot centre and draw it at its own
+                // CR80 size; the rotated footprint (cardH × cardW) equals the slot.
+                $cx = $pos['x'] + $sw / 2 + $offX;
+                $cy = $pos['y'] + $sh / 2 + $offY;
+                $pdf->Rotate(90, $cx, $cy);
+                $pdf->Translate($cx - $cardW / 2, $cy - $cardH / 2);
+                $this->cards->drawAnyCardSide($pdf, $student, $school, $template, $side, $cardW, $cardH);
+            } else {
+                // Orientation matches — fill the slot at its exact physical size.
+                $pdf->Translate($pos['x'] + $offX, $pos['y'] + $offY);
+                $this->cards->drawAnyCardSide($pdf, $student, $school, $template, $side, $sw, $sh);
+            }
+
             $pdf->StopTransform();
         }
 

@@ -384,7 +384,10 @@ export default function CardTemplatesEdit({
         setBackCanvasW(data.width); setBackCanvasH(data.height);
         setUploadMsg({ text: `Back image cropped to CR80 (${data.width}×${data.height} px).`, type: 'success' });
       }
-      doSave(true);
+      // Pass the freshly-baked dims explicitly: setState above is async, so a
+      // plain doSave() would post the STALE canvas size and the template could be
+      // saved with the wrong orientation (portrait shown, landscape saved).
+      doSave(true, { w: data.width, h: data.height });
     } catch (err: any) {
       setUploadMsg({ text: 'Upload error: ' + err.message, type: 'error' });
       if (side === 'front') setFrontStatus('Error'); else setBackStatus('Error');
@@ -395,7 +398,9 @@ export default function CardTemplatesEdit({
 
   // ── Save ───────────────────────────────────────────────────────────────
 
-  const doSave = async (silent = false) => {
+  const doSave = async (silent = false, dims?: { w: number; h: number }) => {
+    const saveW = dims?.w ?? canvasW;
+    const saveH = dims?.h ?? canvasH;
     const payload = JSON.stringify(
       fields.map(({ field_key, x, y, w, h, font_family, font_size, font_color, text_align, font_weight, custom_value, side, border_radius }) =>
         ({ field_key, x, y, w, h, font_family, font_size, font_color, text_align, font_weight, custom_value, side, border_radius }))
@@ -403,8 +408,8 @@ export default function CardTemplatesEdit({
     const fd = new FormData();
     fd.append('_token', (document.querySelector('meta[name=csrf-token]') as HTMLMetaElement)?.content ?? '');
     fd.append('fields', payload);
-    fd.append('canvas_w', String(canvasW));
-    fd.append('canvas_h', String(canvasH));
+    fd.append('canvas_w', String(saveW));
+    fd.append('canvas_h', String(saveH));
     fd.append('name', templateName);
     try {
       const r = await fetch(saveUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as HTMLMetaElement)?.content ?? '' }, body: fd });
