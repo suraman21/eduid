@@ -204,6 +204,10 @@ function FieldCard({ f, onUpdate, onRemove }: {
 
 // ── Main editor page ───────────────────────────────────────────────────────
 
+// CR80 canvas defaults — used if the server props ever omit them (e.g. a stale
+// OPcache controller), so the editor can never blank out on a missing prop.
+const CR80_DEFAULT = { landscape: { w: 1011, h: 638 }, portrait: { w: 638, h: 1011 } };
+
 export default function CardTemplatesEdit({
   school, template, fieldLabels, savedFields,
   canvasW: initCanvasW, canvasH: initCanvasH,
@@ -212,6 +216,7 @@ export default function CardTemplatesEdit({
   uploadUrl, saveUrl, convertUrl, schoolUrl,
   orientation: initOrientation, isLegacy, cr80,
 }: Props) {
+  const cr80Dims = cr80 ?? CR80_DEFAULT;
   const [fields, setFields] = useState<Field[]>(() =>
     savedFields.map((f, i) => ({ ...f, id: i, side: f.side ?? 'front', border_radius: f.border_radius ?? 0 }))
   );
@@ -220,8 +225,10 @@ export default function CardTemplatesEdit({
   // The canvas aspect is LOCKED to CR80. In legacy mode we keep the old canvas
   // so existing fields display, but Save is blocked until the template is
   // converted (the banner drives that). Otherwise the canvas follows orientation.
-  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>(initOrientation);
-  const lockedDims = orientation === 'portrait' ? cr80.portrait : cr80.landscape;
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>(
+    initOrientation ?? (initCanvasH > initCanvasW ? 'portrait' : 'landscape')
+  );
+  const lockedDims = orientation === 'portrait' ? cr80Dims.portrait : cr80Dims.landscape;
 
   const [canvasW, setCanvasW] = useState(isLegacy ? initCanvasW : lockedDims.w);
   const [canvasH, setCanvasH] = useState(isLegacy ? initCanvasH : lockedDims.h);
@@ -346,8 +353,8 @@ export default function CardTemplatesEdit({
   // the layout is preserved across the aspect flip.
   const switchOrientation = (next: 'landscape' | 'portrait') => {
     if (next === orientation) return;
-    const from = orientation === 'portrait' ? cr80.portrait : cr80.landscape;
-    const to = next === 'portrait' ? cr80.portrait : cr80.landscape;
+    const from = orientation === 'portrait' ? cr80Dims.portrait : cr80Dims.landscape;
+    const to = next === 'portrait' ? cr80Dims.portrait : cr80Dims.landscape;
     const sx = to.w / from.w, sy = to.h / from.h;
     setFields(prev => prev.map(f => ({ ...f, x: Math.round(f.x * sx), y: Math.round(f.y * sy), w: Math.round(f.w * sx), h: Math.round(f.h * sy) })));
     setOrientation(next);
