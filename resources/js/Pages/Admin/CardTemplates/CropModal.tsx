@@ -5,6 +5,10 @@ import React, { useEffect, useRef, useState } from 'react';
  * result to a CR80-aspect PNG (at the canvas pixel resolution) so the stored
  * background can never distort at print time. The frame aspect never changes —
  * only what part of the image fills it.
+ *
+ * NOTE: every hook is declared unconditionally BEFORE any early return — moving
+ * a hook below a conditional return changes the hook count between renders and
+ * crashes React ("rendered more hooks than during the previous render").
  */
 export default function CropModal({
     file, side, canvasW, canvasH, onCancel, onApply,
@@ -17,26 +21,40 @@ export default function CropModal({
     onApply: (blob: Blob) => void;
 }) {
     const frameW = 380;
-    const frameH = Math.round(frameW * (canvasH / canvasW));
+    const frameH = Math.round(frameW * (canvasH / canvasW)) || 240;
 
     const imgRef = useRef<HTMLImageElement | null>(null);
+    const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
     const [url, setUrl] = useState('');
     const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
     const [error, setError] = useState('');
     const [zoom, setZoom] = useState(1);
     const [tx, setTx] = useState(0);
     const [ty, setTy] = useState(0);
-    const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
+    // Hook 1 — load the chosen file.
     useEffect(() => {
         const u = URL.createObjectURL(file);
         setUrl(u);
         const im = new Image();
-        im.onload = () => { setNat({ w: im.naturalWidth, h: im.naturalHeight }); imgRef.current = im; };
+        im.onload = () => { imgRef.current = im; setNat({ w: im.naturalWidth, h: im.naturalHeight }); };
         im.onerror = () => setError('Could not load this image. Use a PNG or JPG under 10 MB.');
         im.src = u;
         return () => URL.revokeObjectURL(u);
     }, [file]);
+
+    // Hook 2 — global drag listeners (declared unconditionally, above any return).
+    useEffect(() => {
+        function move(e: MouseEvent) {
+            if (!drag.current) return;
+            setTx(drag.current.tx + (e.clientX - drag.current.x));
+            setTy(drag.current.ty + (e.clientY - drag.current.y));
+        }
+        function up() { drag.current = null; }
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+        return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    }, []);
 
     if (error) {
         return (
@@ -63,41 +81,33 @@ export default function CropModal({
     const left = (frameW - dw) / 2 + cx;
     const top = (frameH - dh) / 2 + cy;
 
-    function onZoom(z: number) {
+    const onZoom = (z: number) => {
         setZoom(z);
-        // re-clamp pan against the new size
-        const ndw = nat!.w * coverScale * z;
-        const ndh = nat!.h * coverScale * z;
+        const ndw = nat.w * coverScale * z;
+        const ndh = nat.h * coverScale * z;
         const mx = Math.max(0, (ndw - frameW) / 2);
         const my = Math.max(0, (ndh - frameH) / 2);
         setTx(t => Math.min(mx, Math.max(-mx, t)));
         setTy(t => Math.min(my, Math.max(-my, t)));
-    }
+    };
 
-    function onDown(e: React.MouseEvent) { drag.current = { x: e.clientX, y: e.clientY, tx: cx, ty: cy }; }
-    useEffect(() => {
-        function move(e: MouseEvent) {
-            if (!drag.current) return;
-            setTx(drag.current.tx + (e.clientX - drag.current.x));
-            setTy(drag.current.ty + (e.clientY - drag.current.y));
+    const onDown = (e: React.MouseEvent) => { drag.current = { x: e.clientX, y: e.clientY, tx: cx, ty: cy }; };
+
+    const bake = () => {
+        try {
+            const c = document.createElement('canvas');
+            c.width = canvasW; c.height = canvasH;
+            const ctx = c.getContext('2d');
+            if (!ctx || !imgRef.current) { setError('Could not prepare the image canvas.'); return; }
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvasW, canvasH);
+            const s = canvasW / frameW; // frame px → canvas px
+            ctx.drawImage(imgRef.current, left * s, top * s, dw * s, dh * s);
+            c.toBlob(b => { if (b) onApply(b); else setError('Could not export the cropped image.'); }, 'image/png');
+        } catch {
+            setError('Cropping failed. Try a different image.');
         }
-        function up() { drag.current = null; }
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', up);
-        return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-    }, []);
-
-    function bake() {
-        const c = document.createElement('canvas');
-        c.width = canvasW; c.height = canvasH;
-        const ctx = c.getContext('2d');
-        if (!ctx || !imgRef.current) return;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvasW, canvasH);
-        const s = canvasW / frameW; // frame px → canvas px
-        ctx.drawImage(imgRef.current, left * s, top * s, dw * s, dh * s);
-        c.toBlob(b => { if (b) onApply(b); }, 'image/png');
-    }
+    };
 
     return (
         <Overlay>
