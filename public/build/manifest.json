@@ -95,7 +95,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-B-gk3bra.css",
+    "file": "assets/app-D1ELs1xS.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -375,7 +375,7 @@
     ]
   },
   "resources/js/Pages/Admin/SheetPrint/Wizard.tsx": {
-    "file": "assets/Wizard-PlOaKtJv.js",
+    "file": "assets/Wizard-BgHLNYuR.js",
     "name": "Wizard",
     "src": "resources/js/Pages/Admin/SheetPrint/Wizard.tsx",
     "isDynamicEntry": true,
@@ -945,7 +945,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-Db1BeyZR.js",
+    "file": "assets/app-ionFMfGo.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1017,7 +1017,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-B-gk3bra.css"
+      "assets/app-D1ELs1xS.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

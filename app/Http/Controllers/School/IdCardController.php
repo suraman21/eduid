@@ -151,11 +151,16 @@ class IdCardController extends BaseSchoolController
     {
         // The private-disk copy is the designer's authoritative write and needs no
         // storage:link symlink, so it is the reliable source on shared hosting.
-        if (Storage::disk('local')->exists("cards/{$school->id}/{$side}.png")) {
-            return route('school.id-card.template-image', $side);
+        // A cache-busting ?v=<mtime> ensures the preview refreshes the moment the
+        // designer replaces the artwork (the URL is otherwise static, so the
+        // browser would keep serving the old cached image — BUG: web view stale).
+        $local = "cards/{$school->id}/{$side}.png";
+        if (Storage::disk('local')->exists($local)) {
+            return route('school.id-card.template-image', $side).'?v='.Storage::disk('local')->lastModified($local);
         }
-        if (Storage::disk('public')->exists("card_previews/{$school->id}/{$side}.png")) {
-            return Storage::disk('public')->url("card_previews/{$school->id}/{$side}.png");
+        $public = "card_previews/{$school->id}/{$side}.png";
+        if (Storage::disk('public')->exists($public)) {
+            return Storage::disk('public')->url($public).'?v='.Storage::disk('public')->lastModified($public);
         }
         return null;
     }

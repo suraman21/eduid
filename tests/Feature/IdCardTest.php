@@ -207,6 +207,28 @@ class IdCardTest extends TestCase
         );
     }
 
+    public function test_template_image_url_is_cache_busted(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            "cards/{$this->school->id}/front.png", 'fake-png-bytes'
+        );
+        \App\Models\CardTemplate::create([
+            'school_id' => $this->school->id, 'name' => 'Student Card', 'template_type' => 'student',
+            'front_image_path' => "cards/{$this->school->id}/front.png",
+            'canvas_w' => 1011, 'canvas_h' => 638, 'is_active' => true, 'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('school.students.id-card', $this->student));
+
+        $response->assertOk();
+        // The background URL must carry a ?v= cache-buster so a re-uploaded design
+        // refreshes immediately instead of serving the browser-cached old image.
+        $response->assertInertia(fn ($page) => $page
+            ->where('template.frontUrl', fn ($url) => is_string($url) && str_contains($url, '?v='))
+        );
+    }
+
     public function test_template_image_is_tenant_scoped(): void
     {
         \Illuminate\Support\Facades\Storage::fake('local');

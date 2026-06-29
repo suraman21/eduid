@@ -23,14 +23,16 @@ class CardPreview
         $front = "card_previews/{$school->id}/front.png";
         $back  = "card_previews/{$school->id}/back.png";
 
+        // Cache-bust with the file's mtime so previews refresh as soon as the
+        // designer replaces the artwork (static URLs would serve stale images).
         $frontUrl = Storage::disk('public')->exists($front)
-            ? Storage::disk('public')->url($front)
+            ? Storage::disk('public')->url($front).'?v='.Storage::disk('public')->lastModified($front)
             : (Storage::disk('local')->exists("cards/{$school->id}/front.png")
-                ? route('admin.card-template.image', [$school, 'front']) : null);
+                ? route('admin.card-template.image', [$school, 'front']).'?v='.Storage::disk('local')->lastModified("cards/{$school->id}/front.png") : null);
         $backUrl = Storage::disk('public')->exists($back)
-            ? Storage::disk('public')->url($back)
+            ? Storage::disk('public')->url($back).'?v='.Storage::disk('public')->lastModified($back)
             : (Storage::disk('local')->exists("cards/{$school->id}/back.png")
-                ? route('admin.card-template.image', [$school, 'back']) : null);
+                ? route('admin.card-template.image', [$school, 'back']).'?v='.Storage::disk('local')->lastModified("cards/{$school->id}/back.png") : null);
 
         $backInfo = Storage::disk('local')->exists("cards/{$school->id}/back.png")
             ? @getimagesize(Storage::disk('local')->path("cards/{$school->id}/back.png")) : null;

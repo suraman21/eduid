@@ -225,12 +225,18 @@ export default function Wizard({ order, school, template, students, sheetTemplat
                             {sheetTemplates.map(t => {
                                 const matches = cardIsPortrait === null || sheetIsPortrait(t) === cardIsPortrait;
                                 return (
-                                    <button key={t.id} onClick={() => { setSheetTemplateId(t.id); setTargetSheet('new'); }} className={`px-4 py-4 rounded-xl border text-left ${sheetTemplateId === t.id ? 'bg-purple-600/15 border-purple-500' : 'bg-white/[0.02] border-white/10'}`}>
+                                    <button
+                                        key={t.id}
+                                        disabled={!matches}
+                                        title={matches ? undefined : `This sheet is ${sheetIsPortrait(t) ? 'portrait' : 'landscape'} but the card is ${cardIsPortrait ? 'portrait' : 'landscape'}.`}
+                                        onClick={() => { if (matches) { setSheetTemplateId(t.id); setTargetSheet('new'); } }}
+                                        className={`px-4 py-4 rounded-xl border text-left transition ${!matches ? 'opacity-40 cursor-not-allowed bg-white/[0.01] border-white/5' : sheetTemplateId === t.id ? 'bg-purple-600/15 border-purple-500' : 'bg-white/[0.02] border-white/10 hover:border-white/30'}`}
+                                    >
                                         <p className="font-semibold text-slate-100 flex items-center gap-2">
                                             {t.name}
                                             {matches
                                                 ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-300">{sheetIsPortrait(t) ? 'Portrait' : 'Landscape'}</span>
-                                                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-300">orientation mismatch</span>}
+                                                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">wrong orientation</span>}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-1">{t.columns}×{t.rows} · {t.slot_count} cards · {t.sheet_w_mm}×{t.sheet_h_mm}mm</p>
                                     </button>
