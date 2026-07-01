@@ -50,13 +50,13 @@ use Inertia\Inertia;
 
 // Marketing / Sales page
 Route::get('/', function () {
-    // If already logged in, send them to their dashboard
-    if (Auth::check()) {
-        $user = Auth::user();
-        if ($user->isSuperAdmin()) {
-            return redirect('/admin/dashboard');
-        }
+    // Send an authenticated visitor to their dashboard. School (web guard)
+    // takes precedence — the admin portal is reached via /admin explicitly.
+    if (Auth::guard('web')->check()) {
         return redirect('/school/dashboard');
+    }
+    if (Auth::guard('admin')->check()) {
+        return redirect('/admin/dashboard');
     }
     return Inertia::render('Welcome', [
         'success' => session('success'),
@@ -80,11 +80,15 @@ Route::post('/admin/login', [AdminLoginController::class, 'login'])->middleware(
 
 // Redirect /admin to /admin/login (or dashboard if already logged in)
 Route::get('/admin', function () {
-    if (Auth::check() && Auth::user()->isSuperAdmin()) {
+    if (Auth::guard('admin')->check()) {
         return redirect('/admin/dashboard');
     }
     return redirect()->route('admin.login');
 });
+
+// Super Admin logout (admin guard only — a school login in the same browser
+// survives; each portal signs out independently).
+Route::post('/admin/logout', [AdminLoginController::class, 'logout'])->name('admin.logout');
 
 // Password Reset (OTP via email — school portal users only).
 // Rate-limited to blunt enumeration + email-bombing.
@@ -98,10 +102,11 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // ── Protected Routes ──────────────────────────────────────────
 
-Route::middleware(['auth'])->group(function () {
-
-    // Super Admin Group
-    Route::middleware(['role:super_admin'])->prefix('admin')->group(function () {
+// Super Admin Group — OUTSIDE the web-guard group. `auth:admin,web`
+// authenticates against the dedicated admin guard first (dual-session
+// support) while still honouring a super-admin logged in via the web guard;
+// role:super_admin then rejects any school user either way.
+Route::middleware(['auth:admin,web', 'role:super_admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
         Route::resource('/schools', AdminSchoolController::class)->names([
             'index'   => 'admin.schools.index',
@@ -183,7 +188,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // School User Group
-    Route::middleware(['role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
+// School User Group — web guard.
+Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
         Route::get('/dashboard', [SchoolDashboardController::class, 'index'])->name('school.dashboard');
 
         // CSV Student Import — MUST be registered before the students resource,
@@ -278,5 +284,3 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{cardOrder}/cancel', [SchoolCardOrderController::class, 'cancel'])->name('cancel');
         });
     });
-
-});

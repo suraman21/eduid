@@ -40,6 +40,16 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Separate session guard for the Super Admin portal. Each guard keeps
+        // its own user id in the session, so a school login and a super-admin
+        // login can coexist in the same browser without evicting each other
+        // (the old single-guard setup made the second login replace the first,
+        // causing surprise 403s and stale-CSRF 419s in the other tab).
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
     ],
 
     /*

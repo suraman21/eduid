@@ -92,7 +92,9 @@ class AuthTest extends TestCase
 
         $response->assertStatus(302);
         $response->assertRedirect('/admin/dashboard');
-        $this->assertAuthenticated();
+        // Super admins authenticate on the dedicated 'admin' guard so a school
+        // login can coexist in the same browser session.
+        $this->assertAuthenticated('admin');
     }
 
     /**

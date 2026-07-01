@@ -17,7 +17,7 @@ class AdminLoginController extends Controller
      */
     public function showLoginForm()
     {
-        if (Auth::check() && Auth::user()->isSuperAdmin()) {
+        if (Auth::guard('admin')->check()) {
             return redirect('/admin/dashboard');
         }
         return \Inertia\Inertia::render('Auth/AdminLogin');
@@ -73,7 +73,9 @@ class AdminLoginController extends Controller
         // Clear lockouts on successful login (uses model method)
         $user->resetFailedLogins();
 
-        Auth::login($user, $request->filled('remember'));
+        // Dedicated 'admin' guard: coexists with a school login in the same
+        // browser session instead of replacing it.
+        Auth::guard('admin')->login($user, $request->filled('remember'));
 
         // Log successful login (safe — never crashes the login)
         AuditLog::safeRecord(
@@ -89,6 +91,30 @@ class AdminLoginController extends Controller
         $request->session()->regenerate();
 
         return redirect()->intended('/admin/dashboard');
+    }
+
+    /**
+     * Log the Super Admin out of the ADMIN guard only. The session itself is
+     * kept (ID + CSRF token rotated) so a school login in the same browser
+     * survives — invalidating the whole session would evict both portals.
+     */
+    public function logout(Request $request)
+    {
+        $user = Auth::guard('admin')->user();
+
+        if ($user) {
+            AuditLog::safeRecord(
+                null, $user->id, 'admin.logout', 'users', $user->id, null,
+                ['ip' => $request->ip()]
+            );
+        }
+
+        Auth::guard('admin')->logout();
+
+        $request->session()->regenerate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('admin.login');
     }
 
     /**

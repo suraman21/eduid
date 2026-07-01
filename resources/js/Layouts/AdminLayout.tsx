@@ -80,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Footer */}
             <div className="px-2 pb-4 border-t border-white/5 pt-3">
-                <form method="POST" action="/logout" style={{ margin: 0 }}>
+                <form method="POST" action="/admin/logout" style={{ margin: 0 }}>
                     <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''} />
                     <button
                         type="submit"
