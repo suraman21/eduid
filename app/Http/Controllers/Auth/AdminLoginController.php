@@ -8,6 +8,8 @@ use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AdminLoginController extends Controller
@@ -73,6 +75,37 @@ class AdminLoginController extends Controller
         // Clear lockouts on successful login (uses model method)
         $user->resetFailedLogins();
 
+        // PRD §15: email OTP on every super-admin login. The password step only
+        // creates a short-lived pending state; the session is NOT authenticated
+        // until the emailed code is verified. Fail-closed: if the code cannot
+        // be emailed, the login does not proceed.
+        if (config('auth.admin_2fa')) {
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            try {
+                Mail::raw(
+                    "Hello {$user->name},\n\nYour EduID super-admin verification code is: {$otp}\n\n"
+                    ."It expires in 10 minutes. If you did not try to sign in, change your password immediately.\n\n— EduID",
+                    fn ($m) => $m->to($user->email)->subject('Your EduID admin verification code')
+                );
+            } catch (\Throwable $e) {
+                Log::error('Admin 2FA email failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+                throw ValidationException::withMessages([
+                    'email' => ['Could not send the verification code. Contact the system operator (or set ADMIN_2FA=false to bypass temporarily).'],
+                ]);
+            }
+
+            $request->session()->put('admin_2fa', [
+                'user_id'    => $user->id,
+                'otp_hash'   => Hash::make($otp),
+                'expires_at' => now()->addMinutes(10)->timestamp,
+                'attempts'   => 0,
+                'remember'   => $request->filled('remember'),
+            ]);
+
+            return redirect()->route('admin.otp');
+        }
+
         // Dedicated 'admin' guard: coexists with a school login in the same
         // browser session instead of replacing it.
         Auth::guard('admin')->login($user, $request->filled('remember'));
@@ -89,6 +122,67 @@ class AdminLoginController extends Controller
         );
 
         $request->session()->regenerate();
+
+        return redirect()->intended('/admin/dashboard');
+    }
+
+    /** Second factor: enter the emailed 6-digit code. */
+    public function showOtpForm(Request $request)
+    {
+        if (! $request->session()->has('admin_2fa')) {
+            return redirect()->route('admin.login');
+        }
+
+        return \Inertia\Inertia::render('Auth/AdminOtp');
+    }
+
+    /** Verify the emailed code and complete the admin login. */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate(['otp' => ['required', 'digits:6']]);
+
+        $state = $request->session()->get('admin_2fa');
+
+        if (! $state || now()->timestamp > $state['expires_at']) {
+            $request->session()->forget('admin_2fa');
+
+            return redirect()->route('admin.login')
+                ->withErrors(['email' => 'The verification code expired. Please sign in again.']);
+        }
+
+        if ($state['attempts'] >= 5) {
+            $request->session()->forget('admin_2fa');
+
+            return redirect()->route('admin.login')
+                ->withErrors(['email' => 'Too many incorrect codes. Please sign in again.']);
+        }
+
+        if (! Hash::check($request->input('otp'), $state['otp_hash'])) {
+            $state['attempts']++;
+            $request->session()->put('admin_2fa', $state);
+
+            throw ValidationException::withMessages(['otp' => ['That code is incorrect.']]);
+        }
+
+        $user = User::withoutGlobalScopes()
+            ->whereNull('school_id')
+            ->where('role', User::ROLE_SUPER_ADMIN)
+            ->where('is_active', true)
+            ->find($state['user_id']);
+
+        $request->session()->forget('admin_2fa');
+
+        if (! $user) {
+            return redirect()->route('admin.login');
+        }
+
+        Auth::guard('admin')->login($user, (bool) ($state['remember'] ?? false));
+        $request->session()->regenerate();
+
+        AuditLog::safeRecord(
+            null, $user->id, 'admin.login_2fa', 'users', $user->id, null,
+            ['ip' => $request->ip()]
+        );
 
         return redirect()->intended('/admin/dashboard');
     }

@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'pin_hash')) {
+            return; // self-heal: already applied by a partial deploy
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->string('pin_hash', 255)->nullable()->after('password');
             $table->unsignedTinyInteger('pin_failed_count')->default(0)->after('pin_hash');

@@ -95,7 +95,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-CGhC-YdS.css",
+    "file": "assets/app-BhJ-641S.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -411,6 +411,17 @@
     "imports": [
       "_vendor-motion-Yn65oEY7.js",
       "_vendor-react-Dm-qCjdm.js"
+    ]
+  },
+  "resources/js/Pages/Auth/AdminOtp.tsx": {
+    "file": "assets/AdminOtp-DE0FMiRJ.js",
+    "name": "AdminOtp",
+    "src": "resources/js/Pages/Auth/AdminOtp.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-motion-Yn65oEY7.js",
+      "_vendor-react-Dm-qCjdm.js",
+      "_vendor-ui-D2DYZPKa.js"
     ]
   },
   "resources/js/Pages/Auth/ForgotPassword.tsx": {
@@ -960,7 +971,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-xUUk1Pmd.js",
+    "file": "assets/app-DmeP7Pg1.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -989,6 +1000,7 @@
       "resources/js/Pages/Admin/Schools/Show.tsx",
       "resources/js/Pages/Admin/SheetPrint/Wizard.tsx",
       "resources/js/Pages/Auth/AdminLogin.tsx",
+      "resources/js/Pages/Auth/AdminOtp.tsx",
       "resources/js/Pages/Auth/ForgotPassword.tsx",
       "resources/js/Pages/Auth/Login.tsx",
       "resources/js/Pages/Auth/ResetPassword.tsx",
@@ -1033,7 +1045,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-CGhC-YdS.css"
+      "assets/app-BhJ-641S.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

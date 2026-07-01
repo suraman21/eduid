@@ -16,7 +16,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('sheet_templates', function (Blueprint $table) {
+        if (Schema::hasTable('sheet_templates')) { /* self-heal: already applied */ } else Schema::create('sheet_templates', function (Blueprint $table) {
             $table->id();
             $table->string('key', 50)->unique();          // e.g. 'a4-10up'
             $table->string('name', 100);                  // 'A4 PVC (10 Cards)'

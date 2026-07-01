@@ -14,7 +14,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('printer_profiles', function (Blueprint $table) {
+        if (Schema::hasTable('printer_profiles')) { /* self-heal: already applied */ } else Schema::create('printer_profiles', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100)->unique();          // e.g. "Epson L3250"
             $table->decimal('x_offset_front_mm', 6, 2)->default(0);

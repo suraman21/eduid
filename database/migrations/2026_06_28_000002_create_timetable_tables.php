@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('timetable_periods', function (Blueprint $table) {
+        if (Schema::hasTable('timetable_periods')) { /* self-heal: already applied */ } else Schema::create('timetable_periods', function (Blueprint $table) {
             $table->id();
             $table->foreignId('school_id')->constrained()->cascadeOnDelete();
             $table->string('label', 50);
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->unique(['school_id', 'sort_order']);
         });
 
-        Schema::create('timetable_entries', function (Blueprint $table) {
+        if (Schema::hasTable('timetable_entries')) { /* self-heal: already applied */ } else Schema::create('timetable_entries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('school_id')->constrained()->cascadeOnDelete();
             $table->foreignId('class_id')->constrained('classes')->cascadeOnDelete();

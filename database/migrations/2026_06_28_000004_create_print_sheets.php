@@ -15,7 +15,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('print_sheets', function (Blueprint $table) {
+        if (Schema::hasTable('print_sheets')) { /* self-heal: already applied */ } else Schema::create('print_sheets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sheet_template_id')->constrained('sheet_templates')->restrictOnDelete();
             $table->foreignId('school_id')->nullable()->constrained()->nullOnDelete();
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->index(['status', 'school_id']);
         });
 
-        Schema::create('print_sheet_slots', function (Blueprint $table) {
+        if (Schema::hasTable('print_sheet_slots')) { /* self-heal: already applied */ } else Schema::create('print_sheet_slots', function (Blueprint $table) {
             $table->id();
             $table->foreignId('print_sheet_id')->constrained('print_sheets')->cascadeOnDelete();
             $table->unsignedTinyInteger('slot_number');

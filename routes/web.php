@@ -74,9 +74,11 @@ Route::post('/contact', [LeadController::class, 'store'])->middleware('throttle:
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login');
 
-// Super Admin Login (Email + Password only)
+// Super Admin Login (Email + Password, then emailed OTP — PRD §15 2FA)
 Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
 Route::post('/admin/login', [AdminLoginController::class, 'login'])->middleware('throttle:login');
+Route::get('/admin/login/verify', [AdminLoginController::class, 'showOtpForm'])->name('admin.otp');
+Route::post('/admin/login/verify', [AdminLoginController::class, 'verifyOtp'])->middleware('throttle:login')->name('admin.otp.verify');
 
 // Redirect /admin to /admin/login (or dashboard if already logged in)
 Route::get('/admin', function () {

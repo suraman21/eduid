@@ -20,6 +20,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Super Admin Two-Factor Authentication (PRD §15)
+    |--------------------------------------------------------------------------
+    | Email OTP required on every super-admin login. Kill-switch: set
+    | ADMIN_2FA=false in .env (recovery if the mail server is down; codes are
+    | also visible in storage/logs when MAIL_MAILER=log).
+    */
+    'admin_2fa' => env('ADMIN_2FA', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------
     |
