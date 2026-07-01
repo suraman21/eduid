@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
+    UserCircle,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
     { label: 'Attendance',  href: '/school/attendance',       icon: ClipboardCheck,  inertia: true },
     { label: 'Grades',      href: '/school/grades',           icon: FileBarChart,    inertia: true },
     { label: 'Import',      href: '/school/students/import',  icon: Upload },
+    { label: 'My Profile',  href: '/school/profile',          icon: UserCircle,      inertia: true },
 ];
 
 /* ── colour helpers ──────────────────────────────────────────── */

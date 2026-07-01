@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Building2, GraduationCap, CreditCard,
     Mail, DollarSign, FileText, Menu, LogOut,
-    ChevronRight, ShieldCheck, Printer,
+    ChevronRight, ShieldCheck, Printer, UserCircle,
 } from 'lucide-react';
 import Toast from '@/Components/Toast';
 
@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
     { label: 'Printers',       href: '/admin/printers',        icon: Printer,     inertia: true },
     { label: 'Features',       href: '/admin/features',        icon: ShieldCheck, inertia: true },
     { label: 'Audit Log',      href: '/admin/audit-log',       icon: FileText,    inertia: true },
+    { label: 'My Profile',     href: '/admin/profile',         icon: UserCircle,  inertia: true },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

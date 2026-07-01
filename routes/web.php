@@ -28,6 +28,7 @@ use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
 use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -110,6 +111,11 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 // role:super_admin then rejects any school user either way.
 Route::middleware(['auth:admin,web', 'role:super_admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+
+        // Self-service profile (name / email / password)
+        Route::get('/profile',           [ProfileController::class, 'show'])->name('admin.profile.show');
+        Route::patch('/profile',         [ProfileController::class, 'update'])->name('admin.profile.update');
+        Route::put('/profile/password',  [ProfileController::class, 'updatePassword'])->name('admin.profile.password');
         Route::resource('/schools', AdminSchoolController::class)->names([
             'index'   => 'admin.schools.index',
             'create'  => 'admin.schools.create',
@@ -193,6 +199,11 @@ Route::middleware(['auth:admin,web', 'role:super_admin'])->prefix('admin')->grou
 // School User Group — web guard.
 Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
         Route::get('/dashboard', [SchoolDashboardController::class, 'index'])->name('school.dashboard');
+
+    // Self-service profile (name / email / password) — all school roles.
+    Route::get('/profile',          [ProfileController::class, 'show'])->name('school.profile.show');
+    Route::patch('/profile',        [ProfileController::class, 'update'])->name('school.profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('school.profile.password');
 
         // CSV Student Import — MUST be registered before the students resource,
         // otherwise GET students/{student} captures "import" as a student id.
