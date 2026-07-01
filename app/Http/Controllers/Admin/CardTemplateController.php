@@ -264,6 +264,27 @@ class CardTemplateController extends Controller
                 : back()->with('error', $msg);
         }
 
+        // The stored artwork must match the canvas orientation. Switching the
+        // editor's orientation toggle without re-cropping would otherwise save a
+        // portrait canvas over a landscape image (or vice versa) — stretched on
+        // screen and distorted in print. Reject until the artwork is re-cropped.
+        foreach (['front', 'back'] as $side) {
+            $img = "cards/{$school->id}/{$side}.png";
+            if (! Storage::disk('local')->exists($img)) {
+                continue;
+            }
+            $info = @getimagesize(Storage::disk('local')->path($img));
+            if ($info && (($info[1] > $info[0]) !== ($canvasH > $canvasW))) {
+                $msg = "The {$side} artwork is ".($info[1] > $info[0] ? 'portrait' : 'landscape')
+                    .' but the canvas is '.($canvasH > $canvasW ? 'portrait' : 'landscape')
+                    .'. Re-upload & crop the artwork for the new orientation, then save.';
+
+                return $request->wantsJson()
+                    ? response()->json(['success' => false, 'message' => $msg], 422)
+                    : back()->with('error', $msg);
+            }
+        }
+
         $template = CardTemplate::updateOrCreate(
             ['school_id' => $school->id, 'template_type' => 'student'],
             [

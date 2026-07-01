@@ -38,6 +38,35 @@ class CardTemplateSizingTest extends TestCase
         $this->assertEqualsWithDelta(90.0, $t->cardHMm(), 0.01);
     }
 
+    /**
+     * THE root cause of "portrait prints landscape": card_width_mm/height_mm
+     * carry a landscape 85.6×54 DB default on every row, and the physical size
+     * used to trust that order verbatim. The canvas must decide orientation —
+     * stored dims only supply the long/short edge lengths.
+     */
+    public function test_landscape_default_columns_do_not_override_portrait_canvas(): void
+    {
+        $t = new CardTemplate([
+            'canvas_w' => 638, 'canvas_h' => 1011,           // portrait design
+            'card_width_mm' => 85.60, 'card_height_mm' => 54, // stale landscape default
+        ]);
+
+        $this->assertEqualsWithDelta(54.0, $t->cardWMm(), 0.01);
+        $this->assertEqualsWithDelta(85.6, $t->cardHMm(), 0.01);
+        $this->assertTrue($t->cardHMm() > $t->cardWMm(), 'portrait canvas must yield portrait physical dims');
+    }
+
+    public function test_portrait_stored_dims_orient_to_landscape_canvas(): void
+    {
+        $t = new CardTemplate([
+            'canvas_w' => 1011, 'canvas_h' => 638,            // landscape design
+            'card_width_mm' => 54, 'card_height_mm' => 85.60, // stored the other way round
+        ]);
+
+        $this->assertEqualsWithDelta(85.6, $t->cardWMm(), 0.01);
+        $this->assertEqualsWithDelta(54.0, $t->cardHMm(), 0.01);
+    }
+
     public function test_native_canvas_mm_is_the_design_space(): void
     {
         $t = new CardTemplate(['canvas_w' => 1808, 'canvas_h' => 2559]);

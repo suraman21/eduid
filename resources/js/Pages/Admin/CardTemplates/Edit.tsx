@@ -359,6 +359,14 @@ export default function CardTemplatesEdit({
     setFields(prev => prev.map(f => ({ ...f, x: Math.round(f.x * sx), y: Math.round(f.y * sy), w: Math.round(f.w * sx), h: Math.round(f.h * sy) })));
     setOrientation(next);
     setCanvasW(to.w); setCanvasH(to.h); setBackCanvasW(to.w); setBackCanvasH(to.h);
+    // Existing artwork was baked at the OLD aspect — it must be re-cropped for
+    // the new orientation (the server rejects a save until it is).
+    if (frontUrl || backUrl) {
+      setUploadMsg({
+        text: `Orientation changed to ${next}. Re-upload & crop the ${frontUrl ? 'front' : ''}${frontUrl && backUrl ? ' and ' : ''}${backUrl ? 'back' : ''} artwork before saving — the current image${frontUrl && backUrl ? 's are' : ' is'} still ${orientation}.`,
+        type: 'error',
+      });
+    }
   };
 
   // Upload a CR80-baked PNG produced by the crop modal.

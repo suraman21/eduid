@@ -113,6 +113,26 @@ class CardTemplateCr80Test extends TestCase
         $this->assertEqualsWithDelta(0.5, $field->px_y / 1011, 0.02);
     }
 
+    public function test_save_rejects_canvas_that_mismatches_stored_artwork_orientation(): void
+    {
+        // A landscape image is on disk, but the save claims a portrait canvas —
+        // the orientation toggle was flipped without re-cropping. Must reject.
+        $img = imagecreatetruecolor(1011, 638);
+        ob_start(); imagepng($img); $png = ob_get_clean(); imagedestroy($img);
+        Storage::disk('local')->put("cards/{$this->school->id}/front.png", $png);
+
+        $this->actingAs($this->superAdmin)->postJson(
+            route('admin.card-template.save', $this->school),
+            ['fields' => json_encode([]), 'canvas_w' => 638, 'canvas_h' => 1011]
+        )->assertStatus(422);
+
+        // Matching orientation is accepted.
+        $this->actingAs($this->superAdmin)->postJson(
+            route('admin.card-template.save', $this->school),
+            ['fields' => json_encode([]), 'canvas_w' => 1011, 'canvas_h' => 638]
+        )->assertOk();
+    }
+
     public function test_convert_route_migrates_a_legacy_template(): void
     {
         $template = CardTemplate::withoutGlobalScopes()->create([

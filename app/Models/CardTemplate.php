@@ -73,30 +73,42 @@ class CardTemplate extends Model
     public function isPortrait(): bool { return $this->canvasH() > $this->canvasW(); }
 
     /**
-     * PHYSICAL card size in mm. This is decoupled from the canvas resolution: a
-     * card always prints at CR80 (oriented to the design's aspect) unless an
-     * explicit physical size was stored. The canvas pixels remain the design
-     * coordinate space; renderers scale that design onto this physical size.
+     * PHYSICAL card size in mm, ALWAYS oriented to the design canvas.
      *
-     * Without this, a high-resolution template (e.g. 1808×2559 px) would be
-     * mis-read as a 153×216 mm card and print across multiple pages.
+     * card_width_mm / card_height_mm define the physical card *size* only
+     * (long × short edge — CR80 by default); the CANVAS decides orientation.
+     * The columns carry a landscape 85.6×54 default from their migration, so
+     * trusting their order verbatim made every template print landscape no
+     * matter what the editor said (portrait proofs on landscape pages, and the
+     * sheet engine's rotation check never firing → squished cards). Orienting
+     * long/short to the canvas heals every existing row with no data migration.
      */
     public function cardWMm(): float
     {
-        if ($this->card_width_mm) {
-            return (float) $this->card_width_mm;
-        }
-
-        return $this->isPortrait() ? self::CR80_SHORT : self::CR80_LONG;
+        return $this->isPortrait() ? $this->physicalShortMm() : $this->physicalLongMm();
     }
 
     public function cardHMm(): float
     {
-        if ($this->card_height_mm) {
-            return (float) $this->card_height_mm;
-        }
+        return $this->isPortrait() ? $this->physicalLongMm() : $this->physicalShortMm();
+    }
 
-        return $this->isPortrait() ? self::CR80_LONG : self::CR80_SHORT;
+    /** Long physical edge in mm (stored size if present, else CR80). */
+    private function physicalLongMm(): float
+    {
+        $w = (float) ($this->card_width_mm ?: 0);
+        $h = (float) ($this->card_height_mm ?: 0);
+
+        return ($w > 0 && $h > 0) ? max($w, $h) : self::CR80_LONG;
+    }
+
+    /** Short physical edge in mm (stored size if present, else CR80). */
+    private function physicalShortMm(): float
+    {
+        $w = (float) ($this->card_width_mm ?: 0);
+        $h = (float) ($this->card_height_mm ?: 0);
+
+        return ($w > 0 && $h > 0) ? min($w, $h) : self::CR80_SHORT;
     }
 
     /** The card's native canvas size in mm (px ÷ 300 DPI) — the design space. */
