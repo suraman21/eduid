@@ -33,6 +33,7 @@ interface SheetTemplate {
 
 interface SheetSlot { slot_number: number; status: 'empty' | 'printed'; student_id: number | null; }
 interface OpenSheet { id: number; sheet_template_id: number; status: string; next_empty_slot: number | null; slots: SheetSlot[]; }
+interface Printer { id: number; name: string; is_default: boolean; flip_instruction: string; }
 
 interface Props {
     order: { id: number; order_code: string };
@@ -41,6 +42,7 @@ interface Props {
     students: Student[];
     sheetTemplates: SheetTemplate[];
     openSheets: OpenSheet[];
+    printers: Printer[];
 }
 
 type Side = 'front' | 'back' | 'both';
@@ -51,7 +53,7 @@ function csrf() {
 
 const STEPS = ['Students', 'Side', 'Sheet', 'Slots', 'Preview'];
 
-export default function Wizard({ order, school, template, students, sheetTemplates, openSheets }: Props) {
+export default function Wizard({ order, school, template, students, sheetTemplates, openSheets, printers = [] }: Props) {
     // Card orientation drives the default sheet: a portrait card must print on a
     // portrait sheet so it stays vertical (never squished into a landscape slot).
     const cardIsPortrait = template ? template.cardHmm > template.cardWmm : null;
@@ -67,6 +69,8 @@ export default function Wizard({ order, school, template, students, sheetTemplat
     const [targetSheet, setTargetSheet] = useState<number | 'new'>('new');
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<{ front?: string; back?: string } | null>(null);
+    const [flipInstruction, setFlipInstruction] = useState<string | null>(null);
+    const [printerId, setPrinterId] = useState<number | null>(printers.find(p => p.is_default)?.id ?? printers[0]?.id ?? null);
     const [error, setError] = useState<string | null>(null);
 
     const sheetTemplate = useMemo(
@@ -120,7 +124,7 @@ export default function Wizard({ order, school, template, students, sheetTemplat
 
     async function generate() {
         if (!sheetTemplate) return;
-        setGenerating(true); setError(null); setResult(null);
+        setGenerating(true); setError(null); setResult(null); setFlipInstruction(null);
         try {
             const res = await fetch(`/admin/card-orders/${order.id}/sheet-print/generate`, {
                 method: 'POST',
@@ -128,6 +132,7 @@ export default function Wizard({ order, school, template, students, sheetTemplat
                 body: JSON.stringify({
                     sheet_template_id: sheetTemplate.id,
                     print_sheet_id: targetSheet === 'new' ? null : targetSheet,
+                    printer_profile_id: printerId,
                     side,
                     assignments: assignments.map(a => ({ slot: a.slot, student_id: a.student.id })),
                 }),
@@ -135,6 +140,7 @@ export default function Wizard({ order, school, template, students, sheetTemplat
             const data = await res.json();
             if (!res.ok) { setError(data.message ?? 'Generation failed.'); return; }
             setResult(data.urls ?? {});
+            setFlipInstruction(data.flip_instruction ?? null);
         } catch (e) {
             setError('Network error while generating the sheet.');
         } finally {
@@ -280,6 +286,22 @@ export default function Wizard({ order, school, template, students, sheetTemplat
                 {/* Step 5 — Preview + generate */}
                 {step === 5 && sheetTemplate && (
                     <Panel title="Preview & generate" subtitle="This preview matches the generated PDF exactly (same mm coordinates).">
+                        {/* Printer profile — calibration offsets are baked into the PDF */}
+                        <div className="mb-4 flex flex-wrap items-center gap-3">
+                            <label className="text-xs text-slate-500 uppercase tracking-wide">Printer</label>
+                            <select
+                                value={printerId ?? ''}
+                                onChange={e => setPrinterId(e.target.value ? Number(e.target.value) : null)}
+                                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
+                            >
+                                <option value="">No calibration (raw)</option>
+                                {printers.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}{p.is_default ? ' (default)' : ''}</option>
+                                ))}
+                            </select>
+                            <a href="/admin/printers" className="text-xs text-purple-400 hover:text-purple-300">Manage printers & calibration →</a>
+                        </div>
+
                         <A4Preview template={sheetTemplate} cardTemplate={template} assignments={assignments} toValues={toValues} side={side} />
 
                         {error && (
@@ -293,6 +315,11 @@ export default function Wizard({ order, school, template, students, sheetTemplat
                                 <p className="text-sm text-emerald-300">Sheet generated and slots recorded.</p>
                                 {result.front && <a href={result.front} className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-2 rounded-lg mr-2"><Download className="w-4 h-4" /> Front PDF</a>}
                                 {result.back && <a href={result.back} className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-2 rounded-lg"><Download className="w-4 h-4" /> Back PDF</a>}
+                                {flipInstruction && (
+                                    <div className="mt-3 text-sm text-blue-300 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                        <strong>Duplex:</strong> print the FRONT first, then reinsert the sheet — {flipInstruction} Then print the BACK.
+                                    </div>
+                                )}
                                 <p className="text-[11px] text-slate-500 pt-2">Print at 100% / "Actual size" — never "Fit to page" — or front/back registration will drift.</p>
                             </div>
                         ) : (

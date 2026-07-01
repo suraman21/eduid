@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\CardOrder;
 use App\Models\CardTemplate;
+use App\Models\PrinterProfile;
 use App\Models\PrintSheet;
 use App\Models\SheetTemplate;
 use App\Models\Student;
@@ -85,6 +86,13 @@ class SheetPrintController extends Controller
             ])->values(),
             'sheetTemplates' => $sheetTemplates->values(),
             'openSheets'     => $openSheets->values(),
+            'printers'       => PrinterProfile::orderBy('name')->get()
+                ->map(fn (PrinterProfile $p) => [
+                    'id'               => $p->id,
+                    'name'             => $p->name,
+                    'is_default'       => $p->is_default,
+                    'flip_instruction' => $p->flipInstruction(),
+                ])->values(),
         ]);
     }
 
@@ -98,11 +106,16 @@ class SheetPrintController extends Controller
         $data = $request->validate([
             'sheet_template_id' => ['required', Rule::exists('sheet_templates', 'id')],
             'print_sheet_id'    => ['nullable', Rule::exists('print_sheets', 'id')],
+            'printer_profile_id' => ['nullable', Rule::exists('printer_profiles', 'id')],
             'side'              => ['required', Rule::in(['front', 'back', 'both'])],
             'assignments'                 => ['required', 'array', 'min:1'],
             'assignments.*.slot'          => ['required', 'integer', 'min:1'],
             'assignments.*.student_id'    => ['required', 'integer'],
         ]);
+
+        $printer = ! empty($data['printer_profile_id'])
+            ? PrinterProfile::find($data['printer_profile_id'])
+            : null;
 
         $cardOrder->load('school');
         $school = $cardOrder->school;
@@ -151,7 +164,14 @@ class SheetPrintController extends Controller
         $urls = [];
         $sides = $data['side'] === 'both' ? ['front', 'back'] : [$data['side']];
         foreach ($sides as $side) {
-            $bytes = $this->printer->render($sheetTemplate, $cardTemplate, $school, $renderAssignments, $side);
+            // Printer calibration: per-side offsets; rotation/mirror apply to the
+            // BACK pass only (that is where duplex feed error shows up).
+            $bytes = $this->printer->render(
+                $sheetTemplate, $cardTemplate, $school, $renderAssignments, $side,
+                $printer ? $printer->offsetFor($side) : ['x' => 0.0, 'y' => 0.0],
+                ($printer && $side === 'back') ? $printer->rotation_offset_deg : 0.0,
+                $printer && $side === 'back' && $printer->mirror_back,
+            );
             $path = "print_sheets/{$sheet->id}/{$side}/sheet-".now()->format('Ymd-His').'.pdf';
             Storage::disk('local')->put($path, $bytes);
             $urls[$side] = route('admin.sheet-print.download', ['printSheet' => $sheet->id, 'side' => $side]);
@@ -160,12 +180,18 @@ class SheetPrintController extends Controller
         AuditLog::createRecord(
             $school->id, $request->user()->id,
             'sheet_print.generated', 'print_sheets', $sheet->id, null,
-            ['order_code' => $cardOrder->order_code, 'side' => $data['side'], 'slots' => array_column($data['assignments'], 'slot')]
+            [
+                'order_code' => $cardOrder->order_code,
+                'side'       => $data['side'],
+                'slots'      => array_column($data['assignments'], 'slot'),
+                'printer'    => $printer?->name,
+            ]
         );
 
         return response()->json([
             'sheet' => $this->sheetStatePayload($sheet->fresh()->load('slots')),
             'urls'  => $urls,
+            'flip_instruction' => ($data['side'] === 'both' && $printer) ? $printer->flipInstruction() : null,
         ]);
     }
 

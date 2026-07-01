@@ -212,6 +212,7 @@ class StudentController extends BaseSchoolController
     public function update(Request $request, Student $student)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $this->validateStudent($request);
 

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Building2, GraduationCap, CreditCard,
     Mail, DollarSign, FileText, Menu, LogOut,
-    ChevronRight, ShieldCheck,
+    ChevronRight, ShieldCheck, Printer,
 } from 'lucide-react';
 import Toast from '@/Components/Toast';
 
@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
     { label: 'Leads',          href: '/admin/leads',           icon: Mail,        inertia: true },
     { label: 'Payments',       href: '/admin/payments',        icon: DollarSign,  inertia: true },
     { label: 'Card Orders',    href: '/admin/card-orders',     icon: CreditCard,  inertia: true },
+    { label: 'Printers',       href: '/admin/printers',        icon: Printer,     inertia: true },
     { label: 'Features',       href: '/admin/features',        icon: ShieldCheck, inertia: true },
     { label: 'Audit Log',      href: '/admin/audit-log',       icon: FileText,    inertia: true },
 ];

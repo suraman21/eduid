@@ -7,6 +7,7 @@ use App\Models\PhotoSession;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 
@@ -51,6 +52,7 @@ class PhotoSessionController extends BaseSchoolController
     public function store(Request $request)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate([
             'class_id'     => 'nullable|exists:classes,id',
@@ -141,52 +143,65 @@ class PhotoSessionController extends BaseSchoolController
     public function uploadPhoto(Request $request, PhotoSession $photoSession)
     {
         $this->requireAdmin();
-
-        if (! $photoSession->isActive()) {
-            return back()->with('error', 'This session is no longer active.');
-        }
-
-        $student = $photoSession->getCurrentStudent();
-
-        if (! $student) {
-            return back()->with('error', 'All students have been photographed.');
-        }
+        $this->requireWritableSubscription();
 
         $request->validate([
             'photo' => 'required|image|max:5120',
         ]);
 
-        $path = $request->file('photo')->store(
-            "schools/{$this->schoolId()}/students",
-            'local'
-        );
+        // The position/captured counters are advanced under a row lock: two
+        // concurrent uploads (or an upload racing a skip) would otherwise both
+        // read the same position and only advance one slot (TOCTOU), skipping a
+        // student and corrupting the completion state.
+        $result = DB::transaction(function () use ($request, $photoSession) {
+            $session = PhotoSession::whereKey($photoSession->id)->lockForUpdate()->firstOrFail();
 
-        // Delete old photo if present (either disk: legacy public or new private)
-        if ($student->photo_path) {
-            Storage::disk('local')->delete($student->photo_path);
-            Storage::disk('public')->delete($student->photo_path);
+            if (! $session->isActive()) {
+                return ['error' => 'This session is no longer active.'];
+            }
+
+            $student = $session->getCurrentStudent();
+            if (! $student) {
+                return ['error' => 'All students have been photographed.'];
+            }
+
+            $path = $request->file('photo')->store(
+                "schools/{$this->schoolId()}/students",
+                'local'
+            );
+
+            // Delete old photo if present (either disk: legacy public or new private)
+            if ($student->photo_path) {
+                Storage::disk('local')->delete($student->photo_path);
+                Storage::disk('public')->delete($student->photo_path);
+            }
+
+            $student->update(['photo_path' => $path]);
+
+            $newPosition = $session->current_position + 1;
+            $isComplete  = $newPosition >= $session->total_students;
+
+            $session->update([
+                'current_position' => $newPosition,
+                'photos_captured'  => $session->photos_captured + 1,
+                'status'           => $isComplete ? 'completed' : 'active',
+                'completed_at'     => $isComplete ? now() : null,
+            ]);
+
+            return ['student' => $student, 'complete' => $isComplete];
+        });
+
+        if (isset($result['error'])) {
+            return back()->with('error', $result['error']);
         }
 
-        $student->update(['photo_path' => $path]);
-
-        $newPosition = $photoSession->current_position + 1;
-        $newCaptured = $photoSession->photos_captured + 1;
-        $isComplete  = $newPosition >= $photoSession->total_students;
-
-        $photoSession->update([
-            'current_position' => $newPosition,
-            'photos_captured'  => $newCaptured,
-            'status'           => $isComplete ? 'completed' : 'active',
-            'completed_at'     => $isComplete ? now() : null,
-        ]);
-
-        if ($isComplete) {
+        if ($result['complete']) {
             return redirect()->route('school.photo-sessions.show', $photoSession)
                 ->with('success', 'All photos captured. Session complete!');
         }
 
         return redirect()->route('school.photo-sessions.show', $photoSession)
-            ->with('success', "Photo saved for {$student->full_name}.");
+            ->with('success', "Photo saved for {$result['student']->full_name}.");
     }
 
     /**
@@ -196,18 +211,30 @@ class PhotoSessionController extends BaseSchoolController
     {
         $this->requireAdmin();
 
-        if (! $photoSession->isActive()) {
-            return back()->with('error', 'This session is no longer active.');
+        // Same row lock as uploadPhoto — a skip racing an upload must not lose
+        // or double-advance the queue position.
+        $error = DB::transaction(function () use ($photoSession) {
+            $session = PhotoSession::whereKey($photoSession->id)->lockForUpdate()->firstOrFail();
+
+            if (! $session->isActive()) {
+                return 'This session is no longer active.';
+            }
+
+            $newPosition = $session->current_position + 1;
+            $isComplete  = $newPosition >= $session->total_students;
+
+            $session->update([
+                'current_position' => $newPosition,
+                'status'           => $isComplete ? 'completed' : 'active',
+                'completed_at'     => $isComplete ? now() : null,
+            ]);
+
+            return null;
+        });
+
+        if ($error) {
+            return back()->with('error', $error);
         }
-
-        $newPosition = $photoSession->current_position + 1;
-        $isComplete  = $newPosition >= $photoSession->total_students;
-
-        $photoSession->update([
-            'current_position' => $newPosition,
-            'status'           => $isComplete ? 'completed' : 'active',
-            'completed_at'     => $isComplete ? now() : null,
-        ]);
 
         return redirect()->route('school.photo-sessions.show', $photoSession)
             ->with('info', 'Student skipped.');
@@ -220,6 +247,7 @@ class PhotoSessionController extends BaseSchoolController
     public function uploadZip(Request $request, PhotoSession $photoSession)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         if (! $photoSession->isActive()) {
             return back()->with('error', 'This session is no longer active.');

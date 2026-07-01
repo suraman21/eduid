@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\SchoolController as AdminSchoolController;
 use App\Http\Controllers\Admin\CardOrderController as AdminCardOrderController;
 use App\Http\Controllers\Admin\SheetPrintController as AdminSheetPrintController;
+use App\Http\Controllers\Admin\PrinterProfileController as AdminPrinterProfileController;
 use App\Http\Controllers\Admin\CardTemplateController as AdminCardTemplateController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
@@ -170,6 +171,15 @@ Route::middleware(['auth'])->group(function () {
 
         // Sheet PDF download (most-recent front/back for a sheet).
         Route::get('/print-sheets/{printSheet}/download/{side}', [AdminSheetPrintController::class, 'download'])->name('admin.sheet-print.download');
+
+        // Printer calibration profiles + calibration test sheets.
+        Route::prefix('printers')->name('admin.printers.')->group(function () {
+            Route::get('/',                     [AdminPrinterProfileController::class, 'index'])->name('index');
+            Route::post('/',                    [AdminPrinterProfileController::class, 'store'])->name('store');
+            Route::patch('/{printerProfile}',   [AdminPrinterProfileController::class, 'update'])->name('update');
+            Route::delete('/{printerProfile}',  [AdminPrinterProfileController::class, 'destroy'])->name('destroy');
+            Route::get('/{printerProfile}/calibration/{sheetTemplate}/{side}', [AdminPrinterProfileController::class, 'calibrationSheet'])->name('calibration');
+        });
     });
 
     // School User Group

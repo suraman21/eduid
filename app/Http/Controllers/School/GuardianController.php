@@ -89,6 +89,7 @@ class GuardianController extends BaseSchoolController
     public function update(Request $request, Student $student, Guardian $guardian)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         abort_unless($student->guardians()->where('guardians.id', $guardian->id)->exists(), 404);
 
@@ -122,6 +123,7 @@ class GuardianController extends BaseSchoolController
     public function destroy(Student $student, Guardian $guardian)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         abort_unless($student->guardians()->where('guardians.id', $guardian->id)->exists(), 404);
 
