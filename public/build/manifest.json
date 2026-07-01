@@ -95,7 +95,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-Bj5PlbKg.css",
+    "file": "assets/app-CGhC-YdS.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -219,7 +219,7 @@
     ]
   },
   "resources/js/Pages/Admin/Dashboard.tsx": {
-    "file": "assets/Dashboard-DRaMdUFq.js",
+    "file": "assets/Dashboard-Bt0D0apo.js",
     "name": "Dashboard",
     "src": "resources/js/Pages/Admin/Dashboard.tsx",
     "isDynamicEntry": true,
@@ -960,7 +960,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-Cj4b4SGo.js",
+    "file": "assets/app-BLjlu_hn.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1033,7 +1033,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-Bj5PlbKg.css"
+      "assets/app-CGhC-YdS.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

@@ -15,6 +15,7 @@ use App\Services\SheetPrintService;
 use App\Services\SheetTrackingService;
 use App\Support\CardPreview;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -49,16 +50,22 @@ class SheetPrintController extends Controller
             ->orderBy('first_name')
             ->get();
 
-        $sheetTemplates = SheetTemplate::where('is_active', true)->get()
+        $sheetTemplates = (Schema::hasTable('sheet_templates')
+                ? SheetTemplate::where('is_active', true)->get()
+                : collect())
             ->map(fn (SheetTemplate $t) => $this->sheetTemplatePayload($t));
 
-        // Open sheets for this school the operator can resume.
-        $openSheets = PrintSheet::with('slots')
-            ->where('status', 'open')
-            ->where('school_id', $school->id)
-            ->latest()
-            ->get()
-            ->map(fn (PrintSheet $s) => $this->sheetStatePayload($s));
+        // Open sheets for this school the operator can resume. Guarded so a
+        // deploy that hasn't migrated yet degrades (no resume list) instead of
+        // 500ing the whole wizard — the dashboard banner reports the drift.
+        $openSheets = Schema::hasTable('print_sheets')
+            ? PrintSheet::with('slots')
+                ->where('status', 'open')
+                ->where('school_id', $school->id)
+                ->latest()
+                ->get()
+                ->map(fn (PrintSheet $s) => $this->sheetStatePayload($s))
+            : collect();
 
         return Inertia::render('Admin/SheetPrint/Wizard', [
             'order'    => [
@@ -86,7 +93,9 @@ class SheetPrintController extends Controller
             ])->values(),
             'sheetTemplates' => $sheetTemplates->values(),
             'openSheets'     => $openSheets->values(),
-            'printers'       => PrinterProfile::orderBy('name')->get()
+            'printers'       => (Schema::hasTable('printer_profiles')
+                    ? PrinterProfile::orderBy('name')->get()
+                    : collect())
                 ->map(fn (PrinterProfile $p) => [
                     'id'               => $p->id,
                     'name'             => $p->name,

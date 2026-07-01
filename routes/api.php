@@ -32,10 +32,15 @@ Route::prefix('v1')->group(function () {
 
         $storageStatus = is_writable(storage_path('app')) ? 'ok' : 'error';
 
+        // Schema drift (deploy skipped `migrate`) has caused production 500s —
+        // surface it here so uptime monitors flag it before users hit it.
+        $pending = \App\Support\SchemaHealth::pendingMigrations();
+
         return response()->json([
-            'status'  => ($dbStatus === 'ok' && $storageStatus === 'ok') ? 'ok' : 'degraded',
+            'status'  => ($dbStatus === 'ok' && $storageStatus === 'ok' && $pending === 0) ? 'ok' : 'degraded',
             'db'      => $dbStatus,
             'storage' => $storageStatus,
+            'pending_migrations' => $pending,
             'version' => '1.0.0',
             'time'    => now()->toIso8601String(),
         ]);

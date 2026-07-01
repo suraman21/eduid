@@ -40,6 +40,9 @@ class DashboardController extends Controller
             'recentSchools' => $recentSchools,
             'recentLeads'  => $recentLeads,
             'schoolsByPlan' => $schoolsByPlan,
+            // Schema drift alarm: a deploy that skipped `migrate` shows up here
+            // as a loud banner instead of scattered 500s.
+            'pendingMigrations' => \App\Support\SchemaHealth::pendingMigrations(),
         ]);
     }
 }

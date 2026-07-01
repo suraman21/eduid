@@ -36,6 +36,7 @@ interface Props {
     recentSchools: RecentSchool[];
     recentLeads: RecentLead[];
     schoolsByPlan: Record<string, number>;
+    pendingMigrations?: number;
 }
 
 const planColors: Record<string, string> = {
@@ -44,10 +45,24 @@ const planColors: Record<string, string> = {
     enterprise:   'bg-purple-500/20 text-purple-400',
 };
 
-export default function Dashboard({ stats, recentSchools, recentLeads }: Props) {
+export default function Dashboard({ stats, recentSchools, recentLeads, pendingMigrations = 0 }: Props) {
     return (
         <AdminLayout>
             <Head title="Dashboard" />
+
+            {/* Schema drift alarm — a deploy skipped `php artisan migrate` */}
+            {pendingMigrations !== 0 && (
+                <div className="mb-6 bg-rose-500/10 border border-rose-500/40 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-rose-300">
+                        ⚠ Database out of sync: {pendingMigrations === -1 ? 'migration state unknown' : `${pendingMigrations} migration(s) pending`}
+                    </p>
+                    <p className="text-xs text-rose-200/80 mt-1">
+                        The last deploy did not run <code className="font-mono">php artisan migrate --force</code>.
+                        New features will 500 until it runs — use the standard deploy command, then verify with
+                        <code className="font-mono"> php artisan migrate:status</code>.
+                    </p>
+                </div>
+            )}
 
             <motion.div {...fadeInUp} className="mb-6">
                 <h1 className="text-2xl font-extrabold text-white">Dashboard</h1>

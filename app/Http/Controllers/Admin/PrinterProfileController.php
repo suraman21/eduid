@@ -8,6 +8,7 @@ use App\Models\PrinterProfile;
 use App\Models\SheetTemplate;
 use App\Services\SheetPrintService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -35,9 +36,13 @@ class PrinterProfileController extends Controller
 
     public function index()
     {
+        // Guarded against schema drift (deploy without migrate) — the page loads
+        // with empty lists; the dashboard banner reports the pending migrations.
         return Inertia::render('Admin/Printers/Index', [
-            'printers' => PrinterProfile::orderBy('name')->get(),
-            'sheets'   => SheetTemplate::where('is_active', true)->get(['id', 'name']),
+            'printers' => Schema::hasTable('printer_profiles')
+                ? PrinterProfile::orderBy('name')->get() : collect(),
+            'sheets'   => Schema::hasTable('sheet_templates')
+                ? SheetTemplate::where('is_active', true)->get(['id', 'name']) : collect(),
         ]);
     }
 
