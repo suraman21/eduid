@@ -12,11 +12,12 @@ return new class extends Migration
             // Add school_id after id (nullable for super_admin)
             $table->foreignId('school_id')->nullable()->after('id')->constrained('schools')->nullOnDelete();
 
-            // Role system. 'staff' is included here so that fresh installs
-            // (including the SQLite test database) accept all four roles. On
-            // already-deployed MySQL databases the later
-            // alter_users_add_staff_columns migration widens the enum instead.
-            $table->enum('role', ['super_admin', 'school_admin', 'teacher', 'staff'])->default('teacher')->after('name');
+            // Role system. 'staff' and 'parent' are included here so that
+            // fresh installs (including the SQLite test database) accept all
+            // roles. On already-deployed MySQL databases the later
+            // alter_users_add_staff_columns / add_parent_role migrations
+            // widen the enum instead.
+            $table->enum('role', ['super_admin', 'school_admin', 'teacher', 'staff', 'parent'])->default('teacher')->after('name');
 
             // Additional profile fields
             $table->string('phone', 20)->nullable()->after('email');

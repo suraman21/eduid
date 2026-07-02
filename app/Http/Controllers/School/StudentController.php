@@ -121,7 +121,7 @@ class StudentController extends BaseSchoolController
 
     public function show(Student $student)
     {
-        $student->load('schoolClass', 'guardians');
+        $student->load('schoolClass', 'guardians.user');
 
         return Inertia::render('School/Students/Show', [
             'student' => [
@@ -152,9 +152,15 @@ class StudentController extends BaseSchoolController
                     'email'        => $g->email,
                     'relationship' => $g->relationship,
                     'is_primary'   => (bool) $g->pivot->is_primary,
+                    // Parent-app login state (null = no account yet).
+                    'app_access'   => $g->user
+                        ? ($g->user->is_active && $g->user->can_login ? 'active' : 'revoked')
+                        : null,
+                    'account_email' => $g->user?->email,
                 ]),
             ],
-            'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
+            'is_admin'   => auth()->user()?->isSchoolAdmin() ?? false,
+            'parent_app' => $this->currentSchool()->hasFeature('parent_app'),
         ]);
     }
 

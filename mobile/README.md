@@ -1,7 +1,9 @@
 # EduID (Flutter)
 
-The EduID school companion app — one app for every role (teachers today;
-parents and more coming). Offline-first: **attendance (continuous QR scan +
+The EduID school companion app — one app for every role. Teachers get
+offline-first attendance, grades and schedule; parents (accounts created by
+the school on a Premium plan) see their children's attendance and published
+grades. Offline-first: **attendance (continuous QR scan +
 manual P/A/L/E), grades, schedule, automatic sync** — built against the API
 contract in [`../docs/MOBILE_API.md`](../docs/MOBILE_API.md).
 

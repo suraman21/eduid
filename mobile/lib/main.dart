@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/api_client.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/parent_home_screen.dart';
 import 'screens/pin_screen.dart';
 import 'screens/role_notice_screen.dart';
 import 'services/auth_service.dart';
@@ -17,10 +18,12 @@ Future<void> main() async {
   final auth = AuthService();
   await auth.restore();
 
-  // Automatic sync: runs whenever the user is signed in and unlocked; never a
-  // manual chore. Reacts live to sign-in / unlock / sign-out.
+  // Automatic sync: runs whenever a TEACHER/ADMIN is signed in and unlocked.
+  // Parents don't sync class rosters — their screens fetch on demand with a
+  // local cache (the teacher endpoints would 403 a parent token anyway).
   void driveSync() {
-    if (auth.signedIn && !auth.locked) {
+    final teacherish = auth.role == 'teacher' || auth.role == 'school_admin';
+    if (auth.signedIn && !auth.locked && teacherish) {
       SyncEngine.instance.start();
     } else {
       SyncEngine.instance.stop();
@@ -92,7 +95,8 @@ class _EduIdAppState extends State<EduIdApp> with WidgetsBindingObserver {
 
 /// Routes by auth state and role:
 ///   signed out → login · PIN pending → unlock ·
-///   teacher / school admin → home · other roles → coming-soon notice.
+///   teacher / school admin → teacher home · parent → parent home ·
+///   other roles → coming-soon notice.
 class _Gate extends StatelessWidget {
   const _Gate();
 
@@ -104,6 +108,7 @@ class _Gate extends StatelessWidget {
 
     final role = auth.role;
     if (role == 'teacher' || role == 'school_admin') return const HomeScreen();
+    if (role == 'parent') return const ParentHomeScreen();
     return RoleNoticeScreen(role: role);
   }
 }

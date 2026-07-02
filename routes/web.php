@@ -27,6 +27,7 @@ use App\Http\Controllers\School\AttendanceController as SchoolAttendanceControll
 use App\Http\Controllers\School\GradeController as SchoolGradeController;
 use App\Http\Controllers\School\CardOrderController as SchoolCardOrderController;
 use App\Http\Controllers\School\PhotoSessionController as SchoolPhotoSessionController;
+use App\Http\Controllers\School\GuardianAccountController as SchoolGuardianAccountController;
 use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
 use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
@@ -303,6 +304,12 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
             Route::get('/report-cards',           [SchoolReportCardController::class, 'index'])->name('school.report-cards.index');
             Route::get('/report-cards/export',    [SchoolReportCardController::class, 'exportGradebook'])->name('school.report-cards.export');
             Route::get('/report-cards/{student}', [SchoolReportCardController::class, 'show'])->name('school.report-cards.show');
+        });
+
+        // Parent app logins for guardians — 'parent_app' module.
+        Route::middleware('feature:parent_app')->group(function () {
+            Route::post('/guardians/{guardian}/account',   [SchoolGuardianAccountController::class, 'store'])->name('school.guardians.account.store');
+            Route::delete('/guardians/{guardian}/account', [SchoolGuardianAccountController::class, 'destroy'])->name('school.guardians.account.destroy');
         });
 
         // Guardians (nested under a student)
