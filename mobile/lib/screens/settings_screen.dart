@@ -16,7 +16,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  static const _version = '1.3.0';
+  static const _version = '1.4.0';
 
   List<Map<String, dynamic>> _pending = [];
 
@@ -271,7 +271,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── Sync ──
+          // ── Sync (teacher/admin only — parents fetch on demand) ──
+          if (auth.role != 'parent') ...[
           const SectionLabel('Sync'),
           AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -339,6 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          ],
 
           // ── Sign out ──
           AppCard(

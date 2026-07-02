@@ -13,6 +13,7 @@ class Guardian extends Model
 
     protected $fillable = [
         'school_id',
+        'user_id',
         'full_name',
         'phone',
         'phone_alt',
@@ -26,5 +27,11 @@ class Guardian extends Model
     {
         return $this->belongsToMany(Student::class, 'student_guardians')
                     ->withPivot('is_primary');
+    }
+
+    /** Login account for the parent app (null = record only, no login). */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

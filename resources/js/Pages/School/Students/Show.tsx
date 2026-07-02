@@ -3,7 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowLeft, Edit2, CreditCard, ShieldCheck, ShieldOff,
     User, Phone, Mail, Calendar, Droplets, Activity, BookOpen,
-    Plus, Trash2, Star,
+    Plus, Trash2, Star, Smartphone,
 } from 'lucide-react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import type { PageProps } from '@/types';
@@ -53,6 +53,8 @@ function StatusBadge({ status }: { status: string }) {
 
 /* ── Types ───────────────────────────────────────────────────── */
 interface Guardian {
+    app_access: 'active' | 'revoked' | null;
+    account_email: string | null;
     id: number;
     full_name: string;
     phone: string | null;
@@ -88,6 +90,7 @@ interface StudentData {
 interface Props {
     student: StudentData;
     is_admin: boolean;
+    parent_app: boolean;
 }
 
 const RELATIONSHIPS = ['father', 'mother', 'guardian', 'sibling', 'other'];
@@ -201,13 +204,28 @@ function AddGuardianForm({ studentId, accent }: { studentId: number; accent: str
 }
 
 /* ── Main page ───────────────────────────────────────────────── */
-export default function Show({ student, is_admin }: Props) {
+export default function Show({ student, is_admin, parent_app }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
 
     function removeGuardian(guardianId: number) {
         if (!confirm('Remove this guardian from the student?')) return;
         router.delete(`/school/students/${student.id}/guardians/${guardianId}`);
+    }
+
+    function grantAppAccess(g: Guardian) {
+        const email = prompt(
+            `Email for ${g.full_name}'s parent app login:`,
+            g.account_email ?? g.email ?? ''
+        );
+        if (!email) return;
+        // The response flashes a ONE-TIME temporary password — share it now.
+        router.post(`/school/guardians/${g.id}/account`, { email }, { preserveScroll: true });
+    }
+
+    function revokeAppAccess(g: Guardian) {
+        if (!confirm(`Revoke ${g.full_name}'s parent app access?`)) return;
+        router.delete(`/school/guardians/${g.id}/account`, { preserveScroll: true });
     }
 
     function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
@@ -367,6 +385,33 @@ export default function Show({ student, is_admin }: Props) {
                                                 )}
                                             </div>
                                         </div>
+                                        {is_admin && parent_app && (
+                                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                                {g.app_access === 'active' ? (
+                                                    <>
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">
+                                                            <Smartphone className="w-3 h-3" /> App access
+                                                        </span>
+                                                        <div className="flex gap-1">
+                                                            <button onClick={() => grantAppAccess(g)}
+                                                                className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-1.5 py-0.5">
+                                                                Reset PW
+                                                            </button>
+                                                            <button onClick={() => revokeAppAccess(g)}
+                                                                className="text-[10px] font-bold text-red-400 hover:text-red-600 px-1.5 py-0.5">
+                                                                Revoke
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <button onClick={() => grantAppAccess(g)}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition">
+                                                        <Smartphone className="w-3 h-3" />
+                                                        {g.app_access === 'revoked' ? 'Re-enable app' : 'Enable app access'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                         {is_admin && (
                                             <button
                                                 onClick={() => removeGuardian(g.id)}

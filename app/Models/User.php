@@ -63,6 +63,7 @@ class User extends Authenticatable
     const ROLE_SUPER_ADMIN  = 'super_admin';
     const ROLE_SCHOOL_ADMIN = 'school_admin';
     const ROLE_TEACHER      = 'teacher';
+    const ROLE_PARENT       = 'parent';
 
     // ── Role Helpers ────────────────────────────────────────────
 
@@ -84,6 +85,11 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->role === 'staff';
+    }
+
+    public function isParent(): bool
+    {
+        return $this->role === self::ROLE_PARENT;
     }
 
     public function isHomeroom(): bool
@@ -173,6 +179,12 @@ class User extends Authenticatable
     public function assignedClasses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(SchoolClass::class, 'teacher_classes', 'user_id', 'class_id');
+    }
+
+    /** The guardian record this login belongs to (parent accounts only). */
+    public function guardian(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Guardian::class);
     }
 
     public function attendanceSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
