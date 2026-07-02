@@ -1,8 +1,13 @@
-# EduID Teacher (Flutter)
+# EduID (Flutter)
 
-Offline-first mobile app for teachers: **attendance (QR + manual P/A/L/E),
-grades, schedule, sync** — built against the API contract in
-[`../docs/MOBILE_API.md`](../docs/MOBILE_API.md).
+The EduID school companion app — one app for every role (teachers today;
+parents and more coming). Offline-first: **attendance (continuous QR scan +
+manual P/A/L/E), grades, schedule, automatic sync** — built against the API
+contract in [`../docs/MOBILE_API.md`](../docs/MOBILE_API.md).
+
+> **Performance note:** always judge speed with a release build —
+> `flutter run --release` (or `flutter build apk --release`). Debug builds
+> (`flutter run`) run 5–10× slower and feel laggy on any phone.
 
 ## Getting started (one-time setup)
 

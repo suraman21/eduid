@@ -4,16 +4,20 @@ import '../models/models.dart';
 import '../services/attendance_service.dart';
 import '../services/data_service.dart';
 import '../services/sync_engine.dart';
-import '../ui/glass.dart';
+import '../ui/kit.dart';
 import 'scanner_screen.dart';
 
 /// Attendance capture: everyone defaults to PRESENT, P/A/L/E per student,
-/// live search, bulk actions, QR scan → verified-present. Saving queues the
+/// live search, bulk actions, continuous QR scanning. Saving queues the
 /// session and the SyncEngine pushes it automatically within a second.
 class RosterScreen extends StatefulWidget {
-  const RosterScreen({super.key, required this.schoolClass});
+  const RosterScreen(
+      {super.key, required this.schoolClass, this.autoScan = false});
 
   final SchoolClass schoolClass;
+
+  /// Open the QR scanner immediately (home "Scan attendance" quick action).
+  final bool autoScan;
 
   @override
   State<RosterScreen> createState() => _RosterScreenState();
@@ -50,6 +54,7 @@ class _RosterScreenState extends State<RosterScreen> {
         _marks[s.id] = AttendanceStatus.present;
       }
     });
+    if (widget.autoScan && students.isNotEmpty) _scan();
   }
 
   List<Student> get _visible {
@@ -63,19 +68,24 @@ class _RosterScreenState extends State<RosterScreen> {
   }
 
   Future<void> _scan() async {
-    final student = await Navigator.of(context).push<Student>(
+    final verified = await Navigator.of(context).push<List<Student>>(
       MaterialPageRoute(
-          builder: (_) => ScannerScreen(classId: widget.schoolClass.id)),
+          builder: (_) => ScannerScreen(
+              classId: widget.schoolClass.id,
+              className: widget.schoolClass.name,
+              alreadyScanned: _scanned)),
     );
-    if (student != null && mounted) {
-      setState(() {
-        _marks[student.id] = AttendanceStatus.present;
-        _scanned.add(student.id);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('✓ ${student.fullName} verified & present'),
-          duration: const Duration(seconds: 1)));
-    }
+    if (verified == null || verified.isEmpty || !mounted) return;
+    setState(() {
+      for (final s in verified) {
+        _marks[s.id] = AttendanceStatus.present;
+        _scanned.add(s.id);
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            '${verified.length} student${verified.length == 1 ? '' : 's'} verified present'),
+        duration: const Duration(seconds: 2)));
   }
 
   Future<void> _save() async {
@@ -103,10 +113,10 @@ class _RosterScreenState extends State<RosterScreen> {
   }
 
   Color _tone(AttendanceStatus s) => switch (s) {
-        AttendanceStatus.present => Palette.emerald,
-        AttendanceStatus.absent => Palette.rose,
-        AttendanceStatus.late => Palette.amber,
-        AttendanceStatus.excused => Palette.indigo,
+        AttendanceStatus.present => AppColors.green,
+        AttendanceStatus.absent => AppColors.red,
+        AttendanceStatus.late => AppColors.amber,
+        AttendanceStatus.excused => AppColors.blue,
       };
 
   @override
@@ -115,117 +125,97 @@ class _RosterScreenState extends State<RosterScreen> {
         _marks.values.where((s) => s == AttendanceStatus.present).length;
     final absent =
         _marks.values.where((s) => s == AttendanceStatus.absent).length;
+    final visible = _visible;
 
-    return AppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // ── Header ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: Row(
-                  children: [
-                    GlassIconButton(
-                        icon: Icons.arrow_back_rounded,
-                        onTap: () => Navigator.of(context).pop()),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(widget.schoolClass.name,
-                              style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: Palette.textHi)),
-                          Text('$present present · $absent absent',
-                              style: const TextStyle(
-                                  fontSize: 12, color: Palette.textLo)),
-                        ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.schoolClass.name,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w800)),
+            Text('$present present · $absent absent',
+                style:
+                    const TextStyle(fontSize: 12, color: AppColors.inkLo)),
+          ],
+        ),
+        actions: [
+          // Session type
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: DropdownButton<String>(
+              value: _sessionType,
+              underline: const SizedBox.shrink(),
+              style: const TextStyle(fontSize: 13, color: AppColors.inkMid),
+              items: const [
+                DropdownMenuItem(value: 'morning', child: Text('Morning')),
+                DropdownMenuItem(
+                    value: 'afternoon', child: Text('Afternoon')),
+                DropdownMenuItem(value: 'full_day', child: Text('Full day')),
+              ],
+              onChanged: (v) =>
+                  setState(() => _sessionType = v ?? 'morning'),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Search + bulk actions ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      style: const TextStyle(
+                          color: AppColors.ink, fontSize: 14),
+                      decoration: const InputDecoration(
+                        hintText: 'Search name or ID…',
+                        prefixIcon: Icon(Icons.search_rounded, size: 20),
+                        isDense: true,
                       ),
                     ),
-                    // Session type pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.12)),
-                      ),
-                      child: DropdownButton<String>(
-                        value: _sessionType,
-                        underline: const SizedBox.shrink(),
-                        dropdownColor: Palette.bg2,
-                        style: const TextStyle(
-                            fontSize: 12.5, color: Palette.textMid),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'morning', child: Text('Morning')),
-                          DropdownMenuItem(
-                              value: 'afternoon', child: Text('Afternoon')),
-                          DropdownMenuItem(
-                              value: 'full_day', child: Text('Full day')),
-                        ],
-                        onChanged: (v) =>
-                            setState(() => _sessionType = v ?? 'morning'),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.done_all_rounded,
+                        color: AppColors.green),
+                    tooltip: 'Mark all present',
+                    onPressed: () => _markAll(AttendanceStatus.present),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.remove_done_rounded,
+                        color: AppColors.red),
+                    tooltip: 'Mark all absent',
+                    onPressed: () => _markAll(AttendanceStatus.absent),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
+            ),
 
-              // ── Search + bulk actions ──
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GlassField(
-                        controller: _search,
-                        label: 'Search name or ID…',
-                        icon: Icons.search_rounded,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GlassIconButton(
-                      icon: Icons.done_all_rounded,
-                      color: Palette.emerald,
-                      tooltip: 'All present',
-                      onTap: () => _markAll(AttendanceStatus.present),
-                    ),
-                    const SizedBox(width: 6),
-                    GlassIconButton(
-                      icon: Icons.remove_done_rounded,
-                      color: Palette.rose,
-                      tooltip: 'All absent',
-                      onTap: () => _markAll(AttendanceStatus.absent),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // ── Student list ──
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                  itemCount: _visible.length,
-                  itemBuilder: (context, i) {
-                    final s = _visible[i];
-                    final mark = _marks[s.id] ?? AttendanceStatus.present;
-                    return GlassCard(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      radius: 18,
+            // ── Student list (fixed row height → fastest possible scroll) ──
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                itemCount: visible.length,
+                itemExtent: 68,
+                itemBuilder: (context, i) {
+                  final s = visible[i];
+                  final mark = _marks[s.id] ?? AttendanceStatus.present;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AppCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      radius: 12,
                       child: Row(
                         children: [
                           Expanded(
                             child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(children: [
@@ -234,60 +224,47 @@ class _RosterScreenState extends State<RosterScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.w600,
-                                            color: Palette.textHi,
+                                            color: AppColors.ink,
                                             fontSize: 14)),
                                   ),
                                   if (_scanned.contains(s.id))
                                     const Padding(
-                                      padding: EdgeInsets.only(left: 6),
+                                      padding: EdgeInsets.only(left: 5),
                                       child: Icon(Icons.verified_rounded,
-                                          size: 15, color: Palette.emerald),
+                                          size: 15, color: AppColors.green),
                                     ),
                                 ]),
                                 Text(s.uid,
                                     style: const TextStyle(
                                         fontSize: 10.5,
-                                        color: Palette.textLo)),
+                                        color: AppColors.inkLo)),
                               ],
                             ),
                           ),
                           for (final st in AttendanceStatus.values)
                             Padding(
                               padding: const EdgeInsets.only(left: 5),
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _marks[s.id] = st),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  width: 33,
-                                  height: 33,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(11),
-                                    color: mark == st
-                                        ? _tone(st)
-                                        : Colors.white.withOpacity(0.06),
-                                    border: Border.all(
-                                        color: mark == st
-                                            ? _tone(st)
-                                            : Colors.white.withOpacity(0.1)),
-                                    boxShadow: mark == st
-                                        ? [
-                                            BoxShadow(
-                                                color: _tone(st)
-                                                    .withOpacity(0.5),
-                                                blurRadius: 10)
-                                          ]
-                                        : null,
-                                  ),
-                                  child: Text(
-                                    st.letter,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 12.5,
-                                      color: mark == st
-                                          ? Colors.white
-                                          : Palette.textLo,
+                              child: Material(
+                                color: mark == st ? _tone(st) : AppColors.bg,
+                                borderRadius: BorderRadius.circular(10),
+                                child: InkWell(
+                                  onTap: () =>
+                                      setState(() => _marks[s.id] = st),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: SizedBox(
+                                    width: 34,
+                                    height: 34,
+                                    child: Center(
+                                      child: Text(
+                                        st.letter,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12.5,
+                                          color: mark == st
+                                              ? Colors.white
+                                              : AppColors.inkMid,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -295,37 +272,40 @@ class _RosterScreenState extends State<RosterScreen> {
                             ),
                         ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
+            ),
 
-              // ── Footer ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-                child: Row(
-                  children: [
-                    GlassIconButton(
-                      icon: Icons.qr_code_scanner_rounded,
-                      color: Palette.cyan,
-                      tooltip: 'Scan ID',
-                      onTap: _students.isEmpty ? null : _scan,
+            // ── Footer ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _students.isEmpty ? null : _scan,
+                      icon: const Icon(Icons.qr_code_scanner_rounded,
+                          size: 19),
+                      label: const Text('Scan'),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GradientButton(
-                        label:
-                            'Save attendance${absent > 0 ? '  ·  $absent absent' : ''}',
-                        icon: Icons.check_rounded,
-                        busy: _saving,
-                        onPressed: _students.isEmpty ? null : _save,
-                      ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: PrimaryButton(
+                      label:
+                          'Save${absent > 0 ? '  ·  $absent absent' : ' attendance'}',
+                      icon: Icons.check_rounded,
+                      busy: _saving,
+                      onPressed: _students.isEmpty ? null : _save,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
