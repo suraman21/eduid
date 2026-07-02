@@ -97,7 +97,7 @@ class AttendanceService {
               'class_id': row['class_id'],
               'session_date': row['session_date'],
               'session_type': row['session_type'],
-              'device_id': 'eduid-teacher-app',
+              'device_id': 'eduid-mobile',
               'idempotency_key': row['idempotency_key'],
               'records': jsonDecode(row['records_json'] as String),
             })

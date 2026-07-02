@@ -1,7 +1,7 @@
 name: eduid_teacher
-description: EduID Teacher — offline-first attendance, grades & schedule for Ethiopian schools.
+description: EduID — the school companion app. Offline-first attendance (QR + manual), grades and schedule for Ethiopian schools.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.2.0+3
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

@@ -7,16 +7,16 @@ import '../services/attendance_service.dart';
 import '../services/auth_service.dart';
 import '../services/data_service.dart';
 import '../services/sync_engine.dart';
-import '../ui/glass.dart';
+import '../ui/kit.dart';
 import '../ui/sync_badge.dart';
 import 'grades_screen.dart';
 import 'roster_screen.dart';
 import 'schedule_screen.dart';
 import 'settings_screen.dart';
 
-/// Home — greeting, live stats, auto-sync badge, tappable class cards and
-/// recent attendance history. Everything reads the offline cache; the
-/// SyncEngine refreshes it in the background.
+/// Home — greeting, stats, quick actions (Scan attendance / Schedule),
+/// tappable class cards and recent activity. Everything reads the offline
+/// cache; the SyncEngine refreshes it in the background.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -58,6 +58,58 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _openRoster(SchoolClass c, {bool scan = false}) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => RosterScreen(schoolClass: c, autoScan: scan)));
+    _loadCache();
+  }
+
+  /// "Scan attendance" quick action: pick the class, then go straight to the
+  /// camera — the fastest path from home to a scanned student.
+  Future<void> _scanAttendance() async {
+    if (_classes.isEmpty) return;
+    if (_classes.length == 1) {
+      _openRoster(_classes.first, scan: true);
+      return;
+    }
+    final chosen = await showModalBottomSheet<SchoolClass>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Text('Scan attendance for…',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
+            ),
+            for (final c in _classes)
+              ListTile(
+                leading: const IconTile(Icons.qr_code_scanner_rounded,
+                    color: AppColors.primary, size: 36),
+                title: Text(c.name,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, color: AppColors.ink)),
+                subtitle: Text('${c.studentCount} students',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.inkLo)),
+                onTap: () => Navigator.pop(ctx, c),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null && mounted) _openRoster(chosen, scan: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -67,209 +119,239 @@ class _HomeScreenState extends State<HomeScreen> {
     final firstName =
         (auth.user?['name'] as String? ?? '').split(' ').firstOrNull ?? '';
 
-    return AppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: RefreshIndicator(
-            color: Palette.violet,
-            onRefresh: () => engine.sync(),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-              children: [
-                // ── Header ──
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _greeting(firstName),
-                            style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: Palette.textHi,
-                                letterSpacing: -0.4),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${auth.school?['name'] ?? ''} · ${DateFormat('EEE, MMM d').format(DateTime.now())}',
-                            style: const TextStyle(
-                                fontSize: 12.5, color: Palette.textLo),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SyncBadge(),
-                    const SizedBox(width: 8),
-                    GlassIconButton(
-                      icon: Icons.calendar_month_rounded,
-                      tooltip: 'Schedule',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const ScheduleScreen())),
-                    ),
-                    const SizedBox(width: 8),
-                    GlassIconButton(
-                      icon: Icons.settings_rounded,
-                      tooltip: 'Settings',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const SettingsScreen())),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── Stats row ──
-                Row(
-                  children: [
-                    _stat('Classes', '${_classes.length}',
-                        Icons.grid_view_rounded, Palette.violet),
-                    const SizedBox(width: 10),
-                    _stat('Students', '$totalStudents',
-                        Icons.people_alt_rounded, Palette.cyan),
-                    const SizedBox(width: 10),
-                    _stat(
-                      'Queued',
-                      '${engine.pending}',
-                      Icons.cloud_upload_rounded,
-                      engine.pending > 0 ? Palette.amber : Palette.emerald,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 26),
-
-                // ── Classes ──
-                const _SectionTitle('My Classes'),
-                const SizedBox(height: 10),
-                if (_classes.isEmpty)
-                  const GlassCard(
-                    padding: EdgeInsets.all(28),
+    return Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => engine.sync(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            children: [
+              // ── Header ──
+              Row(
+                children: [
+                  Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.hourglass_empty_rounded,
-                            color: Palette.textLo, size: 34),
-                        SizedBox(height: 10),
                         Text(
-                          'No classes yet — they appear automatically\nafter the first sync.',
-                          textAlign: TextAlign.center,
-                          style:
-                              TextStyle(color: Palette.textLo, fontSize: 13),
+                          _greeting(firstName),
+                          style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                              letterSpacing: -0.4),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${auth.school?['name'] ?? ''} · ${DateFormat('EEE, MMM d').format(DateTime.now())}',
+                          style: const TextStyle(
+                              fontSize: 12.5, color: AppColors.inkLo),
                         ),
                       ],
                     ),
                   ),
-                for (final c in _classes)
-                  GlassCard(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    glow: Palette.indigo,
-                    // The WHOLE card opens attendance — one tap to work.
-                    onTap: () async {
-                      await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => RosterScreen(schoolClass: c)));
-                      _loadCache();
-                    },
+                  const SyncBadge(),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined,
+                        color: AppColors.inkMid),
+                    tooltip: 'Settings',
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen())),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // ── Quick actions ──
+              Row(
+                children: [
+                  Expanded(
+                    child: AppCard(
+                      color: AppColors.primary,
+                      borderColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 16),
+                      onTap: _classes.isEmpty ? null : _scanAttendance,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.qr_code_scanner_rounded,
+                              color: Colors.white, size: 22),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text('Scan attendance',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppCard(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 16),
+                      onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const ScheduleScreen())),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.calendar_month_rounded,
+                              color: AppColors.primary, size: 22),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text('My schedule',
+                                style: TextStyle(
+                                    color: AppColors.ink,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // ── Stats row ──
+              Row(
+                children: [
+                  _stat('Classes', '${_classes.length}',
+                      Icons.grid_view_rounded, AppColors.primary),
+                  const SizedBox(width: 10),
+                  _stat('Students', '$totalStudents',
+                      Icons.people_alt_rounded, AppColors.blue),
+                  const SizedBox(width: 10),
+                  _stat(
+                    'Queued',
+                    '${engine.pending}',
+                    Icons.cloud_upload_rounded,
+                    engine.pending > 0 ? AppColors.amber : AppColors.green,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+
+              // ── Classes ──
+              const SectionLabel('My classes'),
+              if (_classes.isEmpty)
+                const AppCard(
+                  padding: EdgeInsets.all(28),
+                  child: Column(
+                    children: [
+                      Icon(Icons.hourglass_empty_rounded,
+                          color: AppColors.inkLo, size: 34),
+                      SizedBox(height: 10),
+                      Text(
+                        'No classes yet — they appear automatically\nafter the first sync.',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(color: AppColors.inkMid, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              for (final c in _classes)
+                AppCard(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  // The WHOLE card opens attendance — one tap to work.
+                  onTap: () => _openRoster(c),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _initial(c),
+                          style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 17),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(c.name,
+                                style: const TextStyle(
+                                    color: AppColors.ink,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15)),
+                            const SizedBox(height: 2),
+                            Text('${c.studentCount} students · tap for attendance',
+                                style: const TextStyle(
+                                    color: AppColors.inkLo, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.insights_rounded,
+                            color: AppColors.blue, size: 21),
+                        tooltip: 'Grades',
+                        onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    GradesScreen(schoolClass: c))),
+                      ),
+                      const Icon(Icons.chevron_right_rounded,
+                          color: AppColors.inkLo),
+                    ],
+                  ),
+                ),
+
+              // ── Recent activity ──
+              if (_recent.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const SectionLabel('Recent attendance'),
+                for (final row in _recent)
+                  AppCard(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                     child: Row(
                       children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            gradient: Palette.accentGradient,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Palette.violet.withOpacity(0.4),
-                                  blurRadius: 14),
-                            ],
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            _initial(c),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17),
-                          ),
+                        Icon(
+                          (row['synced'] ?? 0) == 1
+                              ? Icons.cloud_done_rounded
+                              : Icons.schedule_rounded,
+                          size: 18,
+                          color: (row['synced'] ?? 0) == 1
+                              ? AppColors.green
+                              : AppColors.amber,
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(c.name,
-                                  style: const TextStyle(
-                                      color: Palette.textHi,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15.5)),
-                              const SizedBox(height: 2),
-                              Text('${c.studentCount} students · tap for attendance',
-                                  style: const TextStyle(
-                                      color: Palette.textLo, fontSize: 12)),
-                            ],
+                          child: Text(
+                            '${row['class_name'] ?? 'Class'} · ${row['session_date']}',
+                            style: const TextStyle(
+                                color: AppColors.inkMid, fontSize: 13),
                           ),
                         ),
-                        GlassIconButton(
-                          icon: Icons.insights_rounded,
-                          color: Palette.cyan,
-                          tooltip: 'Grades',
-                          onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      GradesScreen(schoolClass: c))),
+                        StatusPill(
+                          (row['synced'] ?? 0) == 1 ? 'synced' : 'queued',
+                          color: (row['synced'] ?? 0) == 1
+                              ? AppColors.green
+                              : AppColors.amber,
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right_rounded,
-                            color: Palette.textLo),
                       ],
                     ),
                   ),
-
-                // ── Recent activity ──
-                if (_recent.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  const _SectionTitle('Recent Attendance'),
-                  const SizedBox(height: 10),
-                  for (final row in _recent)
-                    GlassCard(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      child: Row(
-                        children: [
-                          Icon(
-                            (row['synced'] ?? 0) == 1
-                                ? Icons.cloud_done_rounded
-                                : Icons.schedule_rounded,
-                            size: 18,
-                            color: (row['synced'] ?? 0) == 1
-                                ? Palette.emerald
-                                : Palette.amber,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              '${row['class_name'] ?? 'Class'} · ${row['session_date']}',
-                              style: const TextStyle(
-                                  color: Palette.textMid, fontSize: 13),
-                            ),
-                          ),
-                          Text(
-                            (row['synced'] ?? 0) == 1 ? 'synced' : 'queued',
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: (row['synced'] ?? 0) == 1
-                                    ? Palette.emerald
-                                    : Palette.amber),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -278,7 +360,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _greeting(String name) {
     final h = DateTime.now().hour;
-    final word = h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
+    final word =
+        h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
     return name.isEmpty ? word : '$word, $name';
   }
 
@@ -289,41 +372,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _stat(String label, String value, IconData icon, Color color) {
     return Expanded(
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        radius: 18,
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 6),
+            Icon(icon, color: color, size: 19),
+            const SizedBox(height: 5),
             Text(value,
                 style: const TextStyle(
-                    color: Palette.textHi,
+                    color: AppColors.ink,
                     fontWeight: FontWeight.w800,
-                    fontSize: 18)),
+                    fontSize: 17)),
             Text(label,
-                style: const TextStyle(color: Palette.textLo, fontSize: 11)),
+                style:
+                    const TextStyle(color: AppColors.inkLo, fontSize: 11)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        color: Palette.textLo,
-        fontSize: 11.5,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 1.6,
       ),
     );
   }

@@ -99,6 +99,13 @@ class DataService {
     return out;
   }
 
+  /// Last cached grades for one class — instant, no network. The screen shows
+  /// this immediately and then refreshes with [grades] in the background.
+  Future<Map<String, dynamic>?> gradesCached(int classId) async {
+    final cached = await LocalDb.instance.getMeta('grades_$classId');
+    return cached == null ? null : jsonDecode(cached) as Map<String, dynamic>;
+  }
+
   /// Grades for one class — online fetch with a per-class cache fallback.
   Future<Map<String, dynamic>?> grades(int classId) async {
     try {

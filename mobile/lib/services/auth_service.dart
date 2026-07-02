@@ -26,6 +26,10 @@ class AuthService extends ChangeNotifier {
   bool get hasLocalPin => _hasLocalPin;
   bool _hasLocalPin = false;
 
+  /// Account role from the server: teacher | school_admin | (future: parent…).
+  /// The app routes features by this — one EduID app for every user type.
+  String get role => (user?['role'] ?? '').toString();
+
   /// Restore a previous session from storage (app cold start).
   Future<void> restore() async {
     final token = await ApiClient.instance.readToken();
@@ -51,7 +55,7 @@ class AuthService extends ChangeNotifier {
       'school_code': schoolCode.trim(),
       'email': email.trim(),
       'password': password,
-      'device_name': 'eduid-teacher-app',
+      'device_name': 'eduid-mobile',
     });
 
     final data = res.data as Map<String, dynamic>;

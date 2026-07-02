@@ -5,9 +5,10 @@ import 'core/api_client.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/pin_screen.dart';
+import 'screens/role_notice_screen.dart';
 import 'services/auth_service.dart';
 import 'services/sync_engine.dart';
-import 'ui/glass.dart';
+import 'ui/kit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,41 +36,28 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: SyncEngine.instance),
       ],
-      child: const EduIdTeacherApp(),
+      child: const EduIdApp(),
     ),
   );
 }
 
-class EduIdTeacherApp extends StatelessWidget {
-  const EduIdTeacherApp({super.key});
+class EduIdApp extends StatelessWidget {
+  const EduIdApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'EduID Teacher',
+      title: 'EduID',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Palette.indigo,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: Colors.transparent,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          foregroundColor: Palette.textHi,
-          elevation: 0,
-          centerTitle: false,
-        ),
-        splashFactory: InkSparkle.splashFactory,
-      ),
+      theme: buildAppTheme(),
       home: const _Gate(),
     );
   }
 }
 
-/// Routes by auth state: signed out → login; PIN pending → unlock; else home.
+/// Routes by auth state and role:
+///   signed out → login · PIN pending → unlock ·
+///   teacher / school admin → home · other roles → coming-soon notice.
 class _Gate extends StatelessWidget {
   const _Gate();
 
@@ -78,6 +66,9 @@ class _Gate extends StatelessWidget {
     final auth = context.watch<AuthService>();
     if (!auth.signedIn) return const LoginScreen();
     if (auth.locked) return const PinScreen(mode: PinMode.unlock);
-    return const HomeScreen();
+
+    final role = auth.role;
+    if (role == 'teacher' || role == 'school_admin') return const HomeScreen();
+    return RoleNoticeScreen(role: role);
   }
 }
