@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
 import '../core/db.dart';
@@ -30,6 +31,42 @@ class AuthService extends ChangeNotifier {
   /// The app routes features by this — one EduID app for every user type.
   String get role => (user?['role'] ?? '').toString();
 
+  // ── Auto-lock ──────────────────────────────────────────────
+  //
+  // Minutes the app may sit in the background before the PIN gate comes
+  // back. 0 = immediately, -1 = never. Industry default: 5 minutes.
+
+  static const _lockTimeoutKey = 'lock_timeout_minutes';
+  static const lockTimeoutChoices = [0, 1, 5, 15, 30, -1];
+
+  int lockTimeoutMinutes = 5;
+  DateTime? _backgroundedAt;
+
+  Future<void> setLockTimeout(int minutes) async {
+    lockTimeoutMinutes = minutes;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lockTimeoutKey, minutes);
+    notifyListeners();
+  }
+
+  /// App went to the background. Instant mode locks right away so the PIN
+  /// gate is already up when the app reappears (nothing sensitive flashes).
+  void appPaused() {
+    _backgroundedAt = DateTime.now();
+    if (lockTimeoutMinutes == 0) lock();
+  }
+
+  /// App came back — lock if it was away longer than the chosen timeout.
+  void appResumed() {
+    final pausedAt = _backgroundedAt;
+    _backgroundedAt = null;
+    if (pausedAt == null || lockTimeoutMinutes < 0) return;
+    if (!signedIn || !_hasLocalPin || locked) return;
+
+    final away = DateTime.now().difference(pausedAt);
+    if (away.inSeconds >= lockTimeoutMinutes * 60) lock();
+  }
+
   /// Restore a previous session from storage (app cold start).
   Future<void> restore() async {
     final token = await ApiClient.instance.readToken();
@@ -43,6 +80,10 @@ class AuthService extends ChangeNotifier {
     _hasLocalPin = (await _storage.read(key: 'pin_hash')) != null;
     // A restored session with a PIN starts LOCKED (quick-unlock gate).
     locked = signedIn && _hasLocalPin;
+
+    final prefs = await SharedPreferences.getInstance();
+    lockTimeoutMinutes = prefs.getInt(_lockTimeoutKey) ?? 5;
+
     notifyListeners();
   }
 

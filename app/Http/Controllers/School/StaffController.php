@@ -5,7 +5,10 @@ namespace App\Http\Controllers\School;
 use App\Exceptions\StaffLimitReached;
 use App\Models\AuditLog;
 use App\Models\School;
+use App\Models\SchoolClass;
+use App\Models\Subject;
 use App\Models\User;
+use App\Services\TeacherAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +18,10 @@ use Inertia\Inertia;
 class StaffController extends BaseSchoolController
 {
     private const ROLES = ['school_admin', 'teacher', 'staff'];
+
+    public function __construct(private TeacherAssignmentService $assignments)
+    {
+    }
 
     public function index(Request $request)
     {
@@ -43,6 +50,7 @@ class StaffController extends BaseSchoolController
                 'job_title'   => $m->job_title,
                 'employee_id' => $m->employee_id,
                 'is_active'   => (bool) $m->is_active,
+                'is_homeroom' => (bool) $m->is_homeroom,
                 'initials'    => strtoupper(substr($m->name, 0, 2)),
             ]),
             'filters'  => $request->only('search', 'role'),
@@ -54,7 +62,10 @@ class StaffController extends BaseSchoolController
     {
         $this->requireAdmin();
         return Inertia::render('School/Staff/Form', [
-            'member' => null,
+            'member'   => null,
+            'classes'  => $this->classOptions(),
+            'subjects' => $this->subjectOptions(),
+            'current_assignments' => ['assignments' => [], 'homeroom_class_ids' => []],
         ]);
     }
 
@@ -63,11 +74,12 @@ class StaffController extends BaseSchoolController
         $this->requireAdmin();
         $this->requireWritableSubscription();
 
-        $validated = $this->validateStaff($request);
+        $validated  = $this->validateStaff($request);
+        $assignment = $this->validateAssignments($request);
+
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = true;
         $validated['can_login'] = $request->boolean('can_login', true);
-        $validated['is_homeroom'] = $request->boolean('is_homeroom');
         $validated['is_coordinator'] = $request->boolean('is_coordinator');
         $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
 
@@ -75,6 +87,10 @@ class StaffController extends BaseSchoolController
             $member = $this->createStaffAtomically($validated);
         } catch (StaffLimitReached $e) {
             return back()->with('error', $e->getMessage())->withInput();
+        }
+
+        if ($member->isTeacher()) {
+            $this->assignments->sync($member, $assignment['assignments'], $assignment['homeroom_class_ids']);
         }
 
         AuditLog::log('staff.created', 'users', $member->id, null, ['name' => $member->name, 'role' => $member->role]);
@@ -101,6 +117,7 @@ class StaffController extends BaseSchoolController
                 'last_login_at'                 => $staff->last_login_at?->diffForHumans(),
                 'initials'                      => strtoupper(substr($staff->name, 0, 2)),
             ],
+            'teaching' => $staff->isTeacher() ? $this->teachingSummary($staff) : null,
             'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
         ]);
     }
@@ -119,10 +136,14 @@ class StaffController extends BaseSchoolController
                 'job_title'                     => $staff->job_title,
                 'is_active'                     => (bool) $staff->is_active,
                 'can_login'                     => (bool) $staff->can_login,
-                'is_homeroom'                   => (bool) $staff->is_homeroom,
                 'is_coordinator'                => (bool) $staff->is_coordinator,
                 'can_record_staff_attendance'   => (bool) $staff->can_record_staff_attendance,
             ],
+            'classes'  => $this->classOptions($staff->id),
+            'subjects' => $this->subjectOptions(),
+            'current_assignments' => $staff->isTeacher()
+                ? $this->assignments->current($staff)
+                : ['assignments' => [], 'homeroom_class_ids' => []],
         ]);
     }
 
@@ -130,7 +151,8 @@ class StaffController extends BaseSchoolController
     {
         $this->requireAdmin();
 
-        $validated = $this->validateStaff($request, $staff->id);
+        $validated  = $this->validateStaff($request, $staff->id);
+        $assignment = $this->validateAssignments($request);
 
         if (!empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
@@ -140,16 +162,87 @@ class StaffController extends BaseSchoolController
 
         $validated['is_active'] = $request->boolean('is_active');
         $validated['can_login'] = $request->boolean('can_login');
-        $validated['is_homeroom'] = $request->boolean('is_homeroom');
         $validated['is_coordinator'] = $request->boolean('is_coordinator');
         $validated['can_record_staff_attendance'] = $request->boolean('can_record_staff_attendance');
 
         $old = $staff->only(array_keys(array_diff_key($validated, ['password' => ''])));
         $staff->update($validated);
 
+        // Teachers get the submitted assignment set; a role change away from
+        // teacher releases every class-subject slot and homeroom they held.
+        if ($staff->isTeacher()) {
+            $this->assignments->sync($staff, $assignment['assignments'], $assignment['homeroom_class_ids']);
+        } else {
+            $this->assignments->clear($staff);
+        }
+
         AuditLog::log('staff.updated', 'users', $staff->id, $old, array_diff_key($validated, ['password' => '']));
 
         return redirect()->route('school.staff.show', $staff)->with('success', 'Staff member updated.');
+    }
+
+    /**
+     * Class options for the assignment picker, with the current homeroom
+     * holder so the admin sees who they would be taking the class from.
+     */
+    private function classOptions(?int $exceptTeacherId = null): array
+    {
+        return SchoolClass::where('is_active', true)
+            ->with('homeroomTeacher:id,name')
+            ->orderBy('level_order')->orderBy('grade')->orderBy('section')
+            ->get()
+            ->map(fn ($c) => [
+                'id'    => $c->id,
+                'name'  => $c->display_name,
+                'homeroom_teacher' => $c->homeroom_teacher_id && $c->homeroom_teacher_id !== $exceptTeacherId
+                    ? $c->homeroomTeacher?->name
+                    : null,
+            ])->all();
+    }
+
+    private function subjectOptions(): array
+    {
+        return Subject::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code'])
+            ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code])
+            ->all();
+    }
+
+    /**
+     * Human summary for the profile page: "Grade 1 - A → English, Homeroom".
+     */
+    private function teachingSummary(User $teacher): array
+    {
+        $current = $this->assignments->current($teacher);
+
+        $classes = SchoolClass::whereIn(
+            'id',
+            collect($current['assignments'])->pluck('class_id')
+                ->merge($current['homeroom_class_ids'])->unique()
+        )->get()->keyBy('id');
+
+        $subjects = Subject::whereIn(
+            'id',
+            collect($current['assignments'])->pluck('subject_id')->filter()->unique()
+        )->get()->keyBy('id');
+
+        $byClass = [];
+        foreach ($current['assignments'] as $a) {
+            $byClass[$a['class_id']]['subjects'][] = $a['subject_id']
+                ? ($subjects[$a['subject_id']]->name ?? '?')
+                : null;
+        }
+        foreach ($current['homeroom_class_ids'] as $cid) {
+            $byClass[$cid]['homeroom'] = true;
+        }
+
+        return collect($byClass)->map(fn ($info, $cid) => [
+            'class_id'   => (int) $cid,
+            'class_name' => $classes[$cid]->display_name ?? '?',
+            'subjects'   => array_values(array_filter($info['subjects'] ?? [])),
+            'homeroom'   => (bool) ($info['homeroom'] ?? false),
+        ])->values()->all();
     }
 
     /**
@@ -205,5 +298,27 @@ class StaffController extends BaseSchoolController
             ],
             'job_title'   => 'nullable|string|max:100',
         ]);
+    }
+
+    /**
+     * Validate the teaching-assignment payload. Tenant ownership of every
+     * class/subject id is re-checked inside TeacherAssignmentService.
+     *
+     * @return array{assignments: array, homeroom_class_ids: array}
+     */
+    private function validateAssignments(Request $request): array
+    {
+        $validated = $request->validate([
+            'assignments'                => 'nullable|array|max:60',
+            'assignments.*.class_id'     => 'required|integer',
+            'assignments.*.subject_id'   => 'nullable|integer',
+            'homeroom_class_ids'         => 'nullable|array|max:10',
+            'homeroom_class_ids.*'       => 'integer',
+        ]);
+
+        return [
+            'assignments'        => $validated['assignments'] ?? [],
+            'homeroom_class_ids' => array_map('intval', $validated['homeroom_class_ids'] ?? []),
+        ];
     }
 }

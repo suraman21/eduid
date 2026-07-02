@@ -21,6 +21,7 @@ class SchoolClass extends Model
         'academic_year',
         'level_order',
         'is_active',
+        'homeroom_teacher_id',
     ];
 
     protected function casts(): array
@@ -46,6 +47,16 @@ class SchoolClass extends Model
     public function teachers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class, 'teacher_classes', 'class_id', 'user_id');
+    }
+
+    public function homeroomTeacher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'homeroom_teacher_id');
+    }
+
+    public function classSubjects(): HasMany
+    {
+        return $this->hasMany(ClassSubject::class, 'class_id');
     }
 
     // ── Helpers ─────────────────────────────────────────────────

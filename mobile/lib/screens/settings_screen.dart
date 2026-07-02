@@ -16,7 +16,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  static const _version = '1.2.0';
+  static const _version = '1.3.0';
 
   List<Map<String, dynamic>> _pending = [];
 
@@ -66,6 +66,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await ApiClient.instance.setBaseUrl(url);
       if (mounted) setState(() {});
     }
+  }
+
+  String _lockTimeoutLabel(int minutes) => switch (minutes) {
+        0 => 'Lock immediately when I leave the app',
+        -1 => 'Never lock automatically',
+        1 => 'Lock after 1 minute in the background',
+        _ => 'Lock after $minutes minutes in the background',
+      };
+
+  Future<void> _pickLockTimeout(AuthService auth) async {
+    final choice = await showDialog<int>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Auto-lock',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        children: [
+          for (final m in AuthService.lockTimeoutChoices)
+            RadioListTile<int>(
+              value: m,
+              groupValue: auth.lockTimeoutMinutes,
+              dense: true,
+              activeColor: AppColors.primary,
+              title: Text(
+                switch (m) {
+                  0 => 'Immediately',
+                  -1 => 'Never',
+                  1 => 'After 1 minute',
+                  _ => 'After $m minutes',
+                },
+                style: const TextStyle(fontSize: 14.5),
+              ),
+              onChanged: (v) => Navigator.pop(ctx, v),
+            ),
+        ],
+      ),
+    );
+    if (choice != null) await auth.setLockTimeout(choice);
   }
 
   Future<void> _signOut() async {
@@ -207,15 +244,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SectionLabel('Security'),
           AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            child: _row(
-              icon: Icons.pin_rounded,
-              tone: AppColors.primary,
-              title: auth.hasLocalPin
-                  ? 'Change quick-unlock PIN'
-                  : 'Set a quick-unlock PIN',
-              subtitle: '4 digits · unlocks the app even offline',
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const PinScreen(mode: PinMode.setup))),
+            child: Column(
+              children: [
+                _row(
+                  icon: Icons.pin_rounded,
+                  tone: AppColors.primary,
+                  title: auth.hasLocalPin
+                      ? 'Change quick-unlock PIN'
+                      : 'Set a quick-unlock PIN',
+                  subtitle: '4 digits · unlocks the app even offline',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const PinScreen(mode: PinMode.setup))),
+                ),
+                if (auth.hasLocalPin) ...[
+                  const Divider(height: 1),
+                  _row(
+                    icon: Icons.timer_outlined,
+                    tone: AppColors.blue,
+                    title: 'Auto-lock',
+                    subtitle: _lockTimeoutLabel(auth.lockTimeoutMinutes),
+                    onTap: () => _pickLockTimeout(auth),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 20),

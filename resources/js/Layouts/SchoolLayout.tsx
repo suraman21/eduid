@@ -4,23 +4,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
-    UserCircle,
+    UserCircle, CreditCard, Camera, FileText,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
 
-interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; }
+interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; roles?: string[]; }
 
+// Sidebar is ROLE-AWARE: teachers only see what teachers can do (their
+// dashboard, attendance, grades, profile) — the registry, staff management,
+// orders and photo tooling are school-admin territory. This mirrors the
+// server-side route guards; hiding here is UX, the routes enforce.
 const navItems: NavItem[] = [
-    { label: 'Dashboard',   href: '/school/dashboard',        icon: LayoutDashboard, inertia: true },
-    { label: 'Students',    href: '/school/students',         icon: Users,           inertia: true },
-    { label: 'Classes',     href: '/school/classes',          icon: GraduationCap,   inertia: true },
-    { label: 'Subjects',    href: '/school/subjects',         icon: BookOpen,        inertia: true },
-    { label: 'Staff',       href: '/school/staff',            icon: UserCog,         inertia: true },
-    { label: 'Attendance',  href: '/school/attendance',       icon: ClipboardCheck,  inertia: true },
-    { label: 'Grades',      href: '/school/grades',           icon: FileBarChart,    inertia: true },
-    { label: 'Import',      href: '/school/students/import',  icon: Upload },
-    { label: 'My Profile',  href: '/school/profile',          icon: UserCircle,      inertia: true },
+    { label: 'Dashboard',      href: '/school/dashboard',       icon: LayoutDashboard, inertia: true },
+    { label: 'Students',       href: '/school/students',        icon: Users,           inertia: true, roles: ['school_admin', 'staff'] },
+    { label: 'Classes',        href: '/school/classes',         icon: GraduationCap,   inertia: true, roles: ['school_admin', 'staff'] },
+    { label: 'Subjects',       href: '/school/subjects',        icon: BookOpen,        inertia: true, roles: ['school_admin'] },
+    { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'] },
+    { label: 'Attendance',     href: '/school/attendance',      icon: ClipboardCheck,  inertia: true },
+    { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true },
+    { label: 'Report Cards',   href: '/school/report-cards',    icon: FileText,        inertia: true, roles: ['school_admin'] },
+    { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'] },
+    { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
+    { label: 'Import',         href: '/school/students/import', icon: Upload,                         roles: ['school_admin'] },
+    { label: 'My Profile',     href: '/school/profile',         icon: UserCircle,      inertia: true },
 ];
 
 /* ── colour helpers ──────────────────────────────────────────── */
@@ -39,6 +46,10 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
     const accent = normHex(props.accent);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [search, setSearch] = useState('');
+
+    const role = (user as { role?: string } | undefined)?.role ?? '';
+    const visibleNav = navItems.filter(item => !item.roles || item.roles.includes(role));
+    const canSearchStudents = role === 'school_admin' || role === 'staff';
 
     useEffect(() => {
         document.documentElement.classList.remove('dark');
@@ -91,7 +102,7 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
 
             {/* nav */}
             <nav className="relative flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-                {navItems.map(item => {
+                {visibleNav.map(item => {
                     const active = isActive(item.href);
                     const cls = 'group flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200';
                     const style: React.CSSProperties = active
@@ -203,19 +214,21 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
                         <Menu className="w-5 h-5" />
                     </button>
 
-                    {/* search */}
-                    <form onSubmit={submitSearch} className="flex-1 max-w-md">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="Search students…"
-                                className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white text-sm text-slate-700 placeholder:text-slate-400 border border-slate-200/70 shadow-sm focus:outline-none focus:ring-2 transition"
-                                style={{ ['--tw-ring-color' as any]: alpha(accent, 0.35) }}
-                            />
-                        </div>
-                    </form>
+                    {/* search — student registry is admin/staff only */}
+                    {canSearchStudents && (
+                        <form onSubmit={submitSearch} className="flex-1 max-w-md">
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="Search students…"
+                                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white text-sm text-slate-700 placeholder:text-slate-400 border border-slate-200/70 shadow-sm focus:outline-none focus:ring-2 transition"
+                                    style={{ ['--tw-ring-color' as any]: alpha(accent, 0.35) }}
+                                />
+                            </div>
+                        </form>
+                    )}
 
                     <div className="flex-1" />
 

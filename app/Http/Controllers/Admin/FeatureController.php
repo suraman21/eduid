@@ -27,12 +27,15 @@ class FeatureController extends Controller
             $schoolOverrides = SchoolFeatureOverride::where('school_id', $schoolId)->get();
         }
 
-        // Build a flat feature_key → {starter, standard, premium} matrix for the frontend
+        // Build a flat feature_key → {starter, standard, premium} matrix for
+        // the frontend. plan_features has NO is_enabled column — a row's
+        // PRESENCE means the tier includes the feature (reading ->is_enabled
+        // here used to silently render the whole matrix as false).
         $planMatrix = $features->mapWithKeys(fn ($f) => [
             $f->key => [
-                'starter'  => (bool) ($planFeats->get('starter')?->firstWhere('feature_key', $f->key)?->is_enabled ?? false),
-                'standard' => (bool) ($planFeats->get('standard')?->firstWhere('feature_key', $f->key)?->is_enabled ?? false),
-                'premium'  => (bool) ($planFeats->get('premium')?->firstWhere('feature_key', $f->key)?->is_enabled ?? false),
+                'starter'  => $planFeats->get('starter')?->contains('feature_key', $f->key) ?? false,
+                'standard' => $planFeats->get('standard')?->contains('feature_key', $f->key) ?? false,
+                'premium'  => $planFeats->get('premium')?->contains('feature_key', $f->key) ?? false,
             ],
         ]);
 

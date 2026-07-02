@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Home } from 'lucide-react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import type { PageProps } from '@/types';
 
@@ -35,16 +35,25 @@ interface StaffMember {
     job_title: string | null;
     is_active: boolean;
     can_login: boolean;
-    is_homeroom: boolean;
     is_coordinator: boolean;
     can_record_staff_attendance: boolean;
 }
 
+interface ClassOption { id: number; name: string; homeroom_teacher: string | null }
+interface SubjectOption { id: number; name: string; code: string }
+interface AssignmentRow { class_id: number | ''; subject_id: number | '' }
+
 interface Props {
     member: StaffMember | null;
+    classes: ClassOption[];
+    subjects: SubjectOption[];
+    current_assignments: {
+        assignments: { class_id: number; subject_id: number | null }[];
+        homeroom_class_ids: number[];
+    };
 }
 
-export default function Form({ member }: Props) {
+export default function Form({ member, classes, subjects, current_assignments }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
     const isEdit = member !== null;
@@ -59,20 +68,41 @@ export default function Form({ member }: Props) {
         job_title:                   member?.job_title ?? '',
         is_active:                   member?.is_active ?? true,
         can_login:                   member?.can_login ?? true,
-        is_homeroom:                 member?.is_homeroom ?? false,
         is_coordinator:              member?.is_coordinator ?? false,
         can_record_staff_attendance: member?.can_record_staff_attendance ?? false,
+        assignments:                 (current_assignments?.assignments ?? []).map(a => ({
+                                         class_id: a.class_id,
+                                         subject_id: a.subject_id ?? '',
+                                     })) as AssignmentRow[],
+        homeroom_class_ids:          (current_assignments?.homeroom_class_ids ?? []) as number[],
     });
 
     function submit(e: React.FormEvent) {
         e.preventDefault();
+        // Drop incomplete rows (no class picked) before posting.
+        transform(d => ({
+            ...(isEdit ? { ...d, _method: 'PUT' } : d),
+            assignments: (d.assignments as AssignmentRow[])
+                .filter(a => a.class_id !== '')
+                .map(a => ({ class_id: a.class_id, subject_id: a.subject_id === '' ? null : a.subject_id })),
+        }));
         if (isEdit) {
-            transform(d => ({ ...d, _method: 'PUT' }));
             post(`/school/staff/${member!.id}`);
         } else {
             post('/school/staff');
         }
     }
+
+    const addRow = () => setData('assignments', [...data.assignments, { class_id: '', subject_id: '' }]);
+    const removeRow = (i: number) => setData('assignments', data.assignments.filter((_, idx) => idx !== i));
+    const setRow = (i: number, patch: Partial<AssignmentRow>) =>
+        setData('assignments', data.assignments.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+    const toggleHomeroom = (classId: number) =>
+        setData('homeroom_class_ids',
+            data.homeroom_class_ids.includes(classId)
+                ? data.homeroom_class_ids.filter(id => id !== classId)
+                : [...data.homeroom_class_ids, classId]);
 
     const inputCls = 'w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition bg-white';
     const inputStyle = { ['--tw-ring-color' as string]: alpha(accent, 0.35) };
@@ -86,8 +116,9 @@ export default function Form({ member }: Props) {
         );
     }
 
-    function FieldError({ name }: { name: keyof typeof errors }) {
-        return errors[name] ? <p className="text-red-500 text-xs mt-1">{errors[name]}</p> : null;
+    function FieldError({ name }: { name: string }) {
+        const msg = (errors as Record<string, string>)[name];
+        return msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
     }
 
     function CheckField({ field, label }: { field: keyof typeof data; label: string }) {
@@ -96,7 +127,7 @@ export default function Form({ member }: Props) {
                 <input
                     type="checkbox"
                     checked={data[field] as boolean}
-                    onChange={e => setData(field, e.target.checked)}
+                    onChange={e => setData(field, e.target.checked as never)}
                     className="w-4 h-4 rounded border-slate-300 accent-indigo-600"
                 />
                 <span className="text-sm text-slate-700">{label}</span>
@@ -184,6 +215,96 @@ export default function Form({ member }: Props) {
                     </div>
                 </Card>
 
+                {/* Teaching assignments — teachers only */}
+                {data.role === 'teacher' && (
+                    <Card className="p-6">
+                        <SectionTitle>Teaching Assignments</SectionTitle>
+                        <p className="text-xs text-slate-500 -mt-2 mb-4">
+                            Which class and subject does this teacher take? e.g. <b>1A — English</b>, <b>2B — Maths</b>.
+                            Leave the subject empty for attendance-only access to a class.
+                        </p>
+
+                        <div className="space-y-2.5">
+                            {data.assignments.map((row, i) => (
+                                <div key={i} className="flex items-center gap-2.5">
+                                    <select
+                                        value={row.class_id}
+                                        onChange={e => setRow(i, { class_id: e.target.value === '' ? '' : Number(e.target.value) })}
+                                        className={inputCls}
+                                        style={inputStyle}
+                                    >
+                                        <option value="">Select class…</option>
+                                        {classes.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={row.subject_id}
+                                        onChange={e => setRow(i, { subject_id: e.target.value === '' ? '' : Number(e.target.value) })}
+                                        className={inputCls}
+                                        style={inputStyle}
+                                    >
+                                        <option value="">No subject (attendance only)</option>
+                                        {subjects.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeRow(i)}
+                                        className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
+                                        title="Remove"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={addRow}
+                            className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-dashed border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> Add class & subject
+                        </button>
+                        <FieldError name="assignments" />
+
+                        {/* Homeroom */}
+                        <div className="mt-6">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <Home className="w-3.5 h-3.5" /> Homeroom teacher of
+                            </p>
+                            <p className="text-xs text-slate-400 mb-3">
+                                A class has one homeroom teacher — selecting a class that already has one reassigns it.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {classes.map(c => {
+                                    const selected = data.homeroom_class_ids.includes(c.id);
+                                    return (
+                                        <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() => toggleHomeroom(c.id)}
+                                            className="px-3.5 py-2 rounded-xl text-xs font-bold border transition"
+                                            style={selected
+                                                ? { background: accent, borderColor: accent, color: '#fff' }
+                                                : { background: '#fff', borderColor: '#e2e8f0', color: '#475569' }}
+                                            title={c.homeroom_teacher ? `Currently: ${c.homeroom_teacher}` : undefined}
+                                        >
+                                            {c.name}
+                                            {c.homeroom_teacher && !selected && (
+                                                <span className="ml-1.5 font-medium opacity-60">· {c.homeroom_teacher}</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <FieldError name="homeroom_class_ids" />
+                        </div>
+                    </Card>
+                )}
+
                 {/* Optional details */}
                 <Card className="p-6">
                     <SectionTitle>Optional Details</SectionTitle>
@@ -229,7 +350,6 @@ export default function Form({ member }: Props) {
                     <SectionTitle>Permissions</SectionTitle>
                     <div className="space-y-4">
                         <CheckField field="can_login" label="Can log in to the system" />
-                        <CheckField field="is_homeroom" label="Homeroom teacher" />
                         <CheckField field="is_coordinator" label="Department coordinator" />
                         <CheckField field="can_record_staff_attendance" label="Can record staff attendance" />
                         {isEdit && (

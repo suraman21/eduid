@@ -36,13 +36,48 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: SyncEngine.instance),
       ],
-      child: const EduIdApp(),
+      child: EduIdApp(auth: auth),
     ),
   );
 }
 
-class EduIdApp extends StatelessWidget {
-  const EduIdApp({super.key});
+class EduIdApp extends StatefulWidget {
+  const EduIdApp({super.key, required this.auth});
+
+  final AuthService auth;
+
+  @override
+  State<EduIdApp> createState() => _EduIdAppState();
+}
+
+/// Watches the app lifecycle so the PIN gate re-arms after the app has been
+/// in the background longer than the user's auto-lock timeout (Settings →
+/// Security). Same pattern as banking apps.
+class _EduIdAppState extends State<EduIdApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        widget.auth.appPaused();
+      case AppLifecycleState.resumed:
+        widget.auth.appResumed();
+      default:
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

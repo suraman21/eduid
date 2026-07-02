@@ -54,12 +54,20 @@ interface StaffMember {
     initials: string;
 }
 
+interface TeachingRow {
+    class_id: number;
+    class_name: string;
+    subjects: string[];
+    homeroom: boolean;
+}
+
 interface Props {
     member: StaffMember;
+    teaching: TeachingRow[] | null;
     is_admin: boolean;
 }
 
-export default function Show({ member, is_admin }: Props) {
+export default function Show({ member, teaching, is_admin }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
 
@@ -148,6 +156,41 @@ export default function Show({ member, is_admin }: Props) {
                         ))}
                     </dl>
                 </Card>
+
+                {/* Teaching assignments */}
+                {teaching !== null && (
+                    <Card className="p-6">
+                        <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: accent }}>
+                            Teaching Assignments
+                        </p>
+                        {teaching.length === 0 ? (
+                            <p className="text-sm text-slate-400">
+                                No classes assigned yet — edit this teacher to add class &amp; subject assignments.
+                            </p>
+                        ) : (
+                            <div className="space-y-2.5">
+                                {teaching.map(t => (
+                                    <div key={t.class_id} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+                                        <span
+                                            className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-extrabold flex-shrink-0"
+                                            style={{ background: alpha(accent, 0.10), color: accent }}
+                                        >
+                                            {t.class_name}
+                                        </span>
+                                        <span className="text-sm text-slate-700 flex-1">
+                                            {t.subjects.length > 0 ? t.subjects.join(', ') : 'Attendance only'}
+                                        </span>
+                                        {t.homeroom && (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">
+                                                Homeroom
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+                )}
 
                 {/* Permissions card */}
                 <Card className="p-6">
