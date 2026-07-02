@@ -100,6 +100,8 @@ class StaffController extends BaseSchoolController
 
     public function show(User $staff)
     {
+        $this->assertManageable($staff);
+
         return Inertia::render('School/Staff/Show', [
             'member' => [
                 'id'                            => $staff->id,
@@ -125,6 +127,8 @@ class StaffController extends BaseSchoolController
     public function edit(User $staff)
     {
         $this->requireAdmin();
+        $this->assertManageable($staff);
+
         return Inertia::render('School/Staff/Form', [
             'member' => [
                 'id'                            => $staff->id,
@@ -150,9 +154,25 @@ class StaffController extends BaseSchoolController
     public function update(Request $request, User $staff)
     {
         $this->requireAdmin();
+        $this->assertManageable($staff);
 
         $validated  = $this->validateStaff($request, $staff->id);
         $assignment = $this->validateAssignments($request);
+
+        // Self-lockout guard: an admin editing their OWN account cannot
+        // demote themselves or switch off their own access — if they are the
+        // school's only admin, that would lock the whole school out with no
+        // self-service way back in.
+        if ($staff->id === auth()->id()) {
+            if ($validated['role'] !== 'school_admin'
+                || ! $request->boolean('is_active')
+                || ! $request->boolean('can_login')
+            ) {
+                return back()->with('error',
+                    'You cannot demote or deactivate your own account. Ask another administrator to change it.')
+                    ->withInput();
+            }
+        }
 
         if (!empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
@@ -179,6 +199,20 @@ class StaffController extends BaseSchoolController
         AuditLog::log('staff.updated', 'users', $staff->id, $old, array_diff_key($validated, ['password' => '']));
 
         return redirect()->route('school.staff.show', $staff)->with('success', 'Staff member updated.');
+    }
+
+    /**
+     * The staff pages manage staff ROLES only. Route-model binding on User
+     * would otherwise also resolve parent accounts (same table, same
+     * school), letting an admin "edit" a parent here and flip their role —
+     * which would orphan the guardian↔user link. Parents are managed from
+     * the student page.
+     */
+    private function assertManageable(User $staff): void
+    {
+        if (! in_array($staff->role, self::ROLES, true)) {
+            abort(404);
+        }
     }
 
     /**

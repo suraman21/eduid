@@ -65,9 +65,10 @@ class ReportCardController extends BaseSchoolController
             'term_id' => ['required', Rule::exists('terms', 'id')->where('school_id', $this->schoolId())],
         ])['term_id'];
 
-        if ($student->class_id) {
-            $this->requireTeacherCanAccessClass($student->class_id);
-        }
+        // Null class_id included — the helper 403s teachers for classless
+        // students instead of skipping the check (route is admin-ring today,
+        // but keep the guard honest for defense in depth).
+        $this->requireTeacherCanAccessClass($student->class_id);
 
         $term = Term::findOrFail($termId);
         $student->load('schoolClass', 'guardians');

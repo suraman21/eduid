@@ -136,11 +136,34 @@ class StudentImportController extends BaseSchoolController
         $classes = SchoolClass::where('is_active', true)->get()->keyBy(fn ($c) => $this->classKey($c->grade, $c->section));
         $imported = 0;
         $skipped  = 0;
+        $capped   = 0;
+        $activeImported = 0; // only ACTIVE students consume plan seats
+
+        // Plan seat cap — the SAME rule the single-student form enforces
+        // under a row lock. Without this, bulk import silently blew straight
+        // past max_students (a Starter school could import 800 rows).
+        // Snapshot the remaining seats under a lock so two concurrent
+        // imports can't both read a full quota.
+        $remainingSeats = DB::transaction(function () use ($school) {
+            $locked = School::whereKey($school->id)->lockForUpdate()->firstOrFail();
+
+            return max(0, $locked->max_students - $locked->activeStudentCount());
+        });
 
         foreach ($rows as $row) {
             if (! empty($this->validateRow($row, 0, $classes))) {
                 $skipped++;
                 continue;
+            }
+
+            $isActiveRow = strtolower(trim($row['status'] ?? 'active')) === 'active'
+                || blank($row['status'] ?? null);
+            if ($isActiveRow && $activeImported >= $remainingSeats) {
+                $capped++;
+                continue;
+            }
+            if ($isActiveRow) {
+                $activeImported++;
             }
 
             DB::transaction(function () use ($row, $school, $classes, &$imported) {
@@ -187,10 +210,15 @@ class StudentImportController extends BaseSchoolController
         AuditLog::log('student.bulk_import', 'students', null, null, [
             'imported' => $imported,
             'skipped'  => $skipped,
+            'capped'   => $capped,
         ]);
 
+        $message = "{$imported} student(s) imported successfully."
+            . ($skipped ? " {$skipped} row(s) skipped." : '')
+            . ($capped ? " {$capped} row(s) NOT imported — student limit ({$school->max_students}) reached. Upgrade your plan to add more seats." : '');
+
         return redirect()->route('school.students.index')
-            ->with('success', "{$imported} student(s) imported successfully." . ($skipped ? " {$skipped} row(s) skipped." : ''));
+            ->with($capped ? 'error' : 'success', $message);
     }
 
     /**

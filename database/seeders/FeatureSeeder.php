@@ -78,10 +78,16 @@ class FeatureSeeder extends Seeder
             $planFeatures[] = ['plan_tier' => 'premium', 'feature_key' => $key];
         }
 
-        // Clear and re-insert plan features to avoid duplicates
-        DB::table('plan_features')->truncate();
-        foreach ($planFeatures as $pf) {
-            DB::table('plan_features')->insert(array_merge($pf, ['created_at' => $now, 'updated_at' => $now]));
+        // FIRST INSTALL ONLY. This seeder runs on EVERY deploy (standing
+        // deploy command), and the super admin edits the plan×feature matrix
+        // live on the Packages page — truncating + reseeding here would
+        // silently revert those business decisions on each deploy. Row
+        // presence = enabled, so we only lay down the default matrix when
+        // the table has never been populated.
+        if (DB::table('plan_features')->count() === 0) {
+            foreach ($planFeatures as $pf) {
+                DB::table('plan_features')->insert(array_merge($pf, ['created_at' => $now, 'updated_at' => $now]));
+            }
         }
 
         // Subscription plans
@@ -121,11 +127,17 @@ class FeatureSeeder extends Seeder
             ],
         ];
 
+        // Insert missing tiers only — never overwrite. Pricing and seat
+        // limits are edited live on the Packages page; updateOrInsert here
+        // used to reset them to these defaults on every deploy.
         foreach ($plans as $plan) {
-            DB::table('subscription_plans')->updateOrInsert(
-                ['tier' => $plan['tier']],
-                array_merge($plan, ['created_at' => $now, 'updated_at' => $now])
-            );
+            $exists = DB::table('subscription_plans')
+                ->where('tier', $plan['tier'])->exists();
+            if (! $exists) {
+                DB::table('subscription_plans')->insert(
+                    array_merge($plan, ['created_at' => $now, 'updated_at' => $now])
+                );
+            }
         }
     }
 }

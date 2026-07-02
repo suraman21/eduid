@@ -24,9 +24,11 @@ class IdCardController extends BaseSchoolController
      */
     public function show(Student $student)
     {
-        if ($student->class_id !== null) {
-            $this->requireTeacherCanAccessClass($student->class_id);
-        }
+        // Null class_id included: a classless student is on no teacher's
+        // roster, so teachers get 403 (admins/staff pass). The old
+        // null-wrapper here silently let ANY teacher view ANY classless
+        // student's card.
+        $this->requireTeacherCanAccessClass($student->class_id);
 
         $school = $this->currentSchool();
         $student->load('schoolClass');

@@ -6,6 +6,8 @@ use App\Models\ClassSubject;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\Term;
+use App\Models\TimetableEntry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -152,6 +154,24 @@ class YearTransitionService
                 // The old-year class is history either way.
                 $source->update(['is_active' => false]);
             }
+
+            // Archived classes take their timetable with them — otherwise
+            // teacher dashboards and the mobile app keep showing LAST year's
+            // periods forever (entries are queried by teacher, not by class
+            // activity). The bell schedule (periods) survives; the new year's
+            // grid is rebuilt on the Timetable page.
+            TimetableEntry::withoutGlobalScope('school')
+                ->where('school_id', $school->id)
+                ->whereIn('class_id', $classes->keys())
+                ->delete();
+
+            // Old-year terms must stop being "current", or grade entry after
+            // the transition silently defaults to a term of the previous
+            // year. The admin marks a new term current when they create it.
+            Term::withoutGlobalScope('school')
+                ->where('school_id', $school->id)
+                ->where('academic_year', '!=', $newYear)
+                ->update(['is_current' => false]);
 
             // Turn the school's year over BEFORE minting tokens — the token
             // payload is "{uid}|{academic_year}" and must use the new year.
