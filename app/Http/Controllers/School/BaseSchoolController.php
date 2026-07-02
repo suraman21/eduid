@@ -61,12 +61,21 @@ abstract class BaseSchoolController extends Controller
     /**
      * Abort 403 when a teacher tries to access a class they are not assigned to.
      * Admins and staff pass through unconditionally.
+     *
+     * Accepts null (e.g. a student not yet placed in any class): callers pass
+     * $student->class_id directly, and a non-nullable parameter turned that
+     * into a TypeError 500 for teachers. A classless student belongs to no
+     * teacher's roster, so null → 403 for teachers.
      */
-    protected function requireTeacherCanAccessClass(int $classId): void
+    protected function requireTeacherCanAccessClass(?int $classId): void
     {
         $user = auth()->user();
-        if ($user->isTeacher()
-            && ! $user->assignedClasses()->where('classes.id', $classId)->exists()
+        if (! $user->isTeacher()) {
+            return;
+        }
+
+        if ($classId === null
+            || ! $user->assignedClasses()->where('classes.id', $classId)->exists()
         ) {
             abort(403, 'You are not assigned to this class.');
         }

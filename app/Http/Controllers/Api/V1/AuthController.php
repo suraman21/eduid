@@ -70,6 +70,15 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Respect the can_login flag — the web portal enforced this but the
+        // API used to skip it, so "revoked" accounts could still mint mobile
+        // tokens.
+        if (!$user->can_login) {
+            return response()->json([
+                'message' => 'Your access has been disabled. Please contact your administrator.'
+            ], 403);
+        }
+
         // Check for account lockout (uses model method)
         if ($user->isLocked()) {
             $diffInMinutes = ceil(now()->diffInMinutes($user->locked_until));

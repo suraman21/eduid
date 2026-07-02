@@ -80,15 +80,6 @@ class LoginController extends Controller
             ]);
         }
 
-        // Parents are mobile-only: the web portal has no parent pages, so a
-        // session here would just land on 403s. Point them at the app before
-        // any credentials are consumed.
-        if ($user->role === User::ROLE_PARENT) {
-            throw ValidationException::withMessages([
-                'email' => ['Parent accounts sign in through the EduID mobile app, not the web portal.'],
-            ]);
-        }
-
         // Check for account lockout (uses model method)
         if ($user->isLocked()) {
             $diffInMinutes = ceil(now()->diffInMinutes($user->locked_until));
@@ -103,6 +94,16 @@ class LoginController extends Controller
             
             throw ValidationException::withMessages([
                 'email' => ['These credentials do not match our records.'],
+            ]);
+        }
+
+        // Parents are mobile-only: the web portal has no parent pages, so a
+        // session here would just land on 403s. Checked AFTER password
+        // verification so the message never leaks account existence or role
+        // to someone who doesn't know the credentials.
+        if ($user->role === User::ROLE_PARENT) {
+            throw ValidationException::withMessages([
+                'email' => ['Parent accounts sign in through the EduID mobile app, not the web portal.'],
             ]);
         }
 

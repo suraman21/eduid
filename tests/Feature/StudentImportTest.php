@@ -136,4 +136,37 @@ class StudentImportTest extends TestCase
             ->get('/school/students/import')
             ->assertForbidden();
     }
+
+    public function test_import_stops_at_the_plan_seat_limit(): void
+    {
+        // 1 seat left: cap is 2, one active student already enrolled.
+        $this->school->update(['max_students' => 2]);
+        Student::create([
+            'school_id' => $this->school->id, 'uid' => 'ALPHA-2018-000001',
+            'first_name' => 'Existing', 'last_name' => 'Student', 'gender' => 'male',
+            'status' => 'active', 'enrollment_date' => today(), 'class_id' => $this->class->id,
+        ]);
+
+        $csv = "first_name,last_name,gender,grade,section\n"
+             . "Abebe,Kebede,male,Grade 5,A\n"
+             . "Sara,Alemu,female,Grade 5,A\n"
+             . "Chala,Bekele,male,Grade 5,A\n";
+
+        $preview = $this->actingAs($this->admin)
+            ->post('/school/students/import', ['csv_file' => $this->upload($csv)]);
+        $preview->assertOk();
+
+        $this->actingAs($this->admin)
+            ->post('/school/students/import/confirm', ['tmp_key' => $this->props($preview)['tmpKey']])
+            ->assertRedirect()
+            ->assertSessionHas('error'); // capped rows reported loudly
+
+        // Only ONE new student fit within the plan cap.
+        $this->assertSame(
+            2,
+            Student::withoutGlobalScope('school')
+                ->where('school_id', $this->school->id)
+                ->where('status', 'active')->count()
+        );
+    }
 }
