@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
 use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\School\AnalyticsController as SchoolAnalyticsController;
 use App\Http\Controllers\School\StudentImportController as SchoolStudentImportController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
@@ -278,6 +279,10 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
         Route::resource('/subjects', SchoolSubjectController::class)
             ->only(['index', 'store', 'update'])
             ->names('school.subjects');
+
+        // Analytics dashboard — 'analytics' module (Premium).
+        Route::get('/analytics', [SchoolAnalyticsController::class, 'index'])
+            ->middleware('feature:analytics')->name('school.analytics.index');
 
         // Academic Year Promotion wizard — 'year_transition' module.
         Route::middleware('feature:year_transition')->group(function () {
