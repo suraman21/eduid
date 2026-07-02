@@ -1,0 +1,46 @@
+name: eduid_teacher
+description: EduID Teacher — offline-first attendance, grades & schedule for Ethiopian schools.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP client (base-url config, interceptors for the Sanctum bearer token).
+  dio: ^5.4.0
+
+  # Secure storage for the API token + local PIN hash.
+  flutter_secure_storage: ^9.0.0
+
+  # Offline cache: classes, rosters (with qr_token), attendance queue.
+  sqflite: ^2.3.0
+  path: ^1.9.0
+
+  # QR scanning (camera) for attendance.
+  mobile_scanner: ^5.1.1
+
+  # Lightweight app-state (auth session).
+  provider: ^6.1.1
+
+  # Idempotency keys for offline attendance sync (safe retries).
+  uuid: ^4.3.0
+
+  # Local PIN hash (sha256) for offline quick-unlock.
+  crypto: ^3.0.3
+
+  # Non-secret preferences (server URL, last sync time).
+  shared_preferences: ^2.2.0
+
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
