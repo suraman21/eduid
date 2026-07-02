@@ -77,6 +77,13 @@ class AttendanceService {
         where: 'synced = 0', orderBy: 'created_at DESC');
   }
 
+  /// Latest captured sessions (synced or not) for the home activity feed.
+  Future<List<Map<String, dynamic>>> recentSessions({int limit = 5}) async {
+    final d = await LocalDb.instance.db;
+    return d.query('attendance_queue',
+        orderBy: 'created_at DESC', limit: limit);
+  }
+
   /// Push every unsynced session. Returns (synced, failed).
   /// 'created' / 'merged' / 'duplicate' all count as success — duplicate means
   /// an earlier retry already landed.

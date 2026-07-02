@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/data_service.dart';
+import '../ui/glass.dart';
 
-/// "My Schedule" — Today + Week tabs, read from the offline cache
-/// (refreshed on every sync). Highlights the period happening right now.
+/// "My Schedule" — Today + Week, from the offline cache (auto-refreshed by the
+/// SyncEngine). The period happening right now glows.
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
 
@@ -52,52 +53,71 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _slotTile(PeriodSlot p, {bool highlightNow = false}) {
     final now = highlightNow && _isNow(p);
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: now ? const Color(0xFFEEF2FF) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: now ? const Color(0xFF6366F1) : const Color(0xFFE2E8F0)),
-      ),
+      radius: 18,
+      glow: now ? Palette.cyan : null,
       child: Row(
         children: [
           SizedBox(
-            width: 78,
+            width: 62,
             child: Text(
               '${_hhmm(p.startTime)}\n${_hhmm(p.endTime)}',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: const TextStyle(fontSize: 11.5, color: Palette.textLo),
+            ),
+          ),
+          Container(
+            width: 3,
+            height: 34,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(2),
+              gradient: now
+                  ? const LinearGradient(
+                      colors: [Palette.cyan, Palette.violet],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter)
+                  : null,
+              color: now ? null : Colors.white.withOpacity(0.10),
             ),
           ),
           Expanded(
             child: p.isBreak
-                ? Text('☕ ${p.label}',
-                    style: TextStyle(color: Colors.grey.shade500))
+                ? const Text('Break',
+                    style: TextStyle(color: Palette.textLo, fontSize: 13.5))
                 : p.className == null
                     ? Text('Free — ${p.label}',
-                        style: TextStyle(color: Colors.grey.shade500))
+                        style: const TextStyle(
+                            color: Palette.textLo, fontSize: 13.5))
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('${p.subjectName ?? p.label} · ${p.className}',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Palette.textHi,
+                                  fontSize: 14)),
                           if (p.room != null)
                             Text('Room ${p.room}',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey.shade600)),
+                                style: const TextStyle(
+                                    fontSize: 11.5, color: Palette.textLo)),
                         ],
                       ),
           ),
           if (now)
-            const Padding(
-              padding: EdgeInsets.only(left: 6),
-              child: Text('NOW',
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                gradient: Palette.accentGradient,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text('NOW',
                   style: TextStyle(
-                      color: Color(0xFF4F46E5),
+                      color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      fontSize: 11)),
+                      fontSize: 10)),
             ),
         ],
       ),
@@ -106,57 +126,91 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('My Schedule',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-          bottom: const TabBar(tabs: [Tab(text: 'Today'), Tab(text: 'Week')]),
-        ),
-        body: TabBarView(
-          children: [
-            // Today
-            _today.isEmpty
-                ? _empty()
-                : ListView(
-                    padding: const EdgeInsets.all(16),
+    return AppBackground(
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                  child: Row(
                     children: [
-                      for (final p in _today) _slotTile(p, highlightNow: true)
+                      GlassIconButton(
+                          icon: Icons.arrow_back_rounded,
+                          onTap: () => Navigator.of(context).pop()),
+                      const SizedBox(width: 12),
+                      const Text('My Schedule',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Palette.textHi)),
                     ],
                   ),
-            // Week
-            _week.isEmpty
-                ? _empty()
-                : ListView(
-                    padding: const EdgeInsets.all(16),
+                ),
+                const TabBar(
+                  indicatorColor: Palette.violet,
+                  labelColor: Palette.textHi,
+                  unselectedLabelColor: Palette.textLo,
+                  dividerColor: Colors.transparent,
+                  tabs: [Tab(text: 'Today'), Tab(text: 'Week')],
+                ),
+                Expanded(
+                  child: TabBarView(
                     children: [
-                      for (var day = 1; day <= 7; day++)
-                        if ((_week[day] ?? [])
-                            .any((p) => p.className != null || p.isBreak)) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8, top: 8),
-                            child: Text(_dayNames[day - 1],
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800, fontSize: 15)),
-                          ),
-                          for (final p in _week[day]!) _slotTile(p),
-                        ],
+                      _today.isEmpty
+                          ? _empty()
+                          : ListView(
+                              padding: const EdgeInsets.all(20),
+                              children: [
+                                for (final p in _today)
+                                  _slotTile(p, highlightNow: true)
+                              ],
+                            ),
+                      _week.isEmpty
+                          ? _empty()
+                          : ListView(
+                              padding: const EdgeInsets.all(20),
+                              children: [
+                                for (var day = 1; day <= 7; day++)
+                                  if ((_week[day] ?? []).any((p) =>
+                                      p.className != null || p.isBreak)) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 8, top: 10),
+                                      child: Text(
+                                        _dayNames[day - 1].toUpperCase(),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 11.5,
+                                            letterSpacing: 1.6,
+                                            color: Palette.textLo),
+                                      ),
+                                    ),
+                                    for (final p in _week[day]!) _slotTile(p),
+                                  ],
+                              ],
+                            ),
                     ],
                   ),
-          ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _empty() => Center(
+  Widget _empty() => const Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(32),
           child: Text(
-            'No schedule cached yet.\nSync while online, or the school may not have set up its timetable.',
+            'No schedule yet.\nIt appears automatically once the school sets up its timetable.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(color: Palette.textLo, fontSize: 13),
           ),
         ),
       );
