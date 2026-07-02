@@ -104,7 +104,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-CKQKUKrG.css",
+    "file": "assets/app-BEhKkMS3.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -984,7 +984,7 @@
     ]
   },
   "resources/js/Pages/School/Students/Show.tsx": {
-    "file": "assets/Show-CFa0cgTq.js",
+    "file": "assets/Show-DY_8MCMZ.js",
     "name": "Show",
     "src": "resources/js/Pages/School/Students/Show.tsx",
     "isDynamicEntry": true,
@@ -1078,7 +1078,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-DY5juHIG.js",
+    "file": "assets/app-BDI1zinY.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1159,7 +1159,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-CKQKUKrG.css"
+      "assets/app-BEhKkMS3.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

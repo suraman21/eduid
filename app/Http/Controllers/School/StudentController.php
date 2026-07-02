@@ -157,10 +157,14 @@ class StudentController extends BaseSchoolController
                         ? ($g->user->is_active && $g->user->can_login ? 'active' : 'revoked')
                         : null,
                     'account_email' => $g->user?->email,
+                    // Telegram absence-alert linking ('alerts' module).
+                    'telegram_linked' => (bool) $g->telegram_chat_id,
+                    'telegram_link'   => app(\App\Services\TelegramService::class)->deepLink($g),
                 ]),
             ],
             'is_admin'   => auth()->user()?->isSchoolAdmin() ?? false,
             'parent_app' => $this->currentSchool()->hasFeature('parent_app'),
+            'alerts_on'  => $this->currentSchool()->hasFeature('alerts'),
         ]);
     }
 
