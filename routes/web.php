@@ -20,6 +20,7 @@ use App\Http\Controllers\School\DashboardController as SchoolDashboardController
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
+use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
 use App\Http\Controllers\School\StaffController as SchoolStaffController;
 use App\Http\Controllers\School\AttendanceController as SchoolAttendanceController;
 use App\Http\Controllers\School\GradeController as SchoolGradeController;
@@ -275,6 +276,16 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
         Route::resource('/subjects', SchoolSubjectController::class)
             ->only(['index', 'store', 'update'])
             ->names('school.subjects');
+
+        // Timetable builder (periods + weekly grid) — 'timetable' module.
+        Route::prefix('timetable')->name('school.timetable.')->middleware('feature:timetable')->group(function () {
+            Route::get('/',                    [SchoolTimetableController::class, 'index'])->name('index');
+            Route::post('/periods',            [SchoolTimetableController::class, 'storePeriod'])->name('periods.store');
+            Route::patch('/periods/{period}',  [SchoolTimetableController::class, 'updatePeriod'])->name('periods.update');
+            Route::delete('/periods/{period}', [SchoolTimetableController::class, 'destroyPeriod'])->name('periods.destroy');
+            Route::post('/entries',            [SchoolTimetableController::class, 'saveEntry'])->name('entries.save');
+            Route::delete('/entries',          [SchoolTimetableController::class, 'clearEntry'])->name('entries.clear');
+        });
         Route::resource('/staff', SchoolStaffController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.staff');
