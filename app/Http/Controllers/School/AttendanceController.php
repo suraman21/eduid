@@ -21,6 +21,12 @@ class AttendanceController extends BaseSchoolController
         $query = AttendanceSession::with(['schoolClass', 'teacher'])
             ->withCount('records');
 
+        // Teachers only see sessions for classes assigned to them.
+        $user = auth()->user();
+        if ($user->isTeacher()) {
+            $query->whereIn('class_id', $user->assignedClasses()->pluck('classes.id'));
+        }
+
         if ($classId = $request->get('class_id')) {
             $query->where('class_id', $classId);
         }
@@ -75,6 +81,7 @@ class AttendanceController extends BaseSchoolController
         $class = null;
 
         if (!empty($filters['class_id'])) {
+            $this->requireTeacherCanAccessClass((int) $filters['class_id']);
             $class = SchoolClass::findOrFail($filters['class_id']);
 
             $roster = Student::where('class_id', $class->id)
@@ -122,6 +129,8 @@ class AttendanceController extends BaseSchoolController
             'records.*.note'        => ['nullable', 'string', 'max:200'],
         ]);
 
+        $this->requireTeacherCanAccessClass((int) $validated['class_id']);
+
         $session = $this->saveAttendance($validated);
 
         AuditLog::log('attendance.recorded', 'attendance_sessions', $session->id, null, [
@@ -138,6 +147,8 @@ class AttendanceController extends BaseSchoolController
 
     public function show(AttendanceSession $attendance)
     {
+        $this->requireTeacherCanAccessClass($attendance->class_id);
+
         $attendance->load(['schoolClass', 'teacher', 'records.student']);
 
         return \Inertia\Inertia::render('School/Attendance/Show', [
@@ -224,14 +235,13 @@ class AttendanceController extends BaseSchoolController
     }
 
     /**
-     * Active classes for dropdowns (auto-scoped to the current school).
+     * Active classes for dropdowns — scoped to the current school AND, for
+     * teachers, to their assigned classes only (mirrors the mobile API's
+     * BaseApiController scoping; the web side must never be looser).
      */
     private function activeClasses()
     {
-        return SchoolClass::where('is_active', true)
-            ->orderBy('level_order')
-            ->orderBy('grade')
-            ->get();
+        return $this->classesForCurrentUser();
     }
 
     /**

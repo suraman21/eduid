@@ -127,6 +127,7 @@ class GradeController extends BaseSchoolController
         // would be orphaned — the gradebook iterates ClassSubject and would
         // never surface them.
         $this->requireSubjectInClass($filters['class_id'], $filters['subject_id']);
+        $this->requireTeacherOwnsSubjectSlot((int) $filters['class_id'], (int) $filters['subject_id']);
 
         $class   = SchoolClass::findOrFail($filters['class_id']);
         $subject = Subject::findOrFail($filters['subject_id']);
@@ -195,6 +196,7 @@ class GradeController extends BaseSchoolController
 
         // The subject must be taught in this class (no orphan grades).
         $this->requireSubjectInClass($validated['class_id'], $validated['subject_id']);
+        $this->requireTeacherOwnsSubjectSlot((int) $validated['class_id'], (int) $validated['subject_id']);
 
         // A score can never exceed its own max — otherwise the weighted
         // percentage exceeds 100% and silently corrupts every average/rank.
@@ -500,6 +502,28 @@ class GradeController extends BaseSchoolController
 
         if (! $exists) {
             abort(422, 'This subject is not assigned to the selected class.');
+        }
+    }
+
+    /**
+     * Teachers may only enter grades for a class×subject slot they own.
+     * An UNASSIGNED slot (teacher_id null) stays open to any teacher of the
+     * class — small schools often share entry duties — but once the admin
+     * assigns the slot, only that teacher (or an admin) can write to it.
+     */
+    private function requireTeacherOwnsSubjectSlot(int $classId, int $subjectId): void
+    {
+        $user = auth()->user();
+        if (! $user->isTeacher()) {
+            return;
+        }
+
+        $assignedTo = ClassSubject::where('class_id', $classId)
+            ->where('subject_id', $subjectId)
+            ->value('teacher_id');
+
+        if ($assignedTo !== null && (int) $assignedTo !== (int) $user->id) {
+            abort(403, 'This subject is assigned to another teacher.');
         }
     }
 }

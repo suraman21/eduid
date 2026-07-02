@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\CardTemplateController as AdminCardTemplateContro
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
+use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\School\StudentImportController as SchoolStudentImportController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
@@ -136,6 +137,14 @@ Route::middleware(['auth:admin,web', 'role:super_admin'])->prefix('admin')->grou
         // Audit Log
         Route::get('/audit-log', [AdminAuditLogController::class, 'index'])->name('admin.audit-log.index');
 
+        // Packages — plan tiers, plan×feature matrix, per-school package
+        Route::prefix('packages')->name('admin.packages.')->group(function () {
+            Route::get('/',                       [AdminPackageController::class, 'index'])->name('index');
+            Route::patch('/plans/{plan}',         [AdminPackageController::class, 'updatePlan'])->name('plans.update');
+            Route::post('/plan-features',         [AdminPackageController::class, 'togglePlanFeature'])->name('plan-features.toggle');
+            Route::patch('/schools/{school}',     [AdminPackageController::class, 'updateSchoolPackage'])->name('schools.update');
+        });
+
         // Features
         Route::prefix('features')->name('admin.features.')->group(function () {
             Route::get('/',                                          [AdminFeatureController::class, 'index'])->name('index');
@@ -195,61 +204,49 @@ Route::middleware(['auth:admin,web', 'role:super_admin'])->prefix('admin')->grou
         });
     });
 
-    // School User Group
-// School User Group — web guard.
+// ── School User Groups — web guard, split by role ─────────────
+//
+// Three nested permission rings (defense in depth — controllers ALSO guard
+// writes with requireAdmin(), but a teacher should never even reach an
+// admin page's GET):
+//   ring 1  all school roles   → dashboard, profile, attendance, grades
+//   ring 2  admin only         → registry writes' UI, staff, orders, photos, import
+//   ring 3  admin + staff      → student/class registry (read + admin-guarded writes)
+//
+// Registration ORDER matters: /students/import (ring 2) must beat the
+// /students/{student} pattern (ring 3), so ring 2 is registered first.
+
+// Ring 1 — every school role (school_admin, teacher, staff).
 Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->prefix('school')->group(function () {
         Route::get('/dashboard', [SchoolDashboardController::class, 'index'])->name('school.dashboard');
 
-    // Self-service profile (name / email / password) — all school roles.
-    Route::get('/profile',          [ProfileController::class, 'show'])->name('school.profile.show');
-    Route::patch('/profile',        [ProfileController::class, 'update'])->name('school.profile.update');
-    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('school.profile.password');
+        // Self-service profile (name / email / password) — all school roles.
+        Route::get('/profile',          [ProfileController::class, 'show'])->name('school.profile.show');
+        Route::patch('/profile',        [ProfileController::class, 'update'])->name('school.profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('school.profile.password');
 
-        // CSV Student Import — MUST be registered before the students resource,
-        // otherwise GET students/{student} captures "import" as a student id.
-        // PRD §08: CSV import limited to 3 requests/hour.
-        Route::prefix('students/import')->name('school.students.import.')->group(function () {
-            Route::get('/',         [SchoolStudentImportController::class, 'create'])->name('form');
-            Route::post('/',        [SchoolStudentImportController::class, 'preview'])->name('preview')->middleware('throttle:csv-import');
-            Route::post('/confirm', [SchoolStudentImportController::class, 'confirm'])->name('confirm')->middleware('throttle:csv-import');
-            Route::get('/template', [SchoolStudentImportController::class, 'template'])->name('template');
-        });
-
-        // Resource routes are registered for the methods the controllers
-        // actually implement. Write actions are additionally guarded
-        // server-side (school_admin only) inside each controller.
         // PRD §10: student photos are served through this authenticated,
-        // tenant-scoped route — never via direct /storage URLs.
+        // tenant-scoped route — never via direct /storage URLs. Teachers need
+        // them for attendance rosters; the controller scopes them to their
+        // own classes.
         Route::get('/students/{student}/photo', [SchoolStudentController::class, 'photo'])
             ->name('school.students.photo');
 
-        // ID Card preview (single student or batch from card order).
+        // Single-student ID card preview (teachers: own classes only —
+        // enforced in the controller via requireTeacherCanAccessClass).
         Route::get('/students/{student}/id-card', [SchoolIdCardController::class, 'show'])
             ->name('school.students.id-card');
-        Route::get('/card-orders/{cardOrder}/id-cards', [SchoolIdCardController::class, 'batch'])
-            ->name('school.card-orders.id-cards');
         // Serve the school's own card-template background (tenant-scoped, private disk)
         // so the preview works even when the public-disk copy is absent.
         Route::get('/id-card/template-image/{side}', [SchoolIdCardController::class, 'templateImage'])
             ->name('school.id-card.template-image');
 
-        Route::resource('/students', SchoolStudentController::class)
-            ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
-            ->names('school.students');
-        Route::resource('/classes', SchoolClassController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update'])
-            ->names('school.classes');
-        Route::resource('/subjects', SchoolSubjectController::class)
-            ->only(['index', 'store', 'update'])
-            ->names('school.subjects');
-        Route::resource('/staff', SchoolStaffController::class)
-            ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
-            ->names('school.staff');
         Route::resource('/attendance', SchoolAttendanceController::class)
             ->only(['index', 'create', 'store', 'show'])
             ->names('school.attendance');
 
-        // Grades (non-resource: class×subject×term×assessment_type)
+        // Grades (non-resource: class×subject×term×assessment_type).
+        // Teachers are scoped to their assigned classes AND subject slots.
         Route::prefix('grades')->name('school.grades.')->group(function () {
             Route::get('/',          [SchoolGradeController::class, 'index'])->name('index');
             Route::get('/enter',     [SchoolGradeController::class, 'enter'])->name('enter');
@@ -259,6 +256,26 @@ Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->
             Route::get('/terms',     [SchoolGradeController::class, 'terms'])->name('terms');
             Route::post('/terms',    [SchoolGradeController::class, 'termStore'])->name('terms.store');
         });
+    });
+
+// Ring 2 — school admins only.
+Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school')->group(function () {
+        // CSV Student Import — registered before the students resource,
+        // otherwise GET students/{student} captures "import" as a student id.
+        // PRD §08: CSV import limited to 3 requests/hour.
+        Route::prefix('students/import')->name('school.students.import.')->group(function () {
+            Route::get('/',         [SchoolStudentImportController::class, 'create'])->name('form');
+            Route::post('/',        [SchoolStudentImportController::class, 'preview'])->name('preview')->middleware('throttle:csv-import');
+            Route::post('/confirm', [SchoolStudentImportController::class, 'confirm'])->name('confirm')->middleware('throttle:csv-import');
+            Route::get('/template', [SchoolStudentImportController::class, 'template'])->name('template');
+        });
+
+        Route::resource('/subjects', SchoolSubjectController::class)
+            ->only(['index', 'store', 'update'])
+            ->names('school.subjects');
+        Route::resource('/staff', SchoolStaffController::class)
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
+            ->names('school.staff');
 
         // Report Cards (web-viewable, print-friendly — no server-side PDF)
         Route::get('/report-cards',           [SchoolReportCardController::class, 'index'])->name('school.report-cards.index');
@@ -288,6 +305,8 @@ Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->
         });
 
         // Card Orders (school side: select students → confirmation code → track)
+        Route::get('/card-orders/{cardOrder}/id-cards', [SchoolIdCardController::class, 'batch'])
+            ->name('school.card-orders.id-cards');
         Route::prefix('card-orders')->name('school.card-orders.')->group(function () {
             Route::get('/',                   [SchoolCardOrderController::class, 'index'])->name('index');
             Route::get('/create',             [SchoolCardOrderController::class, 'create'])->name('create');
@@ -296,4 +315,15 @@ Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->
             Route::get('/{cardOrder}',        [SchoolCardOrderController::class, 'show'])->name('show');
             Route::post('/{cardOrder}/cancel', [SchoolCardOrderController::class, 'cancel'])->name('cancel');
         });
+    });
+
+// Ring 3 — school admins + support staff (registry pages; writes are
+// additionally requireAdmin()-guarded inside the controllers).
+Route::middleware(['auth', 'role:school_admin,staff', 'school.scope'])->prefix('school')->group(function () {
+        Route::resource('/students', SchoolStudentController::class)
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
+            ->names('school.students');
+        Route::resource('/classes', SchoolClassController::class)
+            ->only(['index', 'create', 'store', 'edit', 'update'])
+            ->names('school.classes');
     });

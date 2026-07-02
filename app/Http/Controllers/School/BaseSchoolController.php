@@ -80,7 +80,8 @@ abstract class BaseSchoolController extends Controller
     protected function classesForCurrentUser(): \Illuminate\Database\Eloquent\Collection
     {
         $user  = auth()->user();
-        $query = SchoolClass::where('is_active', true)->orderBy('grade');
+        $query = SchoolClass::where('is_active', true)
+            ->orderBy('level_order')->orderBy('grade')->orderBy('section');
 
         if ($user->isTeacher()) {
             $query->whereHas('teachers', fn ($q) => $q->where('user_id', $user->id));

@@ -48,6 +48,10 @@ class AttendanceTest extends TestCase
             'academic_year' => '2018 E.C.',
             'is_active' => true,
         ]);
+
+        // Teachers may only record attendance for classes assigned to them
+        // (web now mirrors the mobile API's scoping).
+        $this->teacher->assignedClasses()->attach($this->class->id);
     }
 
     private function makeUser(string $role, string $email): User
