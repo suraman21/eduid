@@ -9,7 +9,7 @@ import {
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
 
-interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; roles?: string[]; }
+interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; roles?: string[]; feature?: string; }
 
 // Sidebar is ROLE-AWARE: teachers only see what teachers can do (their
 // dashboard, attendance, grades, profile) — the registry, staff management,
@@ -22,11 +22,11 @@ const navItems: NavItem[] = [
     { label: 'Subjects',       href: '/school/subjects',        icon: BookOpen,        inertia: true, roles: ['school_admin'] },
     { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'] },
     { label: 'Attendance',     href: '/school/attendance',      icon: ClipboardCheck,  inertia: true },
-    { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true },
-    { label: 'Report Cards',   href: '/school/report-cards',    icon: FileText,        inertia: true, roles: ['school_admin'] },
+    { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true, feature: 'gradebook' },
+    { label: 'Report Cards',   href: '/school/report-cards',    icon: FileText,        inertia: true, roles: ['school_admin'], feature: 'report_cards' },
     { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'] },
     { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
-    { label: 'Import',         href: '/school/students/import', icon: Upload,                         roles: ['school_admin'] },
+    { label: 'Import',         href: '/school/students/import', icon: Upload,                         roles: ['school_admin'], feature: 'csv_import' },
     { label: 'My Profile',     href: '/school/profile',         icon: UserCircle,      inertia: true },
 ];
 
@@ -48,7 +48,12 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
     const [search, setSearch] = useState('');
 
     const role = (user as { role?: string } | undefined)?.role ?? '';
-    const visibleNav = navItems.filter(item => !item.roles || item.roles.includes(role));
+    const features = ((props as Record<string, unknown>).features ?? {}) as Record<string, boolean>;
+    const visibleNav = navItems.filter(item =>
+        (!item.roles || item.roles.includes(role))
+        // Hide modules the school's package doesn't include (routes enforce).
+        && (!item.feature || features[item.feature] !== false)
+    );
     const canSearchStudents = role === 'school_admin' || role === 'staff';
 
     useEffect(() => {

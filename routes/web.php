@@ -247,7 +247,8 @@ Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->
 
         // Grades (non-resource: class×subject×term×assessment_type).
         // Teachers are scoped to their assigned classes AND subject slots.
-        Route::prefix('grades')->name('school.grades.')->group(function () {
+        // Gated on the 'gradebook' module of the school's package.
+        Route::prefix('grades')->name('school.grades.')->middleware('feature:gradebook')->group(function () {
             Route::get('/',          [SchoolGradeController::class, 'index'])->name('index');
             Route::get('/enter',     [SchoolGradeController::class, 'enter'])->name('enter');
             Route::post('/save',     [SchoolGradeController::class, 'save'])->name('save');
@@ -262,8 +263,9 @@ Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->
 Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school')->group(function () {
         // CSV Student Import — registered before the students resource,
         // otherwise GET students/{student} captures "import" as a student id.
-        // PRD §08: CSV import limited to 3 requests/hour.
-        Route::prefix('students/import')->name('school.students.import.')->group(function () {
+        // PRD §08: CSV import limited to 3 requests/hour. Gated on the
+        // 'csv_import' module (Standard plan and above).
+        Route::prefix('students/import')->name('school.students.import.')->middleware('feature:csv_import')->group(function () {
             Route::get('/',         [SchoolStudentImportController::class, 'create'])->name('form');
             Route::post('/',        [SchoolStudentImportController::class, 'preview'])->name('preview')->middleware('throttle:csv-import');
             Route::post('/confirm', [SchoolStudentImportController::class, 'confirm'])->name('confirm')->middleware('throttle:csv-import');
@@ -277,10 +279,13 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.staff');
 
-        // Report Cards (web-viewable, print-friendly — no server-side PDF)
-        Route::get('/report-cards',           [SchoolReportCardController::class, 'index'])->name('school.report-cards.index');
-        Route::get('/report-cards/export',    [SchoolReportCardController::class, 'exportGradebook'])->name('school.report-cards.export');
-        Route::get('/report-cards/{student}', [SchoolReportCardController::class, 'show'])->name('school.report-cards.show');
+        // Report Cards (web-viewable, print-friendly — no server-side PDF).
+        // Gated on the 'report_cards' module of the school's package.
+        Route::middleware('feature:report_cards')->group(function () {
+            Route::get('/report-cards',           [SchoolReportCardController::class, 'index'])->name('school.report-cards.index');
+            Route::get('/report-cards/export',    [SchoolReportCardController::class, 'exportGradebook'])->name('school.report-cards.export');
+            Route::get('/report-cards/{student}', [SchoolReportCardController::class, 'show'])->name('school.report-cards.show');
+        });
 
         // Guardians (nested under a student)
         Route::get('/guardians/search', [SchoolGuardianController::class, 'search'])->name('school.guardians.search');

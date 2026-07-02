@@ -32,6 +32,16 @@ class HandleInertiaRequests extends Middleware
                 'accent_color' => $request->user()->school->accent_color,
                 'plan_tier'    => $request->user()->school->plan_tier,
             ] : null,
+            // Feature-module flags for the school panel (sidebar hiding is
+            // UX; the 'feature:*' route middleware is the enforcement). Only
+            // the keys the frontend actually branches on — resolved through
+            // School::hasFeature() which caches per school+key.
+            'features' => $request->user()?->school ? [
+                'gradebook'    => $request->user()->school->hasFeature('gradebook'),
+                'report_cards' => $request->user()->school->hasFeature('report_cards'),
+                'csv_import'   => $request->user()->school->hasFeature('csv_import'),
+                'timetable'    => $request->user()->school->hasFeature('timetable'),
+            ] : null,
             // Flat, top-level accent colour. Kept SEPARATE from `school` on
             // purpose: a page that returns its own `school` prop (e.g. the
             // dashboard, which carries page-specific fields) shadows the shared
