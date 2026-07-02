@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role'         => \App\Http\Middleware\RoleMiddleware::class,
             'school.scope' => \App\Http\Middleware\SchoolScope::class,
+            'feature'      => \App\Http\Middleware\EnsureFeature::class,
         ]);
 
         // PRD §10: strict CSP + security headers on all web responses.
