@@ -71,3 +71,31 @@ lib/
    exceeding it forces a full password sign-in).
 5. Signing out wipes the local cache (shared-device safety) — the app warns if
    unsynced attendance would be lost.
+
+## Troubleshooting (Windows)
+
+**`cd mobile` says the path doesn't exist** — your checkout is older than the
+app; run `git pull origin main` in the repo root first. If you already ran
+`flutter create .` in the repo ROOT by accident, delete the scaffold it made
+there (android, ios, lib, linux, macos, windows, web, test, build, .dart_tool,
+.idea, .metadata, .flutter-plugins-dependencies, pubspec.yaml, pubspec.lock,
+eduid*.iml — root copies only) before pulling.
+
+**`[CXX1101] NDK … did not have a source.properties file`** — a half-downloaded
+NDK (flaky connection). Delete the folder it names, e.g.
+`C:\Users\<you>\AppData\Local\Android\Sdk\ndk\28.2.13676358`, then build
+again on a stable connection and Gradle re-downloads it. Alternatively install
+"NDK (Side by side)" from Android Studio → SDK Manager → SDK Tools.
+
+**Maven/Gradle `Could not GET/HEAD …repo.maven.apache.org`** — network dropped
+mid-build; just re-run `flutter build apk` once connectivity is stable (Gradle
+resumes from its cache).
+
+**On Windows use `--platforms android`** (iOS builds need a Mac):
+```powershell
+flutter create . --org com.arkeon --project-name eduid_teacher --platforms android
+```
+
+**Chrome/web target is not supported** — the app uses the camera scanner,
+sqflite and secure storage, which are built for Android/iOS. Always test on a
+real phone or Android emulator.
