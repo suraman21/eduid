@@ -18,6 +18,7 @@ class Guardian extends Model
         'phone',
         'phone_alt',
         'email',
+        'telegram_chat_id',
         'relationship',
     ];
 

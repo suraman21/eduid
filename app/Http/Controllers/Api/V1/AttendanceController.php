@@ -86,6 +86,24 @@ class AttendanceController extends BaseApiController
             $results[] = $this->syncOneSession($session);
         }
 
+        // Absence alerts (Telegram) — best effort AFTER the sessions landed;
+        // alert failures must never fail the sync response.
+        try {
+            $alertService = app(\App\Services\AlertService::class);
+            foreach ($results as $result) {
+                if (in_array($result['status'] ?? '', ['created', 'merged'], true)
+                    && ! empty($result['session_id'])
+                ) {
+                    $saved = AttendanceSession::find($result['session_id']);
+                    if ($saved) {
+                        $alertService->attendanceSaved($saved);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Alert dispatch failed (sync)', ['error' => $e->getMessage()]);
+        }
+
         return response()->json([
             'synced'  => collect($results)->whereIn('status', ['created', 'merged'])->count(),
             'skipped' => collect($results)->where('status', 'duplicate')->count(),

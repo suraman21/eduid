@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\GradeController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\ScheduleController;
+use App\Http\Controllers\Api\V1\TelegramWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,11 @@ Route::prefix('v1')->group(function () {
 
     // Authentication Login
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.login');
+
+    // Telegram bot webhook (guardian linking). Public by necessity —
+    // authenticity is enforced inside via the setWebhook secret header.
+    Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
+        ->middleware('throttle:mobile')->name('api.telegram.webhook');
 
 });
 

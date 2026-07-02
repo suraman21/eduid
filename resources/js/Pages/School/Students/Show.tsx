@@ -3,7 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowLeft, Edit2, CreditCard, ShieldCheck, ShieldOff,
     User, Phone, Mail, Calendar, Droplets, Activity, BookOpen,
-    Plus, Trash2, Star, Smartphone,
+    Plus, Trash2, Star, Smartphone, Send,
 } from 'lucide-react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import type { PageProps } from '@/types';
@@ -55,6 +55,8 @@ function StatusBadge({ status }: { status: string }) {
 interface Guardian {
     app_access: 'active' | 'revoked' | null;
     account_email: string | null;
+    telegram_linked: boolean;
+    telegram_link: string | null;
     id: number;
     full_name: string;
     phone: string | null;
@@ -91,6 +93,7 @@ interface Props {
     student: StudentData;
     is_admin: boolean;
     parent_app: boolean;
+    alerts_on: boolean;
 }
 
 const RELATIONSHIPS = ['father', 'mother', 'guardian', 'sibling', 'other'];
@@ -204,7 +207,7 @@ function AddGuardianForm({ studentId, accent }: { studentId: number; accent: str
 }
 
 /* ── Main page ───────────────────────────────────────────────── */
-export default function Show({ student, is_admin, parent_app }: Props) {
+export default function Show({ student, is_admin, parent_app, alerts_on }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
 
@@ -226,6 +229,15 @@ export default function Show({ student, is_admin, parent_app }: Props) {
     function revokeAppAccess(g: Guardian) {
         if (!confirm(`Revoke ${g.full_name}'s parent app access?`)) return;
         router.delete(`/school/guardians/${g.id}/account`, { preserveScroll: true });
+    }
+
+    function copyTelegramLink(g: Guardian) {
+        if (!g.telegram_link) {
+            alert('The Telegram bot is not configured yet — contact Arkeon support.');
+            return;
+        }
+        navigator.clipboard?.writeText(g.telegram_link);
+        alert(`Personal Telegram link copied for ${g.full_name} — share it via any channel.\n\nWhen they open it and tap START, absence alerts switch on automatically.`);
     }
 
     function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
@@ -385,6 +397,21 @@ export default function Show({ student, is_admin, parent_app }: Props) {
                                                 )}
                                             </div>
                                         </div>
+                                        {is_admin && alerts_on && (
+                                            <div className="flex-shrink-0">
+                                                {g.telegram_linked ? (
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-sky-100 text-sky-700">
+                                                        <Send className="w-3 h-3" /> Alerts on
+                                                    </span>
+                                                ) : (
+                                                    <button onClick={() => copyTelegramLink(g)}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-xl border border-sky-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 transition"
+                                                        title="Copy this guardian's personal Telegram link">
+                                                        <Send className="w-3 h-3" /> Telegram link
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                         {is_admin && parent_app && (
                                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                                 {g.app_access === 'active' ? (

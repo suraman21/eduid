@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    // Telegram absence alerts ('alerts' module). One platform bot serves all
+    // schools. webhook_secret is echoed back by Telegram on every webhook
+    // call (registered via setWebhook) and verified before processing.
+    'telegram' => [
+        'bot_token'      => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username'   => env('TELEGRAM_BOT_USERNAME'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+    ],
+
 ];

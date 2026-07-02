@@ -29,6 +29,7 @@ class FeatureSeeder extends Seeder
             ['key' => 'year_transition',        'label' => 'Year Transition Wizard',   'category' => 'academic',   'is_default_enabled' => false],
             ['key' => 'custom_card_templates',  'label' => 'Custom Card Templates',    'category' => 'cards',      'is_default_enabled' => false],
             ['key' => 'analytics',              'label' => 'Analytics Dashboard',      'category' => 'academic',   'is_default_enabled' => false],
+            ['key' => 'alerts',                 'label' => 'Telegram Absence Alerts',  'category' => 'parent',     'is_default_enabled' => false],
         ];
 
         // Keys that already existed BEFORE this run — used below so that
@@ -67,6 +68,7 @@ class FeatureSeeder extends Seeder
             'parent_app',
             'supplementary_exams',
             'analytics',
+            'alerts',
         ];
 
         $planFeatures = [];

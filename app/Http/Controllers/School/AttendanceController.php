@@ -133,6 +133,14 @@ class AttendanceController extends BaseSchoolController
 
         $session = $this->saveAttendance($validated);
 
+        // Absence alerts (Telegram) — best effort AFTER the save committed;
+        // an alert failure must never fail the attendance itself.
+        try {
+            app(\App\Services\AlertService::class)->attendanceSaved($session);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Alert dispatch failed', ['error' => $e->getMessage()]);
+        }
+
         AuditLog::log('attendance.recorded', 'attendance_sessions', $session->id, null, [
             'class_id'     => $session->class_id,
             'session_date' => $session->session_date->toDateString(),
