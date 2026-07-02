@@ -6,6 +6,8 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/pin_screen.dart';
 import 'services/auth_service.dart';
+import 'services/sync_engine.dart';
+import 'ui/glass.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,8 +16,27 @@ Future<void> main() async {
   final auth = AuthService();
   await auth.restore();
 
+  // Automatic sync: runs whenever the user is signed in and unlocked; never a
+  // manual chore. Reacts live to sign-in / unlock / sign-out.
+  void driveSync() {
+    if (auth.signedIn && !auth.locked) {
+      SyncEngine.instance.start();
+    } else {
+      SyncEngine.instance.stop();
+    }
+  }
+
+  auth.addListener(driveSync);
+  driveSync();
+
   runApp(
-    ChangeNotifierProvider.value(value: auth, child: const EduIdTeacherApp()),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider.value(value: SyncEngine.instance),
+      ],
+      child: const EduIdTeacherApp(),
+    ),
   );
 }
 
@@ -29,32 +50,19 @@ class EduIdTeacherApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Palette.indigo,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: Colors.transparent,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF0F172A),
+          backgroundColor: Colors.transparent,
+          foregroundColor: Palette.textHi,
           elevation: 0,
           centerTitle: false,
         ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-        ),
+        splashFactory: InkSparkle.splashFactory,
       ),
       home: const _Gate(),
     );

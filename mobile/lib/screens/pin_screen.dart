@@ -3,12 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../core/api_client.dart';
 import '../services/auth_service.dart';
+import '../ui/glass.dart';
 
 enum PinMode { unlock, setup }
 
-/// PIN pad — quick unlock on app open (PinMode.unlock, works offline) or
-/// first-time PIN registration from Settings (PinMode.setup, asks for the
-/// account password because the server requires re-auth to set a PIN).
+/// Frosted PIN pad — quick unlock (works offline) or first-time setup.
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key, required this.mode});
 
@@ -47,8 +46,8 @@ class _PinScreenState extends State<PinScreen> {
           await auth.setPin(_pin, _password.text);
           if (mounted) {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('PIN set — quick unlock is on.')));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('PIN set — quick unlock is on.')));
             return;
           }
         }
@@ -76,96 +75,168 @@ class _PinScreenState extends State<PinScreen> {
     final auth = context.watch<AuthService>();
     final isUnlock = widget.mode == PinMode.unlock;
 
-    return Scaffold(
-      appBar: isUnlock ? null : AppBar(title: const Text('Set quick-unlock PIN')),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Column(
-                children: [
-                  if (isUnlock) ...[
-                    const Icon(Icons.lock_rounded, size: 44, color: Color(0xFF6366F1)),
-                    const SizedBox(height: 10),
-                    Text('Welcome back, ${auth.user?['name'] ?? ''}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                    Text('Enter your PIN', style: TextStyle(color: Colors.grey.shade600)),
-                  ] else ...[
-                    Text('Choose a 4-digit PIN for fast, offline unlock.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade700)),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _password,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                          labelText: 'Account password (to confirm)',
-                          prefixIcon: Icon(Icons.lock_outline)),
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 380),
+                child: Column(
+                  children: [
+                    if (!isUnlock)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GlassIconButton(
+                            icon: Icons.arrow_back_rounded,
+                            onTap: () => Navigator.of(context).pop()),
+                      ),
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        gradient: Palette.accentGradient,
+                        borderRadius: BorderRadius.circular(19),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Palette.violet.withOpacity(0.5),
+                              blurRadius: 24),
+                        ],
+                      ),
+                      child: Icon(
+                          isUnlock
+                              ? Icons.lock_rounded
+                              : Icons.pin_rounded,
+                          size: 26,
+                          color: Colors.white),
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  // PIN dots
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(4, (i) {
-                      final filled = i < _pin.length;
-                      return Container(
-                        width: 16, height: 16,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: filled ? const Color(0xFF6366F1) : Colors.transparent,
-                          border: Border.all(color: const Color(0xFF6366F1), width: 2),
-                        ),
-                      );
-                    }),
-                  ),
-                  if (_error != null) ...[
                     const SizedBox(height: 14),
-                    Text(_error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13)),
-                  ],
-                  const SizedBox(height: 24),
-                  // Keypad
-                  for (final row in const [
-                    ['1', '2', '3'],
-                    ['4', '5', '6'],
-                    ['7', '8', '9'],
-                    ['', '0', '<'],
-                  ])
+                    Text(
+                      isUnlock
+                          ? 'Welcome back, ${auth.user?['name'] ?? ''}'
+                          : 'Set quick-unlock PIN',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          color: Palette.textHi),
+                    ),
+                    Text(
+                      isUnlock
+                          ? 'Enter your PIN — works offline too'
+                          : 'Choose 4 digits for fast, offline unlock',
+                      style:
+                          const TextStyle(color: Palette.textLo, fontSize: 13),
+                    ),
+                    if (!isUnlock) ...[
+                      const SizedBox(height: 16),
+                      GlassField(
+                        controller: _password,
+                        label: 'Account password (to confirm)',
+                        icon: Icons.lock_outline_rounded,
+                        obscure: true,
+                      ),
+                    ],
+                    const SizedBox(height: 26),
+                    // PIN dots
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: row.map((k) {
-                        if (k.isEmpty) return const SizedBox(width: 88, height: 72);
-                        return SizedBox(
-                          width: 88, height: 72,
-                          child: TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => k == '<'
-                                    ? setState(() => _pin =
-                                        _pin.isEmpty ? '' : _pin.substring(0, _pin.length - 1))
-                                    : _tap(k),
-                            child: k == '<'
-                                ? const Icon(Icons.backspace_outlined, size: 22)
-                                : Text(k,
-                                    style: const TextStyle(
-                                        fontSize: 24, fontWeight: FontWeight.w600)),
+                      children: List.generate(4, (i) {
+                        final filled = i < _pin.length;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          width: 15,
+                          height: 15,
+                          margin: const EdgeInsets.symmetric(horizontal: 9),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: filled ? Palette.violet : Colors.transparent,
+                            border: Border.all(
+                                color: filled
+                                    ? Palette.violet
+                                    : Palette.textLo,
+                                width: 1.6),
+                            boxShadow: filled
+                                ? [
+                                    BoxShadow(
+                                        color:
+                                            Palette.violet.withOpacity(0.6),
+                                        blurRadius: 10)
+                                  ]
+                                : null,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ),
-                  if (isUnlock) ...[
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _busy ? null : () => auth.signOut(),
-                      child: const Text('Sign in with password instead'),
-                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 14),
+                      Text(_error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Palette.rose, fontSize: 12.5)),
+                    ],
+                    const SizedBox(height: 24),
+                    // Keypad
+                    for (final row in const [
+                      ['1', '2', '3'],
+                      ['4', '5', '6'],
+                      ['7', '8', '9'],
+                      ['', '0', '<'],
+                    ])
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: row.map((k) {
+                          if (k.isEmpty) {
+                            return const SizedBox(width: 84, height: 68);
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.all(5),
+                            child: GestureDetector(
+                              onTap: _busy
+                                  ? null
+                                  : () => k == '<'
+                                      ? setState(() => _pin = _pin.isEmpty
+                                          ? ''
+                                          : _pin.substring(
+                                              0, _pin.length - 1))
+                                      : _tap(k),
+                              child: Container(
+                                width: 74,
+                                height: 58,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color:
+                                          Colors.white.withOpacity(0.10)),
+                                ),
+                                child: k == '<'
+                                    ? const Icon(Icons.backspace_rounded,
+                                        size: 20, color: Palette.textMid)
+                                    : Text(k,
+                                        style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w700,
+                                            color: Palette.textHi)),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    if (isUnlock) ...[
+                      const SizedBox(height: 14),
+                      TextButton(
+                        onPressed: _busy ? null : () => auth.signOut(),
+                        child: const Text('Sign in with password instead',
+                            style: TextStyle(
+                                color: Palette.textLo, fontSize: 13)),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

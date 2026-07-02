@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../models/models.dart';
 import '../services/attendance_service.dart';
+import '../ui/glass.dart';
 
 /// Camera QR scanner. Verification is FULLY OFFLINE: the scanned payload
 /// ("UID|hmac_token") is matched against the cached roster's uid + qr_token —
@@ -45,68 +48,106 @@ class _ScannerScreenState extends State<ScannerScreen> {
       return;
     }
 
-    setState(() => _rejected = 'Invalid card, or the student is not in this class.');
+    setState(
+        () => _rejected = 'Invalid card, or the student is not in this class.');
     await Future<void>.delayed(const Duration(milliseconds: 1200));
     if (mounted) setState(() => _rejected = null);
     _handling = false;
   }
 
+  Widget _glassPill({required Widget child, Color? tint}) => ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: (tint ?? Colors.white).withOpacity(0.14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: (tint ?? Colors.white).withOpacity(0.25)),
+            ),
+            child: child,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final frameColor = _rejected == null ? Palette.cyan : Palette.rose;
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: const Text('Scan student ID'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.flash_on_rounded),
-            onPressed: () => _controller.toggleTorch(),
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           MobileScanner(controller: _controller, onDetect: _onDetect),
-          // Aiming frame
-          Center(
-            child: Container(
-              width: 240, height: 240,
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: _rejected == null
-                      ? const Color(0xFF6366F1)
-                      : const Color(0xFFDC2626),
-                  width: 3,
-                ),
-                borderRadius: BorderRadius.circular(20),
+
+          // Top bar
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
+                children: [
+                  GlassIconButton(
+                      icon: Icons.arrow_back_rounded,
+                      color: Colors.white,
+                      onTap: () => Navigator.of(context).pop()),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Scan student ID',
+                        style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                  ),
+                  GlassIconButton(
+                      icon: Icons.flash_on_rounded,
+                      color: Palette.amber,
+                      tooltip: 'Torch',
+                      onTap: () => _controller.toggleTorch()),
+                ],
               ),
             ),
           ),
-          if (_rejected != null)
-            Positioned(
-              left: 24, right: 24, bottom: 48,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(_rejected!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white)),
-              ),
-            )
-          else
-            const Positioned(
-              left: 24, right: 24, bottom: 48,
-              child: Text(
-                'Point the camera at the QR on the student ID card.\nVerification works offline.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+
+          // Glowing aiming frame
+          Center(
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                border: Border.all(color: frameColor, width: 2.6),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                      color: frameColor.withOpacity(0.4), blurRadius: 30),
+                ],
               ),
             ),
+          ),
+
+          // Bottom hint / rejection
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 44,
+            child: _rejected != null
+                ? _glassPill(
+                    tint: Palette.rose,
+                    child: Text(_rejected!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13)),
+                  )
+                : _glassPill(
+                    child: const Text(
+                      'Point the camera at the QR on the student ID card.\nVerification works offline.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 12.5),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
