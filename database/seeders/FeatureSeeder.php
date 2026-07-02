@@ -28,7 +28,13 @@ class FeatureSeeder extends Seeder
             ['key' => 'supplementary_exams',    'label' => 'Supplementary Exams',      'category' => 'academic',   'is_default_enabled' => false],
             ['key' => 'year_transition',        'label' => 'Year Transition Wizard',   'category' => 'academic',   'is_default_enabled' => false],
             ['key' => 'custom_card_templates',  'label' => 'Custom Card Templates',    'category' => 'cards',      'is_default_enabled' => false],
+            ['key' => 'analytics',              'label' => 'Analytics Dashboard',      'category' => 'academic',   'is_default_enabled' => false],
         ];
+
+        // Keys that already existed BEFORE this run — used below so that
+        // defaults for BRAND-NEW features can seed additively on existing
+        // installs without touching the admin's live plan matrix.
+        $preExistingKeys = DB::table('feature_registry')->pluck('key')->flip();
 
         foreach ($features as $feature) {
             DB::table('feature_registry')->updateOrInsert(
@@ -60,6 +66,7 @@ class FeatureSeeder extends Seeder
         $premiumExtras = [
             'parent_app',
             'supplementary_exams',
+            'analytics',
         ];
 
         $planFeatures = [];
@@ -87,6 +94,19 @@ class FeatureSeeder extends Seeder
         if (DB::table('plan_features')->count() === 0) {
             foreach ($planFeatures as $pf) {
                 DB::table('plan_features')->insert(array_merge($pf, ['created_at' => $now, 'updated_at' => $now]));
+            }
+        } else {
+            // Additive path for existing installs: when a release introduces
+            // a NEW feature key, its default tier rows seed once (the key was
+            // absent from the registry until this run). Rows for features the
+            // admin already curates are never touched.
+            foreach ($planFeatures as $pf) {
+                if (! $preExistingKeys->has($pf['feature_key'])) {
+                    DB::table('plan_features')->updateOrInsert(
+                        $pf,
+                        array_merge($pf, ['created_at' => $now, 'updated_at' => $now])
+                    );
+                }
             }
         }
 

@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
                 'csv_import'      => $request->user()->school->hasFeature('csv_import'),
                 'timetable'       => $request->user()->school->hasFeature('timetable'),
                 'year_transition' => $request->user()->school->hasFeature('year_transition'),
+                'analytics'       => $request->user()->school->hasFeature('analytics'),
             ] : null,
             // Flat, top-level accent colour. Kept SEPARATE from `school` on
             // purpose: a page that returns its own `school` prop (e.g. the
