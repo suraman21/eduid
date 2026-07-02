@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
-    UserCircle, CreditCard, Camera, FileText,
+    UserCircle, CreditCard, Camera, FileText, CalendarRange,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
     { label: 'Subjects',       href: '/school/subjects',        icon: BookOpen,        inertia: true, roles: ['school_admin'] },
     { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'] },
     { label: 'Attendance',     href: '/school/attendance',      icon: ClipboardCheck,  inertia: true },
+    { label: 'Timetable',      href: '/school/timetable',       icon: CalendarRange,   inertia: true, roles: ['school_admin'], feature: 'timetable' },
     { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true, feature: 'gradebook' },
     { label: 'Report Cards',   href: '/school/report-cards',    icon: FileText,        inertia: true, roles: ['school_admin'], feature: 'report_cards' },
     { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'] },
