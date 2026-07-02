@@ -21,6 +21,7 @@ use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
+use App\Http\Controllers\School\YearTransitionController as SchoolYearTransitionController;
 use App\Http\Controllers\School\StaffController as SchoolStaffController;
 use App\Http\Controllers\School\AttendanceController as SchoolAttendanceController;
 use App\Http\Controllers\School\GradeController as SchoolGradeController;
@@ -276,6 +277,12 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
         Route::resource('/subjects', SchoolSubjectController::class)
             ->only(['index', 'store', 'update'])
             ->names('school.subjects');
+
+        // Academic Year Promotion wizard — 'year_transition' module.
+        Route::middleware('feature:year_transition')->group(function () {
+            Route::get('/year-transition',  [SchoolYearTransitionController::class, 'index'])->name('school.year-transition.index');
+            Route::post('/year-transition', [SchoolYearTransitionController::class, 'store'])->name('school.year-transition.store');
+        });
 
         // Timetable builder (periods + weekly grid) — 'timetable' module.
         Route::prefix('timetable')->name('school.timetable.')->middleware('feature:timetable')->group(function () {

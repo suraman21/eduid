@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
-    UserCircle, CreditCard, Camera, FileText, CalendarRange,
+    UserCircle, CreditCard, Camera, FileText, CalendarRange, Rocket,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
     { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'] },
     { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
     { label: 'Import',         href: '/school/students/import', icon: Upload,                         roles: ['school_admin'], feature: 'csv_import' },
+    { label: 'New Year',       href: '/school/year-transition', icon: Rocket,          inertia: true, roles: ['school_admin'], feature: 'year_transition' },
     { label: 'My Profile',     href: '/school/profile',         icon: UserCircle,      inertia: true },
 ];
 
