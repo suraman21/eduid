@@ -61,6 +61,61 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error'   => $request->session()->get('error'),
             ],
+            // Onboarding tour state + LIVE progress signals (school users
+            // only, and only while onboarding is unfinished — zero query
+            // overhead once complete).
+            'onboarding' => $this->onboarding($request),
         ]);
+    }
+
+    /**
+     * Onboarding payload for the school portal: persisted UI flags plus
+     * cheap, tenant-scoped existence checks that drive the gamified
+     * checklist. Returns null for super admins and guests.
+     */
+    private function onboarding(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user
+            || ! in_array($user->role, ['school_admin', 'teacher', 'staff'], true)
+            || ! $user->school_id) {
+            return null;
+        }
+
+        $state = $user->onboarding_state ?? [];
+
+        return [
+            'tour_seen'   => (bool) ($state['tour_seen'] ?? false),
+            'dismissed'   => (bool) ($state['dismissed'] ?? false),
+            'finished_at' => $state['finished_at'] ?? null,
+            // Skip the queries entirely once the user has finished.
+            'progress'    => ! empty($state['finished_at'])
+                ? null
+                : $this->onboardingProgress($user),
+        ];
+    }
+
+    /**
+     * Real-data completion signals. Every query is auto-scoped to the
+     * user's school by the BelongsToSchool global scope and hits an index.
+     */
+    private function onboardingProgress($user): array
+    {
+        if ($user->role === 'teacher') {
+            return [
+                'has_attendance' => \App\Models\AttendanceSession::where('teacher_id', $user->id)->exists(),
+                'has_grades'     => \App\Models\StudentGrade::where('entered_by', $user->id)->exists(),
+            ];
+        }
+
+        return [
+            'has_classes'    => \App\Models\SchoolClass::exists(),
+            'has_students'   => \App\Models\Student::exists(),
+            'has_teacher'    => \App\Models\User::where('role', 'teacher')->exists(),
+            'has_attendance' => \App\Models\AttendanceSession::exists(),
+            'has_grades'     => \App\Models\StudentGrade::exists(),
+            'has_order'      => \App\Models\CardOrder::exists(),
+        ];
     }
 }

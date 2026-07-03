@@ -8,25 +8,26 @@ import {
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
+import Onboarding from '@/onboarding/Onboarding';
 
-interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; roles?: string[]; feature?: string; }
+interface NavItem { label: string; href: string; icon: React.ElementType; inertia?: boolean; roles?: string[]; feature?: string; tour?: string; }
 
 // Sidebar is ROLE-AWARE: teachers only see what teachers can do (their
 // dashboard, attendance, grades, profile) — the registry, staff management,
 // orders and photo tooling are school-admin territory. This mirrors the
 // server-side route guards; hiding here is UX, the routes enforce.
 const navItems: NavItem[] = [
-    { label: 'Dashboard',      href: '/school/dashboard',       icon: LayoutDashboard, inertia: true },
-    { label: 'Students',       href: '/school/students',        icon: Users,           inertia: true, roles: ['school_admin', 'staff'] },
-    { label: 'Classes',        href: '/school/classes',         icon: GraduationCap,   inertia: true, roles: ['school_admin', 'staff'] },
+    { label: 'Dashboard',      href: '/school/dashboard',       icon: LayoutDashboard, inertia: true, tour: 'nav-dashboard' },
+    { label: 'Students',       href: '/school/students',        icon: Users,           inertia: true, roles: ['school_admin', 'staff'], tour: 'nav-students' },
+    { label: 'Classes',        href: '/school/classes',         icon: GraduationCap,   inertia: true, roles: ['school_admin', 'staff'], tour: 'nav-classes' },
     { label: 'Subjects',       href: '/school/subjects',        icon: BookOpen,        inertia: true, roles: ['school_admin'] },
-    { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'] },
-    { label: 'Attendance',     href: '/school/attendance',      icon: ClipboardCheck,  inertia: true },
+    { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'], tour: 'nav-staff' },
+    { label: 'Attendance',     href: '/school/attendance',      icon: ClipboardCheck,  inertia: true, tour: 'nav-attendance' },
     { label: 'Timetable',      href: '/school/timetable',       icon: CalendarRange,   inertia: true, roles: ['school_admin'], feature: 'timetable' },
-    { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true, feature: 'gradebook' },
+    { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true, feature: 'gradebook', tour: 'nav-grades' },
     { label: 'Report Cards',   href: '/school/report-cards',    icon: FileText,        inertia: true, roles: ['school_admin'], feature: 'report_cards' },
     { label: 'Analytics',      href: '/school/analytics',       icon: BarChart3,       inertia: true, roles: ['school_admin'], feature: 'analytics' },
-    { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'] },
+    { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'], tour: 'nav-cardorders' },
     { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
     { label: 'Import',         href: '/school/students/import', icon: Upload,                         roles: ['school_admin'], feature: 'csv_import' },
     { label: 'New Year',       href: '/school/year-transition', icon: Rocket,          inertia: true, roles: ['school_admin'], feature: 'year_transition' },
@@ -137,6 +138,7 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
                     const common = {
                         className: cls,
                         style,
+                        'data-tour': item.tour,
                         onClick: onNavigate,
                         onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
                             if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.10)';
@@ -261,6 +263,9 @@ export default function SchoolLayout({ children }: { children: React.ReactNode }
 
                 <main className="flex-1 px-1 pb-8">{children}</main>
             </div>
+
+            {/* First-run guided tour + gamified Getting Started checklist. */}
+            <Onboarding />
         </div>
     );
 }

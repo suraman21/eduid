@@ -32,6 +32,7 @@ class User extends Authenticatable
         'pin_hash',
         'pin_failed_count',
         'pin_locked_until',
+        'onboarding_state',
     ];
 
     protected $hidden = [
@@ -55,6 +56,7 @@ class User extends Authenticatable
             'can_login'                   => 'boolean',
             'pin_failed_count'            => 'integer',
             'pin_locked_until'            => 'datetime',
+            'onboarding_state'            => 'array',
         ];
     }
 

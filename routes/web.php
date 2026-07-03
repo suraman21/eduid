@@ -33,6 +33,7 @@ use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
 use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -228,6 +229,9 @@ Route::middleware(['auth', 'role:school_admin,teacher,staff', 'school.scope'])->
         Route::get('/profile',          [ProfileController::class, 'show'])->name('school.profile.show');
         Route::patch('/profile',        [ProfileController::class, 'update'])->name('school.profile.update');
         Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('school.profile.password');
+
+        // Onboarding tour UI state (welcome coach-marks + checklist).
+        Route::patch('/onboarding', [OnboardingController::class, 'update'])->name('school.onboarding.update');
 
         // PRD §10: student photos are served through this authenticated,
         // tenant-scoped route — never via direct /storage URLs. Teachers need
