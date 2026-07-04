@@ -309,6 +309,8 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
             Route::delete('/periods/{period}', [SchoolTimetableController::class, 'destroyPeriod'])->name('periods.destroy');
             Route::post('/entries',            [SchoolTimetableController::class, 'saveEntry'])->name('entries.save');
             Route::delete('/entries',          [SchoolTimetableController::class, 'clearEntry'])->name('entries.clear');
+            Route::post('/makeup',             [SchoolTimetableController::class, 'storeMakeup'])->name('makeup.store');
+            Route::delete('/makeup/{makeup}',  [SchoolTimetableController::class, 'destroyMakeup'])->name('makeup.destroy');
         });
         Route::resource('/staff', SchoolStaffController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])

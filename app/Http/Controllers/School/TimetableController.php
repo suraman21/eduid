@@ -4,11 +4,13 @@ namespace App\Http\Controllers\School;
 
 use App\Models\AuditLog;
 use App\Models\ClassSubject;
+use App\Models\MakeupClass;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\TimetableEntry;
 use App\Models\TimetablePeriod;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -73,7 +75,104 @@ class TimetableController extends BaseSchoolController
             'default_teachers' => $classSubjects
                 ->filter(fn ($cs) => $cs->teacher_id)
                 ->mapWithKeys(fn ($cs) => [$cs->subject_id => $cs->teacher_id]),
+            // Upcoming one-off makeup / extra classes (today onward), so the
+            // admin can see and manage them alongside the recurring grid.
+            'makeup_classes' => MakeupClass::with(['schoolClass:id,grade,section', 'subject:id,name', 'teacher:id,name'])
+                ->whereDate('date', '>=', today())
+                ->orderBy('date')->orderBy('start_time')
+                ->get()
+                ->map(fn ($m) => [
+                    'id'         => $m->id,
+                    'date'       => $m->date->toDateString(),
+                    'start_time' => substr($m->start_time, 0, 5),
+                    'end_time'   => substr($m->end_time, 0, 5),
+                    'class_id'   => $m->class_id,
+                    'class_name' => $m->schoolClass?->display_name,
+                    'subject_id' => $m->subject_id,
+                    'subject'    => $m->subject?->name,
+                    'teacher_id' => $m->teacher_id,
+                    'teacher'    => $m->teacher?->name,
+                    'room'       => $m->room,
+                    'reason'     => $m->reason,
+                ])->values(),
         ]);
+    }
+
+    // ── Makeup / extra classes (one-off, date-specific) ──────────
+
+    public function storeMakeup(Request $request)
+    {
+        $this->requireAdmin();
+        $this->requireWritableSubscription();
+
+        $validated = $request->validate([
+            'class_id'   => ['required', Rule::exists('classes', 'id')->where('school_id', $this->schoolId())],
+            'date'       => 'required|date|after_or_equal:today',
+            'start_time' => 'required|date_format:H:i',
+            'end_time'   => 'required|date_format:H:i|after:start_time',
+            'subject_id' => ['nullable', Rule::exists('subjects', 'id')->where('school_id', $this->schoolId())],
+            'teacher_id' => ['nullable', Rule::exists('users', 'id')->where('school_id', $this->schoolId())->where('role', 'teacher')],
+            'room'       => 'nullable|string|max:50',
+            'reason'     => 'nullable|string|max:255',
+        ]);
+
+        // Don't put a teacher in two places at once on the SAME date: check both
+        // other makeup classes and the recurring grid for that weekday.
+        if (! empty($validated['teacher_id'])) {
+            $conflict = $this->teacherBusyAt(
+                (int) $validated['teacher_id'], $validated['date'],
+                $validated['start_time'], $validated['end_time']
+            );
+            if ($conflict) {
+                return back()->with('error', $conflict);
+            }
+        }
+
+        MakeupClass::create($validated + [
+            'school_id'  => $this->schoolId(),
+            'created_by' => auth()->id(),
+        ]);
+
+        AuditLog::log('timetable.makeup_created', 'makeup_classes', null, null, $validated);
+
+        return back()->with('success', 'Makeup class scheduled.');
+    }
+
+    public function destroyMakeup(MakeupClass $makeup)
+    {
+        $this->requireAdmin();
+
+        $makeup->delete();
+
+        return back()->with('success', 'Makeup class removed.');
+    }
+
+    /**
+     * Is the teacher already committed at [start,end) on this date? Returns a
+     * human message if so (recurring lesson or another makeup), else null.
+     */
+    private function teacherBusyAt(int $teacherId, string $date, string $start, string $end): ?string
+    {
+        // 1. Another makeup class that overlaps on the same date.
+        $overlapMakeup = MakeupClass::where('teacher_id', $teacherId)
+            ->whereDate('date', $date)
+            ->where('start_time', '<', $end)
+            ->where('end_time', '>', $start)
+            ->exists();
+        if ($overlapMakeup) {
+            return 'That teacher already has another makeup class overlapping this time.';
+        }
+
+        // 2. A recurring lesson whose period overlaps, on that weekday.
+        $dow = (int) Carbon::parse($date)->dayOfWeekIso;
+        $clash = TimetableEntry::where('teacher_id', $teacherId)
+            ->where('day_of_week', $dow)
+            ->whereHas('period', fn ($q) => $q
+                ->where('start_time', '<', $end)
+                ->where('end_time', '>', $start))
+            ->exists();
+
+        return $clash ? 'That teacher has a regular lesson at this time on that weekday.' : null;
     }
 
     // ── Periods (bell schedule) ──────────────────────────────────

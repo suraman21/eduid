@@ -37,6 +37,15 @@ interface Props {
     teachers: Option[];
     default_teachers: Record<number, number>; // subject_id → teacher_id
     working_days: number[]; // ISO weekday numbers the school operates
+    makeup_classes: Makeup[];
+}
+
+interface Makeup {
+    id: number; date: string; start_time: string; end_time: string;
+    class_id: number; class_name: string | null;
+    subject_id: number | null; subject: string | null;
+    teacher_id: number | null; teacher: string | null;
+    room: string | null; reason: string | null;
 }
 
 const ALL_DAYS = [
@@ -49,7 +58,7 @@ const ALL_DAYS = [
 const inputCls = 'w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 transition bg-white';
 
 export default function Index({
-    classes, selected_class_id, periods, entries, subjects, teachers, default_teachers, working_days,
+    classes, selected_class_id, periods, entries, subjects, teachers, default_teachers, working_days, makeup_classes,
 }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
@@ -73,6 +82,21 @@ export default function Index({
             preserveScroll: true,
             onSuccess: () => setEditingDays(false),
         });
+    }
+
+    /* ── makeup / extra classes ── */
+    const emptyMakeup = { class_id: '', date: '', start_time: '08:00', end_time: '09:00', subject_id: '', teacher_id: '', room: '', reason: '' };
+    const [addingMakeup, setAddingMakeup] = useState(false);
+    const [makeupForm, setMakeupForm] = useState<Record<string, string>>(emptyMakeup);
+    function submitMakeup(e: React.FormEvent) {
+        e.preventDefault();
+        router.post('/school/timetable/makeup', makeupForm, {
+            preserveScroll: true,
+            onSuccess: () => { setAddingMakeup(false); setMakeupForm(emptyMakeup); },
+        });
+    }
+    function deleteMakeup(id: number) {
+        router.delete(`/school/timetable/makeup/${id}`, { preserveScroll: true });
     }
 
     const entryMap = useMemo(() => {
@@ -383,6 +407,75 @@ export default function Index({
                     </div>
                 </Card>
             )}
+
+            {/* Makeup / extra classes (one-off, date-specific) */}
+            <Card className="p-6 mt-6">
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: accent }}>
+                            Makeup / Extra Classes
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                            One-off lessons on a specific date (e.g. covering a holiday) — separate from the weekly grid. Teachers see them on that day.
+                        </p>
+                    </div>
+                    {!addingMakeup && (
+                        <button
+                            onClick={() => { setAddingMakeup(true); setMakeupForm({ ...emptyMakeup, class_id: String(selected_class_id ?? '') }); }}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white"
+                            style={{ background: accent }}
+                        >
+                            <Plus className="w-3.5 h-3.5" /> Add makeup class
+                        </button>
+                    )}
+                </div>
+
+                {addingMakeup && (
+                    <form onSubmit={submitMakeup} className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5 p-4 rounded-2xl bg-slate-50">
+                        <select required value={makeupForm.class_id} onChange={e => setMakeupForm(f => ({ ...f, class_id: e.target.value }))} className={inputCls} style={inputStyle}>
+                            <option value="">Class…</option>
+                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <input required type="date" value={makeupForm.date} onChange={e => setMakeupForm(f => ({ ...f, date: e.target.value }))} className={inputCls} style={inputStyle} />
+                        <input required type="time" value={makeupForm.start_time} onChange={e => setMakeupForm(f => ({ ...f, start_time: e.target.value }))} className={inputCls} style={inputStyle} />
+                        <input required type="time" value={makeupForm.end_time} onChange={e => setMakeupForm(f => ({ ...f, end_time: e.target.value }))} className={inputCls} style={inputStyle} />
+                        <select value={makeupForm.subject_id} onChange={e => { const sid = e.target.value; setMakeupForm(f => ({ ...f, subject_id: sid, teacher_id: default_teachers[Number(sid)] ? String(default_teachers[Number(sid)]) : f.teacher_id })); }} className={inputCls} style={inputStyle}>
+                            <option value="">Subject…</option>
+                            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                        <select value={makeupForm.teacher_id} onChange={e => setMakeupForm(f => ({ ...f, teacher_id: e.target.value }))} className={inputCls} style={inputStyle}>
+                            <option value="">Teacher…</option>
+                            {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                        <input value={makeupForm.room} onChange={e => setMakeupForm(f => ({ ...f, room: e.target.value }))} placeholder="Room" className={inputCls} style={inputStyle} />
+                        <input value={makeupForm.reason} onChange={e => setMakeupForm(f => ({ ...f, reason: e.target.value }))} placeholder="Reason (optional)" className={inputCls} style={inputStyle} />
+                        <div className="col-span-2 md:col-span-4 flex items-center gap-2">
+                            <button type="submit" className="px-3.5 py-2 rounded-xl text-xs font-bold text-white" style={{ background: accent }}>Save</button>
+                            <button type="button" onClick={() => setAddingMakeup(false)} className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+                        </div>
+                    </form>
+                )}
+
+                {makeup_classes.length === 0 ? (
+                    <p className="text-xs text-slate-400">No upcoming makeup classes.</p>
+                ) : (
+                    <div className="space-y-2">
+                        {makeup_classes.map(m => (
+                            <div key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-slate-100 bg-white text-sm">
+                                <div className="min-w-0">
+                                    <span className="font-bold text-slate-800">{m.date}</span>
+                                    <span className="text-slate-500"> · {m.start_time}–{m.end_time} · {m.class_name}</span>
+                                    <span className="text-slate-500">{m.subject ? ` · ${m.subject}` : ''}{m.teacher ? ` · ${m.teacher}` : ''}{m.room ? ` · ${m.room}` : ''}</span>
+                                    {m.reason && <p className="text-[11px] text-slate-400 truncate">{m.reason}</p>}
+                                </div>
+                                <button onClick={() => deleteMakeup(m.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex-shrink-0">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
 
             {/* Cell editor modal */}
             {cell && (

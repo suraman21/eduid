@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Models\MakeupClass;
 use App\Models\TimetableEntry;
 use App\Models\TimetablePeriod;
 
@@ -39,10 +40,29 @@ class ScheduleController extends BaseApiController
             ] : null,
         ]);
 
+        // One-off makeup / extra classes scheduled for THIS date only. Returned
+        // as a separate list because they may fall outside the bell periods.
+        $makeups = MakeupClass::where('teacher_id', $user->id)
+            ->whereDate('date', now()->toDateString())
+            ->with(['schoolClass', 'subject'])
+            ->orderBy('start_time')
+            ->get()
+            ->map(fn ($m) => [
+                'id'           => $m->id,
+                'class_name'   => $m->schoolClass?->display_name,
+                'class_id'     => $m->class_id,
+                'subject_name' => $m->subject?->name,
+                'start_time'   => substr($m->start_time, 0, 5),
+                'end_time'     => substr($m->end_time, 0, 5),
+                'room'         => $m->room,
+                'reason'       => $m->reason,
+            ]);
+
         return response()->json([
-            'day_of_week' => $dayOfWeek,
-            'date'        => now()->toDateString(),
-            'schedule'    => $schedule,
+            'day_of_week'    => $dayOfWeek,
+            'date'           => now()->toDateString(),
+            'schedule'       => $schedule,
+            'makeup_classes' => $makeups,
         ]);
     }
 

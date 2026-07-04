@@ -245,4 +245,80 @@ class TimetableTest extends TestCase
             ->patch('/school/timetable/working-days', ['working_days' => []])
             ->assertSessionHasErrors('working_days');
     }
+
+    // ── Makeup / extra classes ───────────────────────────────────
+
+    public function test_admin_can_schedule_and_remove_a_makeup_class(): void
+    {
+        $date = now()->addDays(3)->toDateString();
+
+        $this->actingAs($this->admin)->post('/school/timetable/makeup', [
+            'class_id' => $this->classA->id, 'date' => $date,
+            'start_time' => '14:00', 'end_time' => '15:00',
+            'subject_id' => $this->english->id, 'teacher_id' => $this->teacher->id,
+            'reason' => 'Makeup for holiday',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseHas('makeup_classes', [
+            'school_id' => $this->school->id, 'class_id' => $this->classA->id,
+            'teacher_id' => $this->teacher->id,
+        ]);
+        $created = \App\Models\MakeupClass::withoutGlobalScope('school')->first();
+        $this->assertSame($date, $created->date->toDateString());
+
+        $id = $created->id;
+        $this->actingAs($this->admin)->delete("/school/timetable/makeup/{$id}")->assertRedirect();
+        $this->assertDatabaseMissing('makeup_classes', ['id' => $id]);
+    }
+
+    public function test_makeup_cannot_be_scheduled_in_the_past(): void
+    {
+        $this->actingAs($this->admin)->post('/school/timetable/makeup', [
+            'class_id' => $this->classA->id, 'date' => now()->subDay()->toDateString(),
+            'start_time' => '14:00', 'end_time' => '15:00',
+        ])->assertSessionHasErrors('date');
+    }
+
+    public function test_makeup_blocks_teacher_already_in_a_regular_lesson(): void
+    {
+        // Teacher teaches period 1 (08:00–08:40) every Monday.
+        TimetableEntry::withoutGlobalScope('school')->create([
+            'school_id' => $this->school->id, 'class_id' => $this->classA->id,
+            'period_id' => $this->period->id, 'day_of_week' => 1,
+            'subject_id' => $this->english->id, 'teacher_id' => $this->teacher->id,
+        ]);
+
+        // Next Monday, 08:15–09:00 overlaps that recurring lesson → rejected.
+        $nextMonday = now()->next(\Carbon\Carbon::MONDAY)->toDateString();
+        $this->actingAs($this->admin)->post('/school/timetable/makeup', [
+            'class_id' => $this->classB->id, 'date' => $nextMonday,
+            'start_time' => '08:15', 'end_time' => '09:00',
+            'teacher_id' => $this->teacher->id,
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $this->assertDatabaseCount('makeup_classes', 0);
+    }
+
+    public function test_teacher_cannot_create_makeup(): void
+    {
+        $this->actingAs($this->teacher)->post('/school/timetable/makeup', [
+            'class_id' => $this->classA->id, 'date' => now()->addDay()->toDateString(),
+            'start_time' => '14:00', 'end_time' => '15:00',
+        ])->assertForbidden();
+    }
+
+    public function test_mobile_today_endpoint_returns_makeup_classes(): void
+    {
+        \App\Models\MakeupClass::withoutGlobalScope('school')->create([
+            'school_id' => $this->school->id, 'class_id' => $this->classA->id,
+            'subject_id' => $this->english->id, 'teacher_id' => $this->teacher->id,
+            'date' => today()->toDateString(), 'start_time' => '14:00', 'end_time' => '15:00',
+            'reason' => 'Revision',
+        ]);
+
+        $this->actingAs($this->teacher, 'sanctum')->getJson('/api/v1/schedule/today')
+            ->assertOk()
+            ->assertJsonPath('makeup_classes.0.subject_name', 'English')
+            ->assertJsonPath('makeup_classes.0.reason', 'Revision');
+    }
 }
