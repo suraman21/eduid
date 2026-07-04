@@ -12,12 +12,15 @@ import Footer from './Public/Footer';
 import AdminPanel from './Public/AdminPanel';
 import LoginModal from './Public/LoginModal';
 
+import type { PublicPlan } from './Public/PricingSection';
+
 interface Props {
   success?: string | null;
   error?: string | null;
+  plans?: PublicPlan[];
 }
 
-export default function Welcome({ success, error }: Props) {
+export default function Welcome({ success, error, plans = [] }: Props) {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -106,7 +109,7 @@ export default function Welcome({ success, error }: Props) {
         <HeroSection onOpenDemo={handleOpenDemoForm} />
         <FeaturesSection />
         <HowItWorksSection />
-        <PricingSection onSelectPlan={handleSelectPlan} />
+        <PricingSection onSelectPlan={handleSelectPlan} plans={plans} />
         <FAQSection />
         <DemoSection flash={{ success: success ?? undefined, error: error ?? undefined }} />
       </main>

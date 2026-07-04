@@ -104,7 +104,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-Cq6QTrSw.css",
+    "file": "assets/app-S6Rek-dV.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -604,14 +604,14 @@
     ]
   },
   "resources/js/Pages/Public/PricingSection.tsx": {
-    "file": "assets/PricingSection-DoeSlvh-.js",
+    "file": "assets/PricingSection-DoB9kfPE.js",
     "name": "PricingSection",
     "src": "resources/js/Pages/Public/PricingSection.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_vendor-motion-Yn65oEY7.js",
-      "_vendor-ui-BGdDiV60.js",
-      "_vendor-react-Dm-qCjdm.js"
+      "_vendor-react-Dm-qCjdm.js",
+      "_vendor-ui-BGdDiV60.js"
     ]
   },
   "resources/js/Pages/School/Analytics/Index.tsx": {
@@ -1049,7 +1049,7 @@
     ]
   },
   "resources/js/Pages/Welcome.tsx": {
-    "file": "assets/Welcome-BFk9hWAp.js",
+    "file": "assets/Welcome--T8Brlt_.js",
     "name": "Welcome",
     "src": "resources/js/Pages/Welcome.tsx",
     "isDynamicEntry": true,
@@ -1078,7 +1078,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-CbVMHNlA.js",
+    "file": "assets/app-DQ7UuJwM.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1159,7 +1159,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-Cq6QTrSw.css"
+      "assets/app-S6Rek-dV.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

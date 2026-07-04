@@ -68,6 +68,9 @@ Route::get('/', function () {
     return Inertia::render('Welcome', [
         'success' => session('success'),
         'error'   => session('error'),
+        // Live pricing — assembled from the plans the Super Admin edits, so the
+        // public page and the Packages dashboard never drift apart.
+        'plans'   => \App\Http\Controllers\PublicController::plans(),
     ]);
 })->name('home');
 
