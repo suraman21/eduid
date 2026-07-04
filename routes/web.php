@@ -71,6 +71,9 @@ Route::get('/', function () {
         // Live pricing — assembled from the plans the Super Admin edits, so the
         // public page and the Packages dashboard never drift apart.
         'plans'   => \App\Http\Controllers\PublicController::plans(),
+        // Card printing price — single source of truth is the order model, the
+        // same constant the real school card-order flow bills against.
+        'cardAnnualPrice' => \App\Models\CardOrder::PRICING['annual_renewal'],
     ]);
 })->name('home');
 

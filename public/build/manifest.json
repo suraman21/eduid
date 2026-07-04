@@ -104,7 +104,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-9Z6uFpup.css",
+    "file": "assets/app-S6Rek-dV.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -525,7 +525,7 @@
     ]
   },
   "resources/js/Pages/Public/FAQSection.tsx": {
-    "file": "assets/FAQSection-QKUIc4vF.js",
+    "file": "assets/FAQSection-BgPYhYgB.js",
     "name": "FAQSection",
     "src": "resources/js/Pages/Public/FAQSection.tsx",
     "isDynamicEntry": true,
@@ -536,7 +536,7 @@
     ]
   },
   "resources/js/Pages/Public/FeaturesSection.tsx": {
-    "file": "assets/FeaturesSection-BbWp8OLw.js",
+    "file": "assets/FeaturesSection-NpH4Sung.js",
     "name": "FeaturesSection",
     "src": "resources/js/Pages/Public/FeaturesSection.tsx",
     "isDynamicEntry": true,
@@ -604,7 +604,7 @@
     ]
   },
   "resources/js/Pages/Public/PricingSection.tsx": {
-    "file": "assets/PricingSection-DoB9kfPE.js",
+    "file": "assets/PricingSection-BYvZ-4-C.js",
     "name": "PricingSection",
     "src": "resources/js/Pages/Public/PricingSection.tsx",
     "isDynamicEntry": true,
@@ -1049,7 +1049,7 @@
     ]
   },
   "resources/js/Pages/Welcome.tsx": {
-    "file": "assets/Welcome--T8Brlt_.js",
+    "file": "assets/Welcome-bHRGW9XV.js",
     "name": "Welcome",
     "src": "resources/js/Pages/Welcome.tsx",
     "isDynamicEntry": true,
@@ -1078,7 +1078,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-DALh9g72.js",
+    "file": "assets/app-ZI5CEkcP.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1159,7 +1159,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-9Z6uFpup.css"
+      "assets/app-S6Rek-dV.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

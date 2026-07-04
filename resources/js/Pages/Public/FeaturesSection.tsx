@@ -10,8 +10,11 @@ interface FeatureItem {
   details: string[];
 }
 
-export default function FeaturesSection() {
+interface Props { cardAnnualPrice?: number; }
+
+export default function FeaturesSection({ cardAnnualPrice = 50 }: Props) {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
+  const cardPrice = Math.round(cardAnnualPrice).toLocaleString();
 
   const features: FeatureItem[] = [
     {
@@ -76,7 +79,7 @@ export default function FeaturesSection() {
         'Each order gets a unique code (e.g. ORD-AIA-2026-0847) for tracking',
         'Order status updates: Pending → In Print → Shipped → Delivered',
         'Arkeon prints on professional PVC printers and ships via courier within 3 days',
-        'Schools pay a one-time setup fee plus 50 ETB per card per year',
+        `Card printing is billed separately at ${cardPrice} ETB per card per year — only when you order`,
       ],
     },
     {

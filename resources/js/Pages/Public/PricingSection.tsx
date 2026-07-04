@@ -19,11 +19,12 @@ export interface PublicPlan {
 interface Props {
   onSelectPlan: (planName: string) => void;
   plans?: PublicPlan[];
+  cardAnnualPrice?: number;
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString();
 
-export default function PricingSection({ onSelectPlan, plans = [] }: Props) {
+export default function PricingSection({ onSelectPlan, plans = [], cardAnnualPrice = 50 }: Props) {
   const [annual, setAnnual] = useState(false);
 
   // Whether any plan actually offers an annual price — hides the toggle if not.
@@ -44,7 +45,7 @@ export default function PricingSection({ onSelectPlan, plans = [] }: Props) {
             Simple, Transparent Pricing
           </h2>
           <p className="font-sans text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
-            Choose the plan that fits your school. Cards are printed at <strong>50 ETB per card per year</strong>, billed only when you order.
+            Choose the plan that fits your school. Cards are printed at <strong>{fmt(cardAnnualPrice)} ETB per card per year</strong>, billed only when you order.
           </p>
         </motion.div>
 
@@ -57,7 +58,7 @@ export default function PricingSection({ onSelectPlan, plans = [] }: Props) {
           transition={{ delay: 0.2 }}
         >
           <Package className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <span><strong>Card printing:</strong> 50 ETB per card per year — billed only when you place a card order. No hidden fees.</span>
+          <span><strong>Card printing:</strong> {fmt(cardAnnualPrice)} ETB per card per year — billed only when you place a card order. No hidden fees.</span>
         </motion.div>
 
         {/* Monthly / annual toggle (only if annual pricing exists) */}

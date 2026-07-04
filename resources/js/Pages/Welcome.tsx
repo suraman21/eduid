@@ -18,9 +18,10 @@ interface Props {
   success?: string | null;
   error?: string | null;
   plans?: PublicPlan[];
+  cardAnnualPrice?: number;
 }
 
-export default function Welcome({ success, error, plans = [] }: Props) {
+export default function Welcome({ success, error, plans = [], cardAnnualPrice = 50 }: Props) {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -107,10 +108,10 @@ export default function Welcome({ success, error, plans = [] }: Props) {
 
       <main className="relative">
         <HeroSection onOpenDemo={handleOpenDemoForm} />
-        <FeaturesSection />
+        <FeaturesSection cardAnnualPrice={cardAnnualPrice} />
         <HowItWorksSection />
-        <PricingSection onSelectPlan={handleSelectPlan} plans={plans} />
-        <FAQSection />
+        <PricingSection onSelectPlan={handleSelectPlan} plans={plans} cardAnnualPrice={cardAnnualPrice} />
+        <FAQSection cardAnnualPrice={cardAnnualPrice} />
         <DemoSection flash={{ success: success ?? undefined, error: error ?? undefined }} />
       </main>
 

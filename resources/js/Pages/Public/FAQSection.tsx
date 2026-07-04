@@ -3,8 +3,11 @@ import { ChevronDown } from 'lucide-react';
 
 interface FAQItem { q: string; a: string; }
 
-export default function FAQSection() {
+interface Props { cardAnnualPrice?: number; }
+
+export default function FAQSection({ cardAnnualPrice = 50 }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const cardPrice = Math.round(cardAnnualPrice).toLocaleString();
 
   const faqs: FAQItem[] = [
     {
@@ -33,11 +36,11 @@ export default function FAQSection() {
     },
     {
       q: 'How do we pay? Do you accept Telebirr?',
-      a: 'Yes, we accept Telebirr and bank transfers for both the setup fee and card printing orders. Payment details are confirmed during onboarding. We do not accept subscription billing — the setup fee is a one-time payment.',
+      a: 'Yes, we accept Telebirr and bank transfers for both your plan subscription and card printing orders. Payment details are confirmed during onboarding.',
     },
     {
-      q: 'What is the difference between the setup fee and the card printing fee?',
-      a: 'The setup fee (12,000 – 35,000 ETB depending on plan) is a one-time payment that activates your school account and all platform features. The card printing fee (50 ETB per card per year) is paid separately each time you place a card order. If you have 200 students, a full card order costs 10,000 ETB.',
+      q: 'What is the difference between the plan subscription and the card printing fee?',
+      a: `Your plan subscription (billed monthly or annually, depending on the tier you choose) keeps your school account active and unlocks the platform features for that tier. The card printing fee (${cardPrice} ETB per card per year) is separate and is paid only when you place a card order. For example, an annual card order for 200 students costs ${(200 * cardAnnualPrice).toLocaleString()} ETB.`,
     },
   ];
 

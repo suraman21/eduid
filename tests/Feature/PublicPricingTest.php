@@ -41,6 +41,14 @@ class PublicPricingTest extends TestCase
         );
     }
 
+    public function test_card_price_is_shared_from_the_order_model(): void
+    {
+        // Single source of truth: the same constant the real order flow bills.
+        $this->get('/')->assertInertia(fn ($page) => $page
+            ->where('cardAnnualPrice', \App\Models\CardOrder::PRICING['annual_renewal'])
+        );
+    }
+
     public function test_inactive_plans_are_hidden_and_ordering_holds(): void
     {
         // Deactivating starter drops it; standard becomes the first card.
