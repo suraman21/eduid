@@ -65,7 +65,7 @@ class GuardianController extends BaseSchoolController
         $this->requireWritableSubscription();
 
         $validated = $request->validate([
-            'id'           => 'nullable|integer|exists:guardians,id',
+            'id'           => ['nullable', 'integer', Rule::exists('guardians', 'id')->where('school_id', $this->schoolId())],
             'full_name'    => 'required|string|max:200',
             'phone'        => 'nullable|string|max:20',
             'phone_alt'    => 'nullable|string|max:20',

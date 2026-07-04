@@ -28,6 +28,7 @@ class SubjectController extends BaseSchoolController
     public function store(Request $request)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate($this->rules());
 
@@ -39,6 +40,7 @@ class SubjectController extends BaseSchoolController
     public function update(Request $request, Subject $subject)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate($this->rules($subject->id) + [
             'is_active' => 'boolean',

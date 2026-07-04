@@ -198,6 +198,14 @@ class GradeController extends BaseSchoolController
         $this->requireSubjectInClass($validated['class_id'], $validated['subject_id']);
         $this->requireTeacherOwnsSubjectSlot((int) $validated['class_id'], (int) $validated['subject_id']);
 
+        // Every grade must belong to a student OF this class — otherwise the
+        // row is an invisible orphan (the gradebook iterates class members).
+        $ids     = collect($validated['grades'])->pluck('student_id')->unique();
+        $inClass = Student::where('class_id', $validated['class_id'])->whereIn('id', $ids)->count();
+        if ($inClass !== $ids->count()) {
+            return back()->withErrors(['grades' => 'One or more students are not in the selected class.']);
+        }
+
         // A score can never exceed its own max — otherwise the weighted
         // percentage exceeds 100% and silently corrupts every average/rank.
         foreach ($validated['grades'] as $i => $item) {

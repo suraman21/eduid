@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
                 'year_transition' => $request->user()->school->hasFeature('year_transition'),
                 'analytics'       => $request->user()->school->hasFeature('analytics'),
                 'alerts'          => $request->user()->school->hasFeature('alerts'),
+                'fees'            => $request->user()->school->hasFeature('fees'),
             ] : null,
             // Flat, top-level accent colour. Kept SEPARATE from `school` on
             // purpose: a page that returns its own `school` prop (e.g. the

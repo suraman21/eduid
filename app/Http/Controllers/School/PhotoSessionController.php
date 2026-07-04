@@ -55,7 +55,7 @@ class PhotoSessionController extends BaseSchoolController
         $this->requireWritableSubscription();
 
         $validated = $request->validate([
-            'class_id'     => 'nullable|exists:classes,id',
+            'class_id'     => ['nullable', \Illuminate\Validation\Rule::exists('classes', 'id')->where('school_id', $this->schoolId())],
             'session_type' => 'required|in:app_capture,zip_upload',
         ]);
 
@@ -292,7 +292,9 @@ class PhotoSessionController extends BaseSchoolController
             }
 
             $contents = $zip->getFromIndex($entry['index']);
-            if ($contents === false) {
+            // The filename extension is attacker-controlled; verify the BYTES
+            // are a real image so nothing else can be smuggled into storage.
+            if ($contents === false || @getimagesizefromstring($contents) === false) {
                 $skipped[] = $position + 1;
                 $position++;
                 continue;

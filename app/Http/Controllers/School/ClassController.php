@@ -44,6 +44,7 @@ class ClassController extends BaseSchoolController
     public function store(Request $request)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate($this->rules());
         $validated['is_active'] = true;
@@ -75,6 +76,7 @@ class ClassController extends BaseSchoolController
     public function update(Request $request, SchoolClass $class)
     {
         $this->requireAdmin();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate($this->rules($class->id) + [
             'is_active' => 'boolean',

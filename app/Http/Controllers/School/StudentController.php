@@ -178,6 +178,11 @@ class StudentController extends BaseSchoolController
      */
     public function photo(Student $student)
     {
+        // Teachers may only load photos of students in their own classes
+        // (admins/staff pass). Route ring 1 admits every school role, so the
+        // scoping the route comment promises is enforced HERE.
+        $this->requireTeacherCanAccessClass($student->class_id);
+
         if (! $student->photo_path) {
             abort(404);
         }
@@ -262,7 +267,7 @@ class StudentController extends BaseSchoolController
 
         $validated = $request->validate([
             'guardians'                 => 'array',
-            'guardians.*.id'            => 'nullable|integer|exists:guardians,id',
+            'guardians.*.id'            => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('guardians', 'id')->where('school_id', $this->schoolId())],
             'guardians.*.full_name'     => 'nullable|string|max:200',
             'guardians.*.phone'         => 'nullable|string|max:20',
             'guardians.*.phone_alt'     => 'nullable|string|max:20',
@@ -298,7 +303,8 @@ class StudentController extends BaseSchoolController
             'last_name_am'    => 'nullable|string|max:100',
             'gender'          => 'required|in:male,female',
             'date_of_birth'   => 'nullable|date|before:today',
-            'class_id'        => 'nullable|exists:classes,id',
+            // Tenant-scoped: a foreign school's class id must never validate.
+            'class_id'        => ['nullable', \Illuminate\Validation\Rule::exists('classes', 'id')->where('school_id', $this->schoolId())],
             'blood_type'      => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
             'medical_notes'   => 'nullable|string|max:500',
             'enrollment_date' => 'nullable|date',

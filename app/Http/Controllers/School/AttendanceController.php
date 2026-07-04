@@ -118,6 +118,7 @@ class AttendanceController extends BaseSchoolController
     public function store(Request $request)
     {
         $this->requireCanRecord();
+        $this->requireWritableSubscription();
 
         $validated = $request->validate([
             'class_id'              => ['required', Rule::exists('classes', 'id')->where('school_id', $this->schoolId())],
@@ -130,6 +131,15 @@ class AttendanceController extends BaseSchoolController
         ]);
 
         $this->requireTeacherCanAccessClass((int) $validated['class_id']);
+
+        // Every record must belong to the session's class — otherwise a crafted
+        // payload could write marks for students of another class into this
+        // session (same school, but wrong roster = corrupt reports).
+        $ids     = collect($validated['records'])->pluck('student_id')->unique();
+        $inClass = Student::where('class_id', $validated['class_id'])->whereIn('id', $ids)->count();
+        if ($inClass !== $ids->count()) {
+            return back()->with('error', 'One or more students are not in the selected class. Refresh the roster and try again.');
+        }
 
         $session = $this->saveAttendance($validated);
 
