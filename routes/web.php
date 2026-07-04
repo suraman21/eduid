@@ -32,6 +32,7 @@ use App\Http\Controllers\School\GuardianAccountController as SchoolGuardianAccou
 use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
 use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
+use App\Http\Controllers\School\FeeController as SchoolFeeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -311,6 +312,20 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
             Route::delete('/entries',          [SchoolTimetableController::class, 'clearEntry'])->name('entries.clear');
             Route::post('/makeup',             [SchoolTimetableController::class, 'storeMakeup'])->name('makeup.store');
             Route::delete('/makeup/{makeup}',  [SchoolTimetableController::class, 'destroyMakeup'])->name('makeup.destroy');
+        });
+
+        // Student fee management — 'fees' module.
+        Route::prefix('fees')->name('school.fees.')->middleware('feature:fees')->group(function () {
+            Route::get('/',                              [SchoolFeeController::class, 'index'])->name('index');
+            Route::post('/structures',                   [SchoolFeeController::class, 'storeStructure'])->name('structures.store');
+            Route::patch('/structures/{structure}',      [SchoolFeeController::class, 'updateStructure'])->name('structures.update');
+            Route::delete('/structures/{structure}',     [SchoolFeeController::class, 'destroyStructure'])->name('structures.destroy');
+            Route::post('/structures/{structure}/generate', [SchoolFeeController::class, 'generateInvoices'])->name('structures.generate');
+            Route::post('/invoices',                     [SchoolFeeController::class, 'storeInvoice'])->name('invoices.store');
+            Route::patch('/invoices/{invoice}/waive',    [SchoolFeeController::class, 'waiveInvoice'])->name('invoices.waive');
+            Route::delete('/invoices/{invoice}',         [SchoolFeeController::class, 'destroyInvoice'])->name('invoices.destroy');
+            Route::get('/invoices/{invoice}/payments',   [SchoolFeeController::class, 'invoicePayments'])->name('invoices.payments');
+            Route::post('/invoices/{invoice}/payments',  [SchoolFeeController::class, 'recordPayment'])->name('invoices.pay');
         });
         Route::resource('/staff', SchoolStaffController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])

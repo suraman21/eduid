@@ -30,6 +30,7 @@ class FeatureSeeder extends Seeder
             ['key' => 'custom_card_templates',  'label' => 'Custom Card Templates',    'category' => 'cards',      'is_default_enabled' => false],
             ['key' => 'analytics',              'label' => 'Analytics Dashboard',      'category' => 'academic',   'is_default_enabled' => false],
             ['key' => 'alerts',                 'label' => 'Telegram Absence Alerts',  'category' => 'parent',     'is_default_enabled' => false],
+            ['key' => 'fees',                   'label' => 'Fee Management',           'category' => 'finance',    'is_default_enabled' => false],
         ];
 
         // Keys that already existed BEFORE this run — used below so that
@@ -62,6 +63,7 @@ class FeatureSeeder extends Seeder
             'custom_card_templates',
             'timetable',
             'year_transition',
+            'fees',
         ];
 
         $premiumExtras = [

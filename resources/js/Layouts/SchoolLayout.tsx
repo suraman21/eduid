@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
-    UserCircle, CreditCard, Camera, FileText, CalendarRange, Rocket, BarChart3,
+    UserCircle, CreditCard, Camera, FileText, CalendarRange, Rocket, BarChart3, Wallet,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
     { label: 'Timetable',      href: '/school/timetable',       icon: CalendarRange,   inertia: true, roles: ['school_admin'], feature: 'timetable' },
     { label: 'Grades',         href: '/school/grades',          icon: FileBarChart,    inertia: true, feature: 'gradebook', tour: 'nav-grades' },
     { label: 'Report Cards',   href: '/school/report-cards',    icon: FileText,        inertia: true, roles: ['school_admin'], feature: 'report_cards' },
+    { label: 'Fees',           href: '/school/fees',            icon: Wallet,          inertia: true, roles: ['school_admin'], feature: 'fees' },
     { label: 'Analytics',      href: '/school/analytics',       icon: BarChart3,       inertia: true, roles: ['school_admin'], feature: 'analytics' },
     { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'], tour: 'nav-cardorders' },
     { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
