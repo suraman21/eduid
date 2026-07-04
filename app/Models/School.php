@@ -37,7 +37,11 @@ class School extends Model
         'student_attendance_method',
         'staff_attendance_method',
         'onboarding_completed_at',
+        'working_days',
     ];
+
+    /** Default when a school hasn't chosen its week: Mon–Sat (ISO 1..6). */
+    public const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5, 6];
 
     /**
      * Never serialize the QR-signing secret. Every student QR token is an
@@ -64,7 +68,31 @@ class School extends Model
             'onboarding_completed_at' => 'datetime',
             'student_attendance_method' => 'string',
             'staff_attendance_method' => 'string',
+            'working_days' => 'array',
         ];
+    }
+
+    /**
+     * The school's working days as a sorted array of ISO weekday numbers
+     * (1=Mon … 7=Sun). Falls back to Mon–Sat when unset, and always returns a
+     * clean, de-duplicated, in-range list so callers never guard it themselves.
+     *
+     * @return array<int, int>
+     */
+    public function workingDays(): array
+    {
+        $days = $this->working_days;
+
+        if (! is_array($days) || empty($days)) {
+            return self::DEFAULT_WORKING_DAYS;
+        }
+
+        $clean = collect($days)
+            ->map(fn ($d) => (int) $d)
+            ->filter(fn ($d) => $d >= 1 && $d <= 7)
+            ->unique()->sort()->values()->all();
+
+        return empty($clean) ? self::DEFAULT_WORKING_DAYS : $clean;
     }
 
     // ── Relationships ──────────────────────────────────────────

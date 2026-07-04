@@ -58,6 +58,13 @@ return new class extends Migration
             });
         }
 
+        // 5b. schools.working_days (per-school Mon–Fri / Mon–Sat pattern).
+        if (Schema::hasTable('schools') && ! Schema::hasColumn('schools', 'working_days')) {
+            Schema::table('schools', function (Blueprint $table) {
+                $table->json('working_days')->nullable();
+            });
+        }
+
         // 6. alert_outbox table (Telegram outbox).
         if (! Schema::hasTable('alert_outbox')) {
             Schema::create('alert_outbox', function (Blueprint $table) {

@@ -36,21 +36,44 @@ interface Props {
     subjects: Option[];
     teachers: Option[];
     default_teachers: Record<number, number>; // subject_id → teacher_id
+    working_days: number[]; // ISO weekday numbers the school operates
 }
 
-const DAYS = [
-    { n: 1, label: 'Monday' }, { n: 2, label: 'Tuesday' }, { n: 3, label: 'Wednesday' },
-    { n: 4, label: 'Thursday' }, { n: 5, label: 'Friday' }, { n: 6, label: 'Saturday' },
+const ALL_DAYS = [
+    { n: 1, label: 'Monday', short: 'Mon' }, { n: 2, label: 'Tuesday', short: 'Tue' },
+    { n: 3, label: 'Wednesday', short: 'Wed' }, { n: 4, label: 'Thursday', short: 'Thu' },
+    { n: 5, label: 'Friday', short: 'Fri' }, { n: 6, label: 'Saturday', short: 'Sat' },
+    { n: 7, label: 'Sunday', short: 'Sun' },
 ];
 
 const inputCls = 'w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 transition bg-white';
 
 export default function Index({
-    classes, selected_class_id, periods, entries, subjects, teachers, default_teachers,
+    classes, selected_class_id, periods, entries, subjects, teachers, default_teachers, working_days,
 }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
     const inputStyle = { ['--tw-ring-color' as string]: alpha(accent, 0.35) };
+
+    // Grid columns come from the school's working days, not a hardcoded week.
+    const DAYS = useMemo(
+        () => ALL_DAYS.filter(d => working_days.includes(d.n)),
+        [working_days],
+    );
+
+    /* ── working-days editor ── */
+    const [editingDays, setEditingDays] = useState(false);
+    const [daySel, setDaySel] = useState<number[]>(working_days);
+    function toggleDay(n: number) {
+        setDaySel(s => s.includes(n) ? s.filter(d => d !== n) : [...s, n].sort());
+    }
+    function saveWorkingDays() {
+        if (daySel.length === 0) return;
+        router.patch('/school/timetable/working-days', { working_days: daySel }, {
+            preserveScroll: true,
+            onSuccess: () => setEditingDays(false),
+        });
+    }
 
     const entryMap = useMemo(() => {
         const m = new Map<string, Entry>();
@@ -150,6 +173,62 @@ export default function Index({
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
             </div>
+
+            {/* Working days */}
+            <Card className="p-6 mb-6">
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: accent }}>
+                            Working Days
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                            {DAYS.map(d => d.short).join(' · ')} — the days your school operates. The grid below shows only these.
+                        </p>
+                    </div>
+                    {!editingDays ? (
+                        <button
+                            onClick={() => { setDaySel(working_days); setEditingDays(true); }}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
+                        >
+                            <Pencil className="w-3.5 h-3.5" /> Edit days
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setEditingDays(false)} className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+                            <button
+                                onClick={saveWorkingDays}
+                                disabled={daySel.length === 0}
+                                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40"
+                                style={{ background: accent }}
+                            >
+                                Save days
+                            </button>
+                        </div>
+                    )}
+                </div>
+                {editingDays && (
+                    <div className="flex flex-wrap gap-2">
+                        {ALL_DAYS.map(d => {
+                            const on = daySel.includes(d.n);
+                            return (
+                                <button
+                                    key={d.n}
+                                    onClick={() => toggleDay(d.n)}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition ${on ? 'text-white border-transparent' : 'text-slate-600 border-slate-200 bg-white hover:bg-slate-50'}`}
+                                    style={on ? { background: accent } : undefined}
+                                >
+                                    {d.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+                {editingDays && (
+                    <p className="text-[11px] text-amber-600 mt-3">
+                        Removing a day permanently clears any lessons already scheduled on it.
+                    </p>
+                )}
+            </Card>
 
             {/* Periods (bell schedule) */}
             <Card className="p-6 mb-6">

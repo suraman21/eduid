@@ -104,7 +104,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-9Z6uFpup.css",
+    "file": "assets/app-S6Rek-dV.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -1023,7 +1023,7 @@
     ]
   },
   "resources/js/Pages/School/Timetable/Index.tsx": {
-    "file": "assets/Index-CADCIfJd.js",
+    "file": "assets/Index-DgTO_B78.js",
     "name": "Index",
     "src": "resources/js/Pages/School/Timetable/Index.tsx",
     "isDynamicEntry": true,
@@ -1078,7 +1078,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-CmFlVBjo.js",
+    "file": "assets/app-Co5Iof-t.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1159,7 +1159,7 @@
       "resources/js/Pages/Welcome.tsx"
     ],
     "css": [
-      "assets/app-9Z6uFpup.css"
+      "assets/app-S6Rek-dV.css"
     ],
     "assets": [
       "assets/outfit-latin-Bc-8i84L.woff2",

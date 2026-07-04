@@ -48,6 +48,9 @@ class TimetableController extends BaseSchoolController
                 'id' => $c->id, 'name' => $c->display_name,
             ])->values(),
             'selected_class_id' => $classId ?: null,
+            // The school's chosen week (ISO 1..6/7). The grid renders only these
+            // columns, so a Mon–Fri school never sees an empty Saturday.
+            'working_days' => $this->currentSchool()->workingDays(),
             'periods' => $periods->map(fn ($p) => [
                 'id'         => $p->id,
                 'label'      => $p->label,
@@ -127,6 +130,36 @@ class TimetableController extends BaseSchoolController
             : 'Period removed.');
     }
 
+    // ── Working days (which days the school operates) ────────────
+
+    public function updateWorkingDays(Request $request)
+    {
+        $this->requireAdmin();
+        $this->requireWritableSubscription();
+
+        $validated = $request->validate([
+            'working_days'   => 'required|array|min:1',
+            'working_days.*' => 'integer|min:1|max:7',
+        ]);
+
+        $days = collect($validated['working_days'])
+            ->map(fn ($d) => (int) $d)->unique()->sort()->values()->all();
+
+        $school = $this->currentSchool();
+        $school->update(['working_days' => $days]);
+
+        // Any lessons scheduled on a day that is no longer a working day become
+        // orphans (teachers would still see them). Remove them so the timetable
+        // stays truthful — mirrors how deleting a period drops its lessons.
+        $removed = TimetableEntry::whereNotIn('day_of_week', $days)->delete();
+
+        AuditLog::log('timetable.working_days_updated', 'schools', $school->id, null, ['working_days' => $days]);
+
+        return back()->with('success', $removed > 0
+            ? "Working days updated. {$removed} lesson(s) on removed days were cleared."
+            : 'Working days updated.');
+    }
+
     // ── Grid entries (one class × period × day) ──────────────────
 
     public function saveEntry(Request $request)
@@ -142,6 +175,12 @@ class TimetableController extends BaseSchoolController
             'teacher_id'  => ['nullable', Rule::exists('users', 'id')->where('school_id', $this->schoolId())->where('role', 'teacher')],
             'room'        => 'nullable|string|max:50',
         ]);
+
+        // Never schedule a lesson on a day the school doesn't operate — that
+        // would create a ghost entry teachers could see but never teach.
+        if (! in_array((int) $validated['day_of_week'], $this->currentSchool()->workingDays(), true)) {
+            return back()->with('error', 'That day is not one of the school\'s working days.');
+        }
 
         // A teacher cannot be in two classrooms at once: block double-booking
         // for the same period+day in a different class.

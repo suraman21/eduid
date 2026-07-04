@@ -303,6 +303,7 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
         // Timetable builder (periods + weekly grid) — 'timetable' module.
         Route::prefix('timetable')->name('school.timetable.')->middleware('feature:timetable')->group(function () {
             Route::get('/',                    [SchoolTimetableController::class, 'index'])->name('index');
+            Route::patch('/working-days',      [SchoolTimetableController::class, 'updateWorkingDays'])->name('working-days.update');
             Route::post('/periods',            [SchoolTimetableController::class, 'storePeriod'])->name('periods.store');
             Route::patch('/periods/{period}',  [SchoolTimetableController::class, 'updatePeriod'])->name('periods.update');
             Route::delete('/periods/{period}', [SchoolTimetableController::class, 'destroyPeriod'])->name('periods.destroy');

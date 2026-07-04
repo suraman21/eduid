@@ -175,4 +175,74 @@ class TimetableTest extends TestCase
         $this->assertDatabaseMissing('timetable_periods', ['id' => $this->period->id]);
         $this->assertDatabaseMissing('timetable_entries', ['period_id' => $this->period->id]);
     }
+
+    // ── Working days ─────────────────────────────────────────────
+
+    public function test_unset_working_days_defaults_to_mon_sat(): void
+    {
+        $this->assertSame([1, 2, 3, 4, 5, 6], $this->school->fresh()->workingDays());
+
+        $this->actingAs($this->admin)->get('/school/timetable')
+            ->assertInertia(fn ($page) => $page->where('working_days', [1, 2, 3, 4, 5, 6]));
+    }
+
+    public function test_admin_can_set_a_mon_fri_week(): void
+    {
+        $this->actingAs($this->admin)
+            ->patch('/school/timetable/working-days', ['working_days' => [1, 2, 3, 4, 5]])
+            ->assertRedirect();
+
+        $this->assertSame([1, 2, 3, 4, 5], $this->school->fresh()->workingDays());
+    }
+
+    public function test_removing_a_day_clears_its_lessons(): void
+    {
+        // A Saturday (6) lesson exists.
+        TimetableEntry::withoutGlobalScope('school')->create([
+            'school_id' => $this->school->id, 'class_id' => $this->classA->id,
+            'period_id' => $this->period->id, 'day_of_week' => 6,
+            'subject_id' => $this->english->id, 'teacher_id' => $this->teacher->id,
+        ]);
+
+        // Switch to a Mon–Fri week — the Saturday lesson must be swept away.
+        $this->actingAs($this->admin)
+            ->patch('/school/timetable/working-days', ['working_days' => [1, 2, 3, 4, 5]])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('timetable_entries', [
+            'class_id' => $this->classA->id, 'day_of_week' => 6,
+        ]);
+    }
+
+    public function test_cannot_schedule_a_lesson_on_a_non_working_day(): void
+    {
+        $this->school->update(['working_days' => [1, 2, 3, 4, 5]]);
+
+        // Sunday (7) is not a working day → rejected, nothing written.
+        $this->actingAs($this->admin)->post('/school/timetable/entries', [
+            'class_id'    => $this->classA->id,
+            'period_id'   => $this->period->id,
+            'day_of_week' => 7,
+            'subject_id'  => $this->english->id,
+            'teacher_id'  => $this->teacher->id,
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('timetable_entries', [
+            'class_id' => $this->classA->id, 'day_of_week' => 7,
+        ]);
+    }
+
+    public function test_teacher_cannot_change_working_days(): void
+    {
+        $this->actingAs($this->teacher)
+            ->patch('/school/timetable/working-days', ['working_days' => [1, 2, 3]])
+            ->assertForbidden();
+    }
+
+    public function test_working_days_cannot_be_empty(): void
+    {
+        $this->actingAs($this->admin)
+            ->patch('/school/timetable/working-days', ['working_days' => []])
+            ->assertSessionHasErrors('working_days');
+    }
 }
