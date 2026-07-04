@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/data_service.dart';
 import '../ui/kit.dart';
+import '../ui/skeleton.dart';
 
 /// "My Schedule" — Today + Week, from the offline cache (auto-refreshed by the
 /// SyncEngine). The period happening right now is highlighted.
@@ -25,6 +26,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _load();
   }
 
+  bool _loading = true;
+
   Future<void> _load() async {
     final today = await DataService.instance.cachedScheduleToday();
     final week = await DataService.instance.cachedScheduleWeek();
@@ -32,6 +35,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     setState(() {
       _today = today;
       _week = week;
+      _loading = false;
     });
   }
 
@@ -122,7 +126,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         body: TabBarView(
           children: [
-            _today.isEmpty
+            _loading
+                ? const SkeletonList()
+                : _today.isEmpty
                 ? _empty()
                 : ListView(
                     padding: const EdgeInsets.all(20),
@@ -130,7 +136,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       for (final p in _today) _slotTile(p, highlightNow: true)
                     ],
                   ),
-            _week.isEmpty
+            _loading
+                ? const SkeletonList()
+                : _week.isEmpty
                 ? _empty()
                 : ListView(
                     padding: const EdgeInsets.all(20),
@@ -152,14 +160,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  Widget _empty() => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'No schedule yet.\nIt appears automatically once the school sets up its timetable.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.inkMid, fontSize: 13),
-          ),
-        ),
+  Widget _empty() => const StateMessage(
+        icon: Icons.calendar_today_outlined,
+        title: 'No schedule yet',
+        subtitle:
+            'Your timetable appears here automatically once the school sets it up. Pull down to refresh.',
       );
 }

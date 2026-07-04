@@ -85,37 +85,12 @@ class HandleInertiaRequests extends Middleware
 
         $state = $user->onboarding_state ?? [];
 
+        // Just the welcome-tour flags. The tour is a guided walkthrough only —
+        // it never nags the user to complete tasks that aren't their job, and
+        // it costs zero queries.
         return [
-            'tour_seen'   => (bool) ($state['tour_seen'] ?? false),
-            'dismissed'   => (bool) ($state['dismissed'] ?? false),
-            'finished_at' => $state['finished_at'] ?? null,
-            // Skip the queries entirely once the user has finished.
-            'progress'    => ! empty($state['finished_at'])
-                ? null
-                : $this->onboardingProgress($user),
-        ];
-    }
-
-    /**
-     * Real-data completion signals. Every query is auto-scoped to the
-     * user's school by the BelongsToSchool global scope and hits an index.
-     */
-    private function onboardingProgress($user): array
-    {
-        if ($user->role === 'teacher') {
-            return [
-                'has_attendance' => \App\Models\AttendanceSession::where('teacher_id', $user->id)->exists(),
-                'has_grades'     => \App\Models\StudentGrade::where('entered_by', $user->id)->exists(),
-            ];
-        }
-
-        return [
-            'has_classes'    => \App\Models\SchoolClass::exists(),
-            'has_students'   => \App\Models\Student::exists(),
-            'has_teacher'    => \App\Models\User::where('role', 'teacher')->exists(),
-            'has_attendance' => \App\Models\AttendanceSession::exists(),
-            'has_grades'     => \App\Models\StudentGrade::exists(),
-            'has_order'      => \App\Models\CardOrder::exists(),
+            'tour_seen' => (bool) ($state['tour_seen'] ?? false),
+            'dismissed' => (bool) ($state['dismissed'] ?? false),
         ];
     }
 }

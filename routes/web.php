@@ -81,6 +81,28 @@ Route::get('/', function () {
 // Lead capture / Contact form (public — throttled against lead-spam).
 Route::post('/contact', [LeadController::class, 'store'])->middleware('throttle:contact')->name('contact.store');
 
+// Client-side error sink: the React error boundary posts unexpected UI crashes
+// here so the details are logged on the SERVER (never shown to the user or the
+// browser console). Throttled so a crash-loop can't flood the log.
+Route::post('/client-error', function (\Illuminate\Http\Request $request) {
+    $data = $request->validate([
+        'ref'     => 'required|string|max:40',
+        'message' => 'nullable|string|max:1000',
+        'stack'   => 'nullable|string|max:5000',
+        'url'     => 'nullable|string|max:500',
+    ]);
+
+    \Illuminate\Support\Facades\Log::error("[{$data['ref']}] Client UI error: ".($data['message'] ?? 'unknown'), [
+        'stack'   => $data['stack'] ?? null,
+        'url'     => $data['url'] ?? $request->headers->get('referer'),
+        'user_id' => auth()->id(),
+        'ip'      => $request->ip(),
+        'agent'   => $request->userAgent(),
+    ]);
+
+    return response()->noContent();
+})->middleware('throttle:contact')->name('client-error');
+
 // ── Auth Routes ───────────────────────────────────────────────
 
 // School User Login (School Code + Email + Password)

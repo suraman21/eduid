@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Plus, Trash2, Wallet, HandCoins, Ban, Users2 } from 'lucide-react';
+import { Plus, Trash2, Wallet, HandCoins, Ban, Users2, ReceiptText } from 'lucide-react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
+import { EmptyState } from '@/Components/States';
 import type { PageProps } from '@/types';
 
 function normHex(c: string | null | undefined) {
@@ -137,7 +138,13 @@ export default function Index({ invoices, summary, structures, classes, students
                 )}
 
                 {structures.length === 0 ? (
-                    <p className="text-xs text-slate-400">No fee types yet.</p>
+                    <EmptyState
+                        icon={Wallet} accent={accent}
+                        title="No fee types yet"
+                        description="Create a fee type (like tuition or registration), then generate invoices for your students in one click."
+                        actionLabel="Add fee type"
+                        onAction={() => setAddingStruct(true)}
+                    />
                 ) : (
                     <div className="space-y-2">
                         {structures.map(f => (
@@ -198,7 +205,13 @@ export default function Index({ invoices, summary, structures, classes, students
                 )}
 
                 {invoices.length === 0 ? (
-                    <p className="text-xs text-slate-400">No invoices match.</p>
+                    <EmptyState
+                        icon={ReceiptText} accent={accent}
+                        title={filters.status || filters.class_id ? 'No invoices match this filter' : 'No invoices yet'}
+                        description={filters.status || filters.class_id
+                            ? 'Try clearing the filters above to see all invoices.'
+                            : 'Generate invoices from a fee type above, or add a one-off invoice for a single student.'}
+                    />
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
