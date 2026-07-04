@@ -90,8 +90,15 @@ class AdminLoginController extends Controller
                 );
             } catch (\Throwable $e) {
                 Log::error('Admin 2FA email failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+                // The mail reason is shown here because this point is only ever
+                // reached AFTER a correct super-admin password — so the audience
+                // is the real operator, not an attacker — and a generic message
+                // makes SMTP misconfiguration impossible to diagnose in the wild.
                 throw ValidationException::withMessages([
-                    'email' => ['Could not send the verification code. Contact the system operator (or set ADMIN_2FA=false to bypass temporarily).'],
+                    'email' => [
+                        'Could not send the verification code (set ADMIN_2FA=false in .env to bypass temporarily). Reason: '
+                        . $e->getMessage(),
+                    ],
                 ]);
             }
 

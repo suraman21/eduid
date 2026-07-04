@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Mailer\Transport\Dsn;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransportFactory;
+use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +27,60 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiters();
+        $this->configureSmtpTransport();
+    }
+
+    /**
+     * cPanel-friendly SMTP transport.
+     *
+     * Two things bite shared-hosting mailboxes and both are handled here:
+     *
+     *  1. Port 465 is *implicit* SSL (scheme "smtps"). Laravel 11 dropped
+     *     MAIL_ENCRYPTION and derives the scheme from MAIL_SCHEME only, so a
+     *     .env with just MAIL_PORT=465 can end up trying plaintext on an SSL
+     *     port. We pin the scheme from the port so 465→smtps, else→smtp.
+     *
+     *  2. cPanel mailboxes routinely present a shared or self-signed TLS
+     *     certificate whose CN does not match the mail hostname, which makes
+     *     the SSL handshake fail peer verification. MAIL_VERIFY_PEER=false
+     *     relaxes that check — safe here because the app sends through the very
+     *     same server that hosts the mailbox.
+     *
+     * Only the "smtp" mailer is touched; log/array/fake transports (tests,
+     * local dev) are untouched.
+     */
+    private function configureSmtpTransport(): void
+    {
+        Mail::extend('smtp', function (array $config) {
+            $scheme = $config['scheme'] ?? null;
+            if (! $scheme) {
+                $scheme = ((int) ($config['port'] ?? 0)) === 465 ? 'smtps' : 'smtp';
+            }
+
+            $transport = (new EsmtpTransportFactory)->create(new Dsn(
+                $scheme,
+                $config['host'] ?? '127.0.0.1',
+                $config['username'] ?? null,
+                $config['password'] ?? null,
+                $config['port'] ?? null,
+                $config
+            ));
+
+            if (($config['verify_peer'] ?? true) === false) {
+                $stream = $transport->getStream();
+                if ($stream instanceof SocketStream) {
+                    $stream->setStreamOptions([
+                        'ssl' => [
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                            'allow_self_signed' => true,
+                        ],
+                    ]);
+                }
+            }
+
+            return $transport;
+        });
     }
 
     /**

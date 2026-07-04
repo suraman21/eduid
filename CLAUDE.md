@@ -15,8 +15,15 @@ to the user.
 
 ### Standard deploy (ALWAYS use this — `migrate --force` only runs *pending* migrations, so it is safe even when there are none; seeders are idempotent `updateOrCreate`)
 ```bash
-{ cd /home/arkeonet/arkeoid.arkeonethiopia.com && git fetch origin && git reset --hard origin/main && /opt/cpanel/ea-php84/root/usr/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader && /opt/cpanel/ea-php84/root/usr/bin/php artisan migrate --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan db:seed --class=FeatureSeeder --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan db:seed --class=SheetTemplateSeeder --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan config:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan cache:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan view:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan route:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan storage:link; } > /home/arkeonet/deploy_log.txt 2>&1
+{ cd /home/arkeonet/arkeoid.arkeonethiopia.com && git fetch origin && git reset --hard origin/main; { [ -f /usr/local/bin/composer ] && /opt/cpanel/ea-php84/root/usr/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader; } || { [ -f ~/composer.phar ] && /opt/cpanel/ea-php84/root/usr/bin/php ~/composer.phar install --no-dev --optimize-autoloader; } || echo "composer skipped (no binary found)"; /opt/cpanel/ea-php84/root/usr/bin/php artisan migrate --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan db:seed --class=FeatureSeeder --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan db:seed --class=SheetTemplateSeeder --force && /opt/cpanel/ea-php84/root/usr/bin/php artisan config:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan cache:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan view:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan route:clear && /opt/cpanel/ea-php84/root/usr/bin/php artisan storage:link; } > /home/arkeonet/deploy_log.txt 2>&1
 ```
+
+**Composer must NEVER `&&`-chain into `migrate`** — if the composer binary path
+is wrong the `&&` aborts the whole deploy *before* migrations run, silently
+reproducing "Unknown column … / Base table doesn't exist" 500s (this exact trap
+bit us once: `Could not open input file: /usr/local/bin/composer` skipped every
+step after it). The block above isolates composer (tries `/usr/local/bin/composer`,
+then `~/composer.phar`, else skips) so migrations always run regardless.
 
 **Never use a deploy that skips `migrate --force`** — doing so was the cause of
 repeated "Base table … doesn't exist" 500s. Verify after deploy with:
