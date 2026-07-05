@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Icon(Icons.school_rounded,
+                      child: const Icon(Icons.badge_rounded,
                           size: 32, color: Colors.white),
                     ),
                   ),
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: AppColors.ink, fontSize: 15),
                           decoration: const InputDecoration(
                             labelText: 'School code',
-                            prefixIcon: Icon(Icons.tag_rounded, size: 20),
+                            prefixIcon: Icon(Icons.numbers_rounded, size: 20),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -116,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: AppColors.ink, fontSize: 15),
                           decoration: const InputDecoration(
                             labelText: 'Email',
-                            prefixIcon: Icon(Icons.mail_outline_rounded,
+                            prefixIcon: Icon(Icons.alternate_email_rounded,
                                 size: 20),
                           ),
                         ),
@@ -130,12 +130,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: InputDecoration(
                             labelText: 'Password',
                             prefixIcon:
-                                const Icon(Icons.lock_outline_rounded, size: 20),
+                                const Icon(Icons.lock_rounded, size: 20),
                             suffixIcon: IconButton(
                               icon: Icon(
                                   _showPassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
+                                      ? Icons.visibility_off_rounded
+                                      : Icons.visibility_rounded,
                                   size: 20),
                               onPressed: () => setState(
                                   () => _showPassword = !_showPassword),

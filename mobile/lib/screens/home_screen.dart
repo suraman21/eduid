@@ -97,9 +97,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: Text(c.name,
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, color: AppColors.ink)),
-                subtitle: Text('${c.studentCount} students',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.inkLo)),
+                subtitle: Text(
+                    c.recordedToday.isEmpty
+                        ? '${c.studentCount} students'
+                        : '${c.studentCount} students · ✓ ${c.recordedToday.map((t) => t.replaceAll('_', ' ')).join(', ')} recorded',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: c.recordedToday.isEmpty
+                            ? AppColors.inkLo
+                            : AppColors.primary)),
                 onTap: () => Navigator.pop(ctx, c),
               ),
             const SizedBox(height: 8),
@@ -107,7 +113,33 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-    if (chosen != null && mounted) _openRoster(chosen, scan: true);
+    if (chosen == null || !mounted) return;
+
+    // Duplicate guard: this class already has attendance today. Re-scanning
+    // is allowed (it EDITS the same session — the server merges, never
+    // duplicates) but the teacher should do it on purpose, not by accident.
+    if (chosen.recordedToday.isNotEmpty) {
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Attendance already recorded'),
+          content: Text(
+              '${chosen.name} already has ${chosen.recordedToday.map((t) => t.replaceAll('_', ' ')).join(' and ')} attendance today. '
+              'Scanning again updates the existing record — it will not create a duplicate.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Continue')),
+          ],
+        ),
+      );
+      if (go != true || !mounted) return;
+    }
+
+    _openRoster(chosen, scan: true);
   }
 
   @override

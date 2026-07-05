@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import 'core/api_client.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/photo_sessions_screen.dart';
+import 'screens/schedule_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/parent_home_screen.dart';
 import 'screens/pin_screen.dart';
 import 'screens/role_notice_screen.dart';
@@ -88,15 +91,86 @@ class _EduIdAppState extends State<EduIdApp> with WidgetsBindingObserver {
       title: 'EduID',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const _Gate(),
+      home: const SplashGate(),
+    );
+  }
+}
+
+/// Lightweight branded splash: one implicit scale+fade (~800 ms), no
+/// packages, no images — negligible cost on low-end devices. Shown once per
+/// cold start, then hands over to the auth gate.
+class SplashGate extends StatefulWidget {
+  const SplashGate({super.key});
+
+  @override
+  State<SplashGate> createState() => _SplashGateState();
+}
+
+class _SplashGateState extends State<SplashGate> {
+  bool _shown = false; // logo pop-in
+  bool _done = false;  // splash finished
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _shown = true);
+    });
+    Future.delayed(const Duration(milliseconds: 950), () {
+      if (mounted) setState(() => _done = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_done) return const _Gate();
+
+    return Scaffold(
+      backgroundColor: AppColors.primary,
+      body: Center(
+        child: AnimatedScale(
+          scale: _shown ? 1 : 0.7,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOutBack,
+          child: AnimatedOpacity(
+            opacity: _shown ? 1 : 0,
+            duration: const Duration(milliseconds: 350),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(Icons.badge_rounded,
+                      size: 44, color: AppColors.primary),
+                ),
+                const SizedBox(height: 18),
+                const Text('EduID',
+                    style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 4),
+                const Text('Smart Student Identity',
+                    style: TextStyle(fontSize: 13, color: Colors.white70)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 /// Routes by auth state and role:
 ///   signed out → login · PIN pending → unlock ·
-///   teacher / school admin → teacher home · parent → parent home ·
-///   other roles → coming-soon notice.
+///   teacher → teacher shell · school admin → admin shell ·
+///   parent → parent home · other roles → coming-soon notice.
 class _Gate extends StatelessWidget {
   const _Gate();
 
@@ -107,8 +181,107 @@ class _Gate extends StatelessWidget {
     if (auth.locked) return const PinScreen(mode: PinMode.unlock);
 
     final role = auth.role;
-    if (role == 'teacher' || role == 'school_admin') return const HomeScreen();
+    if (role == 'teacher') return const TeacherShell();
+    if (role == 'school_admin') return const AdminShell();
     if (role == 'parent') return const ParentHomeScreen();
     return RoleNoticeScreen(role: role);
+  }
+}
+
+/// Teacher: their daily work — classes & scanning, schedule, settings.
+class TeacherShell extends StatefulWidget {
+  const TeacherShell({super.key});
+
+  @override
+  State<TeacherShell> createState() => _TeacherShellState();
+}
+
+class _TeacherShellState extends State<TeacherShell> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _tab, children: const [
+        HomeScreen(),
+        ScheduleScreen(),
+        SettingsScreen(),
+      ]),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (i) => setState(() => _tab = i),
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.primarySoft,
+        destinations: const [
+          NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded, color: AppColors.primary),
+              label: 'Home'),
+          NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon:
+                  Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+              label: 'Schedule'),
+          NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon:
+                  Icon(Icons.settings_rounded, color: AppColors.primary),
+              label: 'Settings'),
+        ],
+      ),
+    );
+  }
+}
+
+/// School admin: oversight + operations — home, Photo Session Mode,
+/// schedule, settings. Different job, different shell.
+class AdminShell extends StatefulWidget {
+  const AdminShell({super.key});
+
+  @override
+  State<AdminShell> createState() => _AdminShellState();
+}
+
+class _AdminShellState extends State<AdminShell> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _tab, children: const [
+        HomeScreen(),
+        PhotoSessionsScreen(),
+        ScheduleScreen(),
+        SettingsScreen(),
+      ]),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (i) => setState(() => _tab = i),
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.primarySoft,
+        destinations: const [
+          NavigationDestination(
+              icon: Icon(Icons.space_dashboard_outlined),
+              selectedIcon:
+                  Icon(Icons.space_dashboard_rounded, color: AppColors.primary),
+              label: 'Home'),
+          NavigationDestination(
+              icon: Icon(Icons.photo_camera_outlined),
+              selectedIcon:
+                  Icon(Icons.photo_camera_rounded, color: AppColors.primary),
+              label: 'Photos'),
+          NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon:
+                  Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+              label: 'Schedule'),
+          NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon:
+                  Icon(Icons.settings_rounded, color: AppColors.primary),
+              label: 'Settings'),
+        ],
+      ),
+    );
   }
 }

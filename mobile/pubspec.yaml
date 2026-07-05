@@ -23,6 +23,15 @@ dependencies:
   # QR scanning (camera) for attendance.
   mobile_scanner: ^5.1.1
 
+  # Photo Session Mode: full camera capture (flutter.dev plugin).
+  camera: ^0.11.0
+
+  # On-device photo compression before upload (saves data + storage).
+  flutter_image_compress: ^2.3.0
+
+  # App documents dir for the offline photo-upload queue.
+  path_provider: ^2.1.0
+
   # Lightweight app-state (auth session).
   provider: ^6.1.1
 

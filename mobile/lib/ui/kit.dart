@@ -7,9 +7,10 @@ import 'package:flutter/material.dart';
 /// tappable surface is an InkWell so touch feedback is instant (ripple starts
 /// on pointer-down, before any async work).
 class AppColors {
-  static const primary = Color(0xFF4F46E5); // indigo — matches the web app
-  static const primaryDark = Color(0xFF4338CA);
-  static const primarySoft = Color(0xFFEEF2FF);
+  // Emerald green — matches the public website brand.
+  static const primary = Color(0xFF059669);
+  static const primaryDark = Color(0xFF047857);
+  static const primarySoft = Color(0xFFECFDF5);
 
   static const bg = Color(0xFFF6F7FB);
   static const surface = Colors.white;

@@ -8,12 +8,18 @@ class SchoolClass {
   final String? section;
   final int studentCount;
 
+  /// Session types already recorded TODAY (e.g. ['morning']) — from the
+  /// classes API; drives the duplicate-scan warning. Not persisted locally
+  /// (it is only meaningful while fresh).
+  final List<String> recordedToday;
+
   const SchoolClass({
     required this.id,
     required this.name,
     this.grade,
     this.section,
     this.studentCount = 0,
+    this.recordedToday = const [],
   });
 
   factory SchoolClass.fromApi(Map<String, dynamic> j) => SchoolClass(
@@ -22,6 +28,9 @@ class SchoolClass {
         grade: j['grade']?.toString(),
         section: j['section']?.toString(),
         studentCount: (j['student_count'] ?? 0) as int,
+        recordedToday: ((j['recorded_today'] ?? const []) as List)
+            .map((e) => e.toString())
+            .toList(),
       );
 
   factory SchoolClass.fromDb(Map<String, dynamic> r) => SchoolClass(
@@ -101,6 +110,7 @@ class PeriodSlot {
   final String? className;
   final int? classId;
   final String? subjectName;
+  final String? subjectColor;
   final String? room;
 
   const PeriodSlot({
@@ -112,6 +122,7 @@ class PeriodSlot {
     this.className,
     this.classId,
     this.subjectName,
+    this.subjectColor,
     this.room,
   });
 
@@ -126,6 +137,7 @@ class PeriodSlot {
       className: entry?['class_name']?.toString(),
       classId: entry?['class_id'] as int?,
       subjectName: entry?['subject_name']?.toString(),
+      subjectColor: entry?['subject_color']?.toString(),
       room: entry?['room']?.toString(),
     );
   }

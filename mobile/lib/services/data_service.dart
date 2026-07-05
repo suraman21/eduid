@@ -20,6 +20,18 @@ class DataService {
     final list = (res.data['classes'] as List).cast<Map<String, dynamic>>();
     final classes = list.map(SchoolClass.fromApi).toList();
 
+    // recorded_today lives OUTSIDE sqlite (it is only valid for today):
+    // a day-stamped meta blob, merged back in cachedClasses().
+    await LocalDb.instance.putMeta(
+      'classes_recorded_today',
+      jsonEncode({
+        'date': DateTime.now().toIso8601String().substring(0, 10),
+        'map': {
+          for (final c in classes) '${c.id}': c.recordedToday,
+        },
+      }),
+    );
+
     final d = await LocalDb.instance.db;
     await d.transaction((txn) async {
       await txn.delete('classes');
@@ -58,7 +70,33 @@ class DataService {
   Future<List<SchoolClass>> cachedClasses() async {
     final d = await LocalDb.instance.db;
     final rows = await d.query('classes', orderBy: 'name');
-    return rows.map(SchoolClass.fromDb).toList();
+    final classes = rows.map(SchoolClass.fromDb).toList();
+
+    // Merge today's recorded-session info (dropped if stale — yesterday's
+    // sessions must never trigger today's duplicate warning).
+    final raw = await LocalDb.instance.getMeta('classes_recorded_today');
+    if (raw != null) {
+      try {
+        final data = jsonDecode(raw) as Map<String, dynamic>;
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        if (data['date'] == today) {
+          final map = (data['map'] as Map).cast<String, dynamic>();
+          return classes
+              .map((c) => SchoolClass(
+                    id: c.id,
+                    name: c.name,
+                    grade: c.grade,
+                    section: c.section,
+                    studentCount: c.studentCount,
+                    recordedToday: ((map['${c.id}'] ?? const []) as List)
+                        .map((e) => e.toString())
+                        .toList(),
+                  ))
+              .toList();
+        }
+      } catch (_) {/* stale/corrupt meta — ignore */}
+    }
+    return classes;
   }
 
   Future<List<Student>> cachedRoster(int classId) async {
