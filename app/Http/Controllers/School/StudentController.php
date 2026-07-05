@@ -41,6 +41,12 @@ class StudentController extends BaseSchoolController
             $query->where('status', $status);
         }
 
+        // "Missing photo" worklist — pairs with photo sessions so the admin
+        // can chase exactly who still needs a picture.
+        if ($request->boolean('no_photo')) {
+            $query->whereNull('photo_path');
+        }
+
         // Surface unassigned students (no class) first so admins notice and
         // place them. SQLite + MySQL compatible.
         $students = $query
@@ -64,7 +70,7 @@ class StudentController extends BaseSchoolController
             ]),
             'classes'          => $classes->map(fn ($c) => ['id' => $c->id, 'name' => $c->name]),
             'unassigned_count' => $unassignedCount,
-            'filters'          => $request->only('search', 'class_id', 'status'),
+            'filters'          => $request->only('search', 'class_id', 'status', 'no_photo'),
         ]);
     }
 

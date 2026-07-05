@@ -111,7 +111,9 @@ class AttendanceController extends BaseSchoolController
             ])->values(),
             'existing'    => $existing,
             'sessionDate' => $filters['session_date'] ?? today()->toDateString(),
-            'sessionType' => $filters['session_type'] ?? 'morning',
+            'sessionType' => $filters['session_type'] ?? $this->currentSchool()->sessionTypes()[0],
+            // Cadence-driven: 'once' offers full-day only, 'twice' morning/afternoon.
+            'sessionTypes' => $this->currentSchool()->sessionTypes(),
         ]);
     }
 

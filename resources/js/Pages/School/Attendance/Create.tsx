@@ -12,6 +12,7 @@ interface Props {
   existing: Record<number, string>;
   sessionDate: string;
   sessionType: string;
+  sessionTypes?: string[];
 }
 
 const STATUSES = ['present', 'late', 'excused', 'absent'] as const;
@@ -22,7 +23,8 @@ const STATUS_COLORS: Record<string, string> = {
   absent:  'peer-checked:bg-red-50 peer-checked:text-red-600 peer-checked:border-red-300',
 };
 
-export default function AttendanceCreate({ classes, class: selectedClass, roster, existing, sessionDate, sessionType }: Props) {
+export default function AttendanceCreate({ classes, class: selectedClass, roster, existing, sessionDate, sessionType, sessionTypes = ['morning', 'afternoon'] }: Props) {
+  const typeLabel = (t: string) => t.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
   const [filterState, setFilterState] = useState({ class_id: selectedClass?.id?.toString() ?? '', session_date: sessionDate, session_type: sessionType });
   const [statuses, setStatuses] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {};
@@ -77,9 +79,7 @@ export default function AttendanceCreate({ classes, class: selectedClass, roster
             <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
             <select value={filterState.session_type} onChange={e => setFilterState(p => ({ ...p, session_type: e.target.value }))}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
-              <option value="morning">Morning</option>
-              <option value="afternoon">Afternoon</option>
-              <option value="full_day">Full Day</option>
+              {sessionTypes.map(t => <option key={t} value={t}>{typeLabel(t)}</option>)}
             </select>
           </div>
           <div>

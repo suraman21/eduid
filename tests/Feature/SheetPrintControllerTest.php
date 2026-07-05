@@ -48,7 +48,7 @@ class SheetPrintControllerTest extends TestCase
         return Student::withoutGlobalScope('school')->create([
             'school_id' => $this->school->id, 'uid' => 'ALPHA'.strtoupper($first),
             'first_name' => $first, 'last_name' => 'Test', 'gender' => 'male',
-            'status' => 'active', 'enrollment_date' => today(),
+            'status' => 'active', 'photo_path' => 'x/fixture.jpg', 'enrollment_date' => today(),
         ]);
     }
 

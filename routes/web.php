@@ -33,6 +33,7 @@ use App\Http\Controllers\School\GuardianController as SchoolGuardianController;
 use App\Http\Controllers\School\ReportCardController as SchoolReportCardController;
 use App\Http\Controllers\School\IdCardController as SchoolIdCardController;
 use App\Http\Controllers\School\FeeController as SchoolFeeController;
+use App\Http\Controllers\School\SettingsController as SchoolSettingsController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -349,6 +350,10 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
             Route::get('/invoices/{invoice}/payments',   [SchoolFeeController::class, 'invoicePayments'])->name('invoices.payments');
             Route::post('/invoices/{invoice}/payments',  [SchoolFeeController::class, 'recordPayment'])->name('invoices.pay');
         });
+        // School configuration (attendance cadence, branding, contact).
+        Route::get('/settings',   [SchoolSettingsController::class, 'index'])->name('school.settings.index');
+        Route::patch('/settings', [SchoolSettingsController::class, 'update'])->name('school.settings.update');
+
         Route::resource('/staff', SchoolStaffController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.staff');

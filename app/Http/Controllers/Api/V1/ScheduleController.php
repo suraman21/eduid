@@ -33,10 +33,11 @@ class ScheduleController extends BaseApiController
             'end_time'   => $p->end_time,
             'is_break'   => $p->is_break,
             'entry'      => $entries->has($p->id) ? [
-                'class_name'   => $entries[$p->id]->schoolClass?->display_name,
-                'class_id'     => $entries[$p->id]->class_id,
-                'subject_name' => $entries[$p->id]->subject?->name,
-                'room'         => $entries[$p->id]->room,
+                'class_name'    => $entries[$p->id]->schoolClass?->display_name,
+                'class_id'      => $entries[$p->id]->class_id,
+                'subject_name'  => $entries[$p->id]->subject?->name,
+                'subject_color' => $entries[$p->id]->subject?->color,
+                'room'          => $entries[$p->id]->room,
             ] : null,
         ]);
 
@@ -80,8 +81,10 @@ class ScheduleController extends BaseApiController
             ->get()
             ->groupBy('day_of_week');
 
+        // Only the school's WORKING days — a Mon–Fri school must never show
+        // Saturday/Sunday columns in the app (see schools.working_days).
         $week = [];
-        for ($day = 1; $day <= 7; $day++) {
+        foreach ($this->currentSchool()->workingDays() as $day) {
             $dayEntries = $entries[$day] ?? collect();
             $week[] = [
                 'day' => $day,
@@ -95,12 +98,17 @@ class ScheduleController extends BaseApiController
                         'class_name'   => $e->schoolClass?->display_name,
                         'class_id'     => $e->class_id,
                         'subject_name' => $e->subject?->name,
+                        // Subject colour drives the app's schedule colour-coding.
+                        'subject_color' => $e->subject?->color,
                         'room'         => $e->room,
                     ] : null,
                 ]),
             ];
         }
 
-        return response()->json(['week' => $week]);
+        return response()->json([
+            'week'         => $week,
+            'working_days' => $this->currentSchool()->workingDays(),
+        ]);
     }
 }

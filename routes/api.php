@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\GradeController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\ScheduleController;
+use App\Http\Controllers\Api\V1\PhotoSessionController;
 use App\Http\Controllers\Api\V1\TelegramWebhookController;
 
 /*
@@ -90,6 +91,14 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:mobile'])->group(func
         // Online QR verification + offline attendance sync.
         Route::post('/attendance/verify-qr', [AttendanceController::class, 'verifyQr'])->name('api.attendance.verify');
         Route::post('/attendance/sync', [AttendanceController::class, 'sync'])->name('api.attendance.sync');
+    });
+
+    // ── Photo Session Mode (school admins only) ──────────────────
+    Route::middleware('role:school_admin')->group(function () {
+        Route::get('/photo-sessions/active', [PhotoSessionController::class, 'active'])->name('api.photo-sessions.active');
+        Route::post('/photo-sessions/{photoSession}/photo', [PhotoSessionController::class, 'upload'])
+            ->middleware('throttle:photo-upload')->name('api.photo-sessions.upload');
+        Route::post('/photo-sessions/{photoSession}/skip', [PhotoSessionController::class, 'skip'])->name('api.photo-sessions.skip');
     });
 
     // ── Parent app (read-only, own children only) ────────────────

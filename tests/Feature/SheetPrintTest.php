@@ -90,12 +90,12 @@ class SheetPrintTest extends TestCase
         $s1 = Student::withoutGlobalScope('school')->create([
             'school_id' => $school->id, 'uid' => 'ALPHA001',
             'first_name' => 'Abebe', 'last_name' => 'Test', 'gender' => 'male',
-            'status' => 'active', 'enrollment_date' => today(),
+            'status' => 'active', 'photo_path' => 'x/fixture.jpg', 'enrollment_date' => today(),
         ]);
         $s2 = Student::withoutGlobalScope('school')->create([
             'school_id' => $school->id, 'uid' => 'ALPHA002',
             'first_name' => 'Bekele', 'last_name' => 'Test', 'gender' => 'male',
-            'status' => 'active', 'enrollment_date' => today(),
+            'status' => 'active', 'photo_path' => 'x/fixture.jpg', 'enrollment_date' => today(),
         ]);
 
         $assignments = [
@@ -144,7 +144,7 @@ class SheetPrintTest extends TestCase
         $s1 = Student::withoutGlobalScope('school')->create([
             'school_id' => $school->id, 'uid' => 'BETA001',
             'first_name' => 'Chaltu', 'last_name' => 'Test', 'gender' => 'female',
-            'status' => 'active', 'enrollment_date' => today(),
+            'status' => 'active', 'photo_path' => 'x/fixture.jpg', 'enrollment_date' => today(),
         ]);
 
         $bytes = app(SheetPrintService::class)->render(

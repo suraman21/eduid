@@ -14,15 +14,29 @@ class ClassController extends BaseApiController
      */
     public function index()
     {
-        $classes = $this->classesForUser()->map(fn (SchoolClass $c) => [
-            'id'            => $c->id,
-            'name'          => $c->display_name,
-            'grade'         => $c->grade,
-            'section'       => $c->section,
-            'student_count' => $c->students()->where('status', 'active')->count(),
+        $classes = $this->classesForUser();
+
+        // Which session types are ALREADY recorded today, per class — the app
+        // warns before a teacher re-scans a slot that exists (duplicate guard).
+        $recorded = \App\Models\AttendanceSession::whereIn('class_id', $classes->pluck('id'))
+            ->whereDate('session_date', today())
+            ->get(['class_id', 'session_type'])
+            ->groupBy('class_id')
+            ->map(fn ($rows) => $rows->pluck('session_type')->unique()->values());
+
+        $payload = $classes->map(fn (SchoolClass $c) => [
+            'id'             => $c->id,
+            'name'           => $c->display_name,
+            'grade'          => $c->grade,
+            'section'        => $c->section,
+            'student_count'  => $c->students()->where('status', 'active')->count(),
+            'recorded_today' => $recorded->get($c->id) ?? [],
         ]);
 
-        return response()->json(['classes' => $classes], 200);
+        return response()->json([
+            'classes'       => $payload,
+            'session_types' => $this->currentSchool()->sessionTypes(),
+        ], 200);
     }
 
     /**

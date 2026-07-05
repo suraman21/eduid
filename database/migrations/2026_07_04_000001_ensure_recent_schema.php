@@ -65,6 +65,13 @@ return new class extends Migration
             });
         }
 
+        // 5c. schools.attendance_cadence (once / twice / per_period).
+        if (Schema::hasTable('schools') && ! Schema::hasColumn('schools', 'attendance_cadence')) {
+            Schema::table('schools', function (Blueprint $table) {
+                $table->string('attendance_cadence', 20)->default('twice');
+            });
+        }
+
         // 6. alert_outbox table (Telegram outbox).
         if (! Schema::hasTable('alert_outbox')) {
             Schema::create('alert_outbox', function (Blueprint $table) {

@@ -189,6 +189,11 @@ class TimetableController extends BaseSchoolController
             'is_break'   => 'boolean',
         ]);
 
+        if ($clash = $this->overlappingPeriod($validated['start_time'], $validated['end_time'])) {
+            return back()->with('error',
+                "That time overlaps \"{$clash->label}\" (".substr($clash->start_time, 0, 5).'–'.substr($clash->end_time, 0, 5).'). Periods and breaks must not overlap — adjust the times and try again.');
+        }
+
         $validated['sort_order'] =
             (int) TimetablePeriod::max('sort_order') + 1;
         $validated['school_id'] = $this->schoolId();
@@ -209,11 +214,32 @@ class TimetableController extends BaseSchoolController
             'end_time'   => 'required|date_format:H:i|after:start_time',
             'is_break'   => 'boolean',
         ]);
+
+        if ($clash = $this->overlappingPeriod($validated['start_time'], $validated['end_time'], $period->id)) {
+            return back()->with('error',
+                "That time overlaps \"{$clash->label}\" (".substr($clash->start_time, 0, 5).'–'.substr($clash->end_time, 0, 5).'). Periods and breaks must not overlap — adjust the times and try again.');
+        }
+
         $validated['is_break'] = $request->boolean('is_break');
 
         $period->update($validated);
 
         return back()->with('success', 'Period updated.');
+    }
+
+    /**
+     * The bell schedule is a set of non-overlapping time intervals (the same
+     * invariant every timetabling system enforces). Two ranges overlap when
+     * existing.start < new.end AND existing.end > new.start — back-to-back
+     * periods (end == next start) are fine.
+     */
+    private function overlappingPeriod(string $start, string $end, ?int $ignoreId = null): ?TimetablePeriod
+    {
+        return TimetablePeriod::query()
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->where('start_time', '<', $end.':00')
+            ->where('end_time', '>', $start.':00')
+            ->first();
     }
 
     public function destroyPeriod(TimetablePeriod $period)

@@ -38,6 +38,7 @@ class School extends Model
         'staff_attendance_method',
         'onboarding_completed_at',
         'working_days',
+        'attendance_cadence',
     ];
 
     /** Default when a school hasn't chosen its week: Mon–Sat (ISO 1..6). */
@@ -70,6 +71,18 @@ class School extends Model
             'staff_attendance_method' => 'string',
             'working_days' => 'array',
         ];
+    }
+
+    /** Valid attendance cadences (how many sessions per day). */
+    public const CADENCES = ['once', 'twice', 'per_period'];
+
+    /** Session types the school's cadence offers on attendance forms. */
+    public function sessionTypes(): array
+    {
+        return match ($this->attendance_cadence ?? 'twice') {
+            'once'  => ['full_day'],
+            default => ['morning', 'afternoon'],
+        };
     }
 
     /**

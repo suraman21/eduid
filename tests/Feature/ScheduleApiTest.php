@@ -71,12 +71,14 @@ class ScheduleApiTest extends TestCase
         $response->assertJsonPath('schedule.0.entry.room', 'A101');
     }
 
-    public function test_week_schedule_returns_all_days(): void
+    public function test_week_schedule_returns_working_days_only(): void
     {
         Sanctum::actingAs($this->teacher);
 
         $response = $this->getJson('/api/v1/schedule/week');
         $response->assertOk();
-        $response->assertJsonCount(7, 'week');
+        // Default week is Mon–Sat (6 working days); Sunday must NOT appear.
+        $response->assertJsonCount(6, 'week');
+        $this->assertNotContains(7, collect($response->json('week'))->pluck('day')->all());
     }
 }

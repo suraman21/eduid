@@ -95,6 +95,20 @@ class CardOrderController extends BaseSchoolController
 
         // Deduplicate and re-validate count server-side (never trust the form).
         $studentIds = array_values(array_unique(array_map('intval', $validated['student_ids'])));
+
+        // A card cannot print without a photo — catching it HERE saves the
+        // school a doomed order that Arkeon would have to bounce back.
+        $noPhoto = Student::whereIn('id', $studentIds)
+            ->whereNull('photo_path')
+            ->get();
+        if ($noPhoto->isNotEmpty()) {
+            $names = $noPhoto->map(fn ($s) => $s->full_name)->take(6)->implode(', ')
+                . ($noPhoto->count() > 6 ? '…' : '');
+            return back()->withInput()->with('error',
+                $noPhoto->count() === 1
+                    ? "{$names} has no photo yet — run a photo session for them first, then order the card."
+                    : "{$noPhoto->count()} selected students have no photo yet ({$names}). Run a photo session for them first — cards cannot be printed without photos.");
+        }
         $count      = count($studentIds);
         $unit       = CardOrder::unitPrice($validated['order_type']);
 

@@ -54,7 +54,7 @@ class CardOrderTest extends TestCase
         return Student::withoutGlobalScope('school')->create([
             'school_id' => $this->school->id, 'uid' => 'ALPHA' . strtoupper($first),
             'first_name' => $first, 'last_name' => 'Test', 'gender' => 'male',
-            'status' => 'active', 'enrollment_date' => today(),
+            'status' => 'active', 'photo_path' => 'x/fixture.jpg', 'enrollment_date' => today(),
         ]);
     }
 
@@ -184,7 +184,7 @@ class CardOrderTest extends TestCase
         ]);
         $foreign = Student::withoutGlobalScope('school')->create([
             'school_id' => $other->id, 'uid' => 'BETAX', 'first_name' => 'Foreign',
-            'last_name' => 'Kid', 'gender' => 'male', 'status' => 'active', 'enrollment_date' => today(),
+            'last_name' => 'Kid', 'gender' => 'male', 'status' => 'active', 'photo_path' => 'x/fixture.jpg', 'enrollment_date' => today(),
         ]);
 
         $this->actingAs($this->admin)->post('/school/card-orders', [

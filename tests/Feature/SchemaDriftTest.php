@@ -71,6 +71,7 @@ class SchemaDriftTest extends TestCase
             'school_id' => $this->school->id, 'uid' => 'ALPHA001',
             'first_name' => 'Abebe', 'last_name' => 'Test', 'gender' => 'male',
             'status' => 'active', 'enrollment_date' => today(),
+            'photo_path' => 'x/fixture.jpg',
         ]);
         $this->actingAs($this->admin)->post('/school/card-orders', [
             'order_type' => 'annual_renewal', 'student_ids' => [$s1->id],

@@ -126,6 +126,9 @@ class AuthController extends Controller
                 'code' => $school->code,
                 'calendar_system' => $school->calendar_system,
                 'academic_year' => $school->academic_year,
+                'attendance_cadence' => $school->attendance_cadence ?? 'twice',
+                'session_types' => $school->sessionTypes(),
+                'working_days' => $school->workingDays(),
             ]
         ], 200);
     }
@@ -173,6 +176,9 @@ class AuthController extends Controller
                 'code' => $school->code,
                 'calendar_system' => $school->calendar_system,
                 'academic_year' => $school->academic_year,
+                'attendance_cadence' => $school->attendance_cadence ?? 'twice',
+                'session_types' => $school->sessionTypes(),
+                'working_days' => $school->workingDays(),
             ] : null
         ], 200);
     }
