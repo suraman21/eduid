@@ -55,8 +55,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
   Future<void> _openRoster(SchoolClass c) async {
     final sessionTypes = context.read<AuthService>().sessionTypes;
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) =>
-            RosterScreen(schoolClass: c, sessionTypes: sessionTypes)));
+        builder: (_) => RosterScreen(
+            schoolClass: c,
+            sessionTypes: sessionTypes,
+            recordedToday: c.recordedToday)));
     _load();
   }
 

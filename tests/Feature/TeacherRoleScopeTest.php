@@ -90,7 +90,7 @@ class TeacherRoleScopeTest extends TestCase
             '/school/subjects',
             '/school/staff',
             '/school/card-orders',
-            '/school/photo-sessions',
+            // '/school/photo-sessions', // feature disabled 2026-07 (route commented out)
             '/school/report-cards',
             '/school/students/import',
         ] as $url) {

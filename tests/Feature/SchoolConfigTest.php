@@ -144,6 +144,7 @@ class SchoolConfigTest extends TestCase
 
     public function test_mobile_photo_session_flow_upload_and_advance(): void
     {
+        $this->markTestSkipped('Photo Session feature disabled 2026-07 (routes commented out).');
         Storage::fake('local');
 
         $s1 = Student::withoutGlobalScope('school')->create([
@@ -186,6 +187,7 @@ class SchoolConfigTest extends TestCase
 
     public function test_teacher_token_cannot_touch_photo_sessions(): void
     {
+        $this->markTestSkipped('Photo Session feature disabled 2026-07 (routes commented out).');
         $this->actingAs($this->teacher, 'sanctum')->getJson('/api/v1/photo-sessions/active')
             ->assertForbidden();
     }

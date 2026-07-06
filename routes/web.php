@@ -380,19 +380,24 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
             Route::delete('/{guardian}', [SchoolGuardianController::class, 'destroy'])->name('destroy');
         });
 
-        // Photo Sessions
-        Route::prefix('photo-sessions')->name('school.photo-sessions.')->group(function () {
-            Route::get('/',                               [SchoolPhotoSessionController::class, 'index'])->name('index');
-            Route::get('/create',                         [SchoolPhotoSessionController::class, 'create'])->name('create');
-            Route::post('/',                              [SchoolPhotoSessionController::class, 'store'])->name('store');
-            Route::get('/{photoSession}',                 [SchoolPhotoSessionController::class, 'show'])->name('show');
-            // PRD §08: photo upload limited to 30 requests/minute.
-            Route::post('/{photoSession}/upload-photo',   [SchoolPhotoSessionController::class, 'uploadPhoto'])->name('upload-photo')->middleware('throttle:photo-upload');
-            Route::post('/{photoSession}/skip',           [SchoolPhotoSessionController::class, 'skipStudent'])->name('skip');
-            Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip')->middleware('throttle:photo-upload');
-            Route::post('/{photoSession}/complete',       [SchoolPhotoSessionController::class, 'complete'])->name('complete');
-            Route::post('/{photoSession}/cancel',         [SchoolPhotoSessionController::class, 'cancel'])->name('cancel');
-        });
+        // Photo Sessions — DISABLED (2026-07): schools issue ID cards before the
+        // first class, so the mobile "photograph during session" flow is not
+        // useful in practice. Commented out (not deleted) so it can be restored
+        // wholesale if the workflow is ever needed again. See also:
+        // routes/api.php (photo-sessions), SchoolLayout.tsx (nav), and the
+        // mobile Photos tab in main.dart.
+        // Route::prefix('photo-sessions')->name('school.photo-sessions.')->group(function () {
+        //     Route::get('/',                               [SchoolPhotoSessionController::class, 'index'])->name('index');
+        //     Route::get('/create',                         [SchoolPhotoSessionController::class, 'create'])->name('create');
+        //     Route::post('/',                              [SchoolPhotoSessionController::class, 'store'])->name('store');
+        //     Route::get('/{photoSession}',                 [SchoolPhotoSessionController::class, 'show'])->name('show');
+        //     // PRD §08: photo upload limited to 30 requests/minute.
+        //     Route::post('/{photoSession}/upload-photo',   [SchoolPhotoSessionController::class, 'uploadPhoto'])->name('upload-photo')->middleware('throttle:photo-upload');
+        //     Route::post('/{photoSession}/skip',           [SchoolPhotoSessionController::class, 'skipStudent'])->name('skip');
+        //     Route::post('/{photoSession}/upload-zip',     [SchoolPhotoSessionController::class, 'uploadZip'])->name('upload-zip')->middleware('throttle:photo-upload');
+        //     Route::post('/{photoSession}/complete',       [SchoolPhotoSessionController::class, 'complete'])->name('complete');
+        //     Route::post('/{photoSession}/cancel',         [SchoolPhotoSessionController::class, 'cancel'])->name('cancel');
+        // });
 
         // Card Orders (school side: select students → confirmation code → track)
         Route::get('/card-orders/{cardOrder}/id-cards', [SchoolIdCardController::class, 'batch'])

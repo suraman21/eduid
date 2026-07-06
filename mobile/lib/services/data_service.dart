@@ -67,6 +67,38 @@ class DataService {
     return classes.length;
   }
 
+  /// Optimistically record that [sessionType] has been captured for [classId]
+  /// TODAY, so reopening the class immediately defaults to the next slot (e.g.
+  /// afternoon after morning) even before the next network pull refreshes the
+  /// authoritative recorded_today. Safe offline.
+  Future<void> markRecordedTodayLocally(int classId, String sessionType) async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    Map<String, dynamic> blob;
+    final raw = await LocalDb.instance.getMeta('classes_recorded_today');
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw);
+        blob = decoded is Map<String, dynamic> ? decoded : {};
+      } catch (_) {
+        blob = {};
+      }
+    } else {
+      blob = {};
+    }
+    // Reset the map if the cached blob is from a previous day.
+    if (blob['date'] != today || blob['map'] is! Map) {
+      blob = {'date': today, 'map': <String, dynamic>{}};
+    }
+    final map = (blob['map'] as Map).cast<String, dynamic>();
+    final current = ((map['$classId'] ?? const []) as List)
+        .map((e) => e.toString())
+        .toSet()
+      ..add(sessionType);
+    map['$classId'] = current.toList();
+    blob['map'] = map;
+    await LocalDb.instance.putMeta('classes_recorded_today', jsonEncode(blob));
+  }
+
   Future<List<SchoolClass>> cachedClasses() async {
     final d = await LocalDb.instance.db;
     final rows = await d.query('classes', orderBy: 'name');

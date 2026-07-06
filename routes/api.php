@@ -93,13 +93,17 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:mobile'])->group(func
         Route::post('/attendance/sync', [AttendanceController::class, 'sync'])->name('api.attendance.sync');
     });
 
-    // ── Photo Session Mode (school admins only) ──────────────────
-    Route::middleware('role:school_admin')->group(function () {
-        Route::get('/photo-sessions/active', [PhotoSessionController::class, 'active'])->name('api.photo-sessions.active');
-        Route::post('/photo-sessions/{photoSession}/photo', [PhotoSessionController::class, 'upload'])
-            ->middleware('throttle:photo-upload')->name('api.photo-sessions.upload');
-        Route::post('/photo-sessions/{photoSession}/skip', [PhotoSessionController::class, 'skip'])->name('api.photo-sessions.skip');
-    });
+    // ── Photo Session Mode — DISABLED (2026-07) ──────────────────
+    // Schools hand out ID cards before the first class, so photographing
+    // students during a live session isn't useful. Commented out (not deleted)
+    // so it can be restored if the workflow returns. See routes/web.php and the
+    // mobile Photos tab.
+    // Route::middleware('role:school_admin')->group(function () {
+    //     Route::get('/photo-sessions/active', [PhotoSessionController::class, 'active'])->name('api.photo-sessions.active');
+    //     Route::post('/photo-sessions/{photoSession}/photo', [PhotoSessionController::class, 'upload'])
+    //         ->middleware('throttle:photo-upload')->name('api.photo-sessions.upload');
+    //     Route::post('/photo-sessions/{photoSession}/skip', [PhotoSessionController::class, 'skip'])->name('api.photo-sessions.skip');
+    // });
 
     // ── Parent app (read-only, own children only) ────────────────
     // The school's package must include the 'parent_app' module.

@@ -16,6 +16,7 @@ class RosterScreen extends StatefulWidget {
     required this.schoolClass,
     this.autoScan = false,
     this.sessionTypes = const ['morning', 'afternoon'],
+    this.recordedToday = const [],
   });
 
   final SchoolClass schoolClass;
@@ -26,6 +27,11 @@ class RosterScreen extends StatefulWidget {
   /// Session slots the school actually records (from its attendance cadence).
   /// The picker offers exactly these — never a hardcoded morning/afternoon.
   final List<String> sessionTypes;
+
+  /// Session slots already recorded for this class TODAY — used to default to
+  /// the NEXT un-recorded slot (so "take morning then afternoon" just works)
+  /// and to flag a slot that saving will update rather than create.
+  final List<String> recordedToday;
 
   @override
   State<RosterScreen> createState() => _RosterScreenState();
@@ -54,10 +60,16 @@ class _RosterScreenState extends State<RosterScreen> {
   @override
   void initState() {
     super.initState();
-    // Default to the first slot the school uses (falls back safely).
-    _sessionType = widget.sessionTypes.isNotEmpty
-        ? widget.sessionTypes.first
-        : 'morning';
+    // Default to the first slot NOT yet recorded today — so a teacher who
+    // already did the morning lands on the afternoon automatically instead of
+    // silently re-opening the morning (the "already marked" confusion).
+    final slots = widget.sessionTypes.isNotEmpty
+        ? widget.sessionTypes
+        : const ['morning'];
+    _sessionType = slots.firstWhere(
+      (s) => !widget.recordedToday.contains(s),
+      orElse: () => slots.first,
+    );
     _load();
     _search.addListener(() => setState(() {}));
   }
@@ -119,13 +131,18 @@ class _RosterScreenState extends State<RosterScreen> {
       sessionType: _sessionType,
       marks: _marks,
     );
+    // Reflect this slot immediately so reopening the class defaults to the next
+    // one (afternoon after morning) even before the next network pull.
+    await DataService.instance
+        .markRecordedTodayLocally(widget.schoolClass.id, _sessionType);
     // Automatic: the engine pushes this within a second when online.
     SyncEngine.instance.pushSoon();
     if (!mounted) return;
     setState(() => _saving = false);
+    final label = _sessionLabel(_sessionType).toLowerCase();
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Attendance saved — syncing automatically.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$label attendance saved — syncing automatically.')));
   }
 
   void _markAll(AttendanceStatus st) {
@@ -142,6 +159,47 @@ class _RosterScreenState extends State<RosterScreen> {
         AttendanceStatus.late => AppColors.amber,
         AttendanceStatus.excused => AppColors.blue,
       };
+
+  /// One session-slot chip (Morning / Afternoon). Selected = filled green;
+  /// an already-recorded slot shows a check so the teacher can see at a glance
+  /// what's done.
+  Widget _sessionChip(String type) {
+    final on = _sessionType == type;
+    final done = widget.recordedToday.contains(type);
+    return Material(
+      color: on ? AppColors.primary : AppColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => setState(() => _sessionType = type),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: on ? AppColors.primary : AppColors.border),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (done)
+                Padding(
+                  padding: const EdgeInsets.only(right: 5),
+                  child: Icon(Icons.check_circle_rounded,
+                      size: 15,
+                      color: on ? Colors.white : AppColors.primary),
+                ),
+              Text(_sessionLabel(type),
+                  style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: on ? Colors.white : AppColors.inkMid)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,30 +222,51 @@ class _RosterScreenState extends State<RosterScreen> {
                     const TextStyle(fontSize: 12, color: AppColors.inkLo)),
           ],
         ),
-        actions: [
-          // Session type — only shown when the school actually has a choice
-          // (a single-session school records one slot; no picker needed).
-          if (widget.sessionTypes.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: DropdownButton<String>(
-                value: _sessionType,
-                underline: const SizedBox.shrink(),
-                borderRadius: BorderRadius.circular(12),
-                style: const TextStyle(fontSize: 13, color: AppColors.inkMid),
-                items: [
-                  for (final t in widget.sessionTypes)
-                    DropdownMenuItem(value: t, child: Text(_sessionLabel(t))),
-                ],
-                onChanged: (v) => setState(
-                    () => _sessionType = v ?? widget.sessionTypes.first),
-              ),
-            ),
-        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
+            // ── Session-type selector (Morning / Afternoon / …) ──
+            // Prominent so the teacher always knows and controls which slot
+            // they are recording. Slots already recorded today are flagged.
+            if (widget.sessionTypes.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Row(
+                  children: [
+                    for (final t in widget.sessionTypes) ...[
+                      Expanded(child: _sessionChip(t)),
+                      if (t != widget.sessionTypes.last)
+                        const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+              ),
+            if (widget.recordedToday.contains(_sessionType))
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.amberSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        size: 16, color: AppColors.amber),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                          '${_sessionLabel(_sessionType)} attendance is already recorded today — saving will update it.',
+                          style: const TextStyle(
+                              fontSize: 11.5, color: AppColors.amber)),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 4),
             // ── Search + bulk actions ──
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),

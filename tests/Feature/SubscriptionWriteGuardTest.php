@@ -75,6 +75,7 @@ class SubscriptionWriteGuardTest extends TestCase
 
     public function test_photo_session_store_blocked_when_expired(): void
     {
+        $this->markTestSkipped('Photo Session feature disabled 2026-07 (routes commented out).');
         $this->actingAs($this->admin)->post('/school/photo-sessions', [
             'session_type' => 'app_capture',
         ])->assertForbidden();

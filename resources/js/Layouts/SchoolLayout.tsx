@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
-    UserCircle, CreditCard, Camera, FileText, CalendarRange, Rocket, BarChart3, Wallet, Settings,
+    UserCircle, CreditCard, FileText, CalendarRange, Rocket, BarChart3, Wallet, Settings,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -29,7 +29,9 @@ const navItems: NavItem[] = [
     { label: 'Fees',           href: '/school/fees',            icon: Wallet,          inertia: true, roles: ['school_admin'], feature: 'fees' },
     { label: 'Analytics',      href: '/school/analytics',       icon: BarChart3,       inertia: true, roles: ['school_admin'], feature: 'analytics' },
     { label: 'Card Orders',    href: '/school/card-orders',     icon: CreditCard,      inertia: true, roles: ['school_admin'], tour: 'nav-cardorders' },
-    { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
+    // Photo Sessions — disabled 2026-07 (schools issue cards before class starts).
+    // Restore this entry (and the routes/controllers) to bring the feature back.
+    // { label: 'Photo Sessions', href: '/school/photo-sessions',  icon: Camera,          inertia: true, roles: ['school_admin'] },
     { label: 'Import',         href: '/school/students/import', icon: Upload,                         roles: ['school_admin'], feature: 'csv_import' },
     { label: 'New Year',       href: '/school/year-transition', icon: Rocket,          inertia: true, roles: ['school_admin'], feature: 'year_transition' },
     { label: 'Settings',       href: '/school/settings',        icon: Settings,        inertia: true, roles: ['school_admin'] },

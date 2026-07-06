@@ -6,7 +6,8 @@ import 'screens/classes_screen.dart';
 import 'screens/grades_tab_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/photo_sessions_screen.dart';
+// Photo Session Mode disabled 2026-07 — screen kept but no longer wired.
+// import 'screens/photo_sessions_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/parent_home_screen.dart';
@@ -226,7 +227,7 @@ class _TeacherShellState extends State<TeacherShell> {
               icon: Icon(Icons.calendar_month_outlined),
               selectedIcon:
                   Icon(Icons.calendar_month_rounded, color: AppColors.primary),
-              label: 'Schedule'),
+              label: 'Timetable'),
           NavigationDestination(
               icon: Icon(Icons.grid_view_outlined),
               selectedIcon:
@@ -247,9 +248,14 @@ class _TeacherShellState extends State<TeacherShell> {
   }
 }
 
-/// School admin: Home · Classes · Photos · More. Admins don't teach a personal
-/// timetable, so there's no Schedule tab — Photo Session Mode is their tab
-/// instead. Class rosters and gradebooks are reachable from Classes.
+/// School admin: Home · Classes · More. Class rosters and gradebooks are
+/// reachable from Classes.
+///
+/// NOTE: the "Photos" tab (Photo Session Mode) is disabled as of 2026-07 —
+/// schools issue ID cards before the first class, so photographing students
+/// live wasn't useful. The screens/service stay in the tree but are no longer
+/// wired here; re-add PhotoSessionsScreen as a tab (and uncomment the API
+/// routes) to restore it.
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
 
@@ -266,7 +272,6 @@ class _AdminShellState extends State<AdminShell> {
       body: IndexedStack(index: _tab, children: [
         HomeScreen(onOpenClasses: () => setState(() => _tab = 1)),
         const ClassesScreen(),
-        const PhotoSessionsScreen(),
         const SettingsScreen(),
       ]),
       bottomNavigationBar: NavigationBar(
@@ -285,11 +290,6 @@ class _AdminShellState extends State<AdminShell> {
               selectedIcon:
                   Icon(Icons.grid_view_rounded, color: AppColors.primary),
               label: 'Classes'),
-          NavigationDestination(
-              icon: Icon(Icons.photo_camera_outlined),
-              selectedIcon:
-                  Icon(Icons.photo_camera_rounded, color: AppColors.primary),
-              label: 'Photos'),
           NavigationDestination(
               icon: Icon(Icons.menu_rounded),
               selectedIcon: Icon(Icons.menu_rounded, color: AppColors.primary),

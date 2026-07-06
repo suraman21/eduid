@@ -70,7 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final sessionTypes = context.read<AuthService>().sessionTypes;
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => RosterScreen(
-            schoolClass: c, autoScan: scan, sessionTypes: sessionTypes)));
+            schoolClass: c,
+            autoScan: scan,
+            sessionTypes: sessionTypes,
+            recordedToday: c.recordedToday)));
     _loadCache();
   }
 
@@ -125,30 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (chosen == null || !mounted) return;
 
-    // Duplicate guard: this class already has attendance today. Re-scanning is
-    // allowed (it EDITS the same session — the server merges, never
-    // duplicates) but the teacher should do it on purpose, not by accident.
-    if (chosen.recordedToday.isNotEmpty) {
-      final go = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Attendance already recorded'),
-          content: Text(
-              '${chosen.name} already has ${chosen.recordedToday.map((t) => t.replaceAll('_', ' ')).join(' and ')} attendance today. '
-              'Scanning again updates the existing record — it will not create a duplicate.'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Continue')),
-          ],
-        ),
-      );
-      if (go != true || !mounted) return;
-    }
-
+    // No blocking dialog here anymore: the roster opens on the next un-recorded
+    // slot (e.g. afternoon once morning is done) and clearly flags a slot that
+    // saving would update — so re-recording is always a deliberate choice.
     _openRoster(chosen, scan: true);
   }
 
@@ -237,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icons.calendar_month_rounded,
                             value: '${_todayTeaching.length}',
                             label: "Today's periods",
-                            linkText: 'View schedule',
+                            linkText: 'Timetable',
                             onTap: widget.onOpenSchedule,
                           )
                         : _StatTile(
