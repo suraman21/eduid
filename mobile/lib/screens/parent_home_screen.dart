@@ -145,12 +145,12 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   child: Row(
                     children: [
                       Container(
-                        width: 44,
-                        height: 44,
+                        width: 46,
+                        height: 46,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(13),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           (c['full_name']?.toString() ?? '?')
@@ -195,6 +195,37 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                     ],
                   ),
                 ),
+
+              if (!_loading && _error == null && _children.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                AppCard(
+                  padding: const EdgeInsets.all(14),
+                  color: AppColors.bg,
+                  borderColor: Colors.transparent,
+                  child: Row(
+                    children: [
+                      const IconTile(Icons.support_agent_rounded,
+                          color: AppColors.primary, size: 36),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Need help?',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: AppColors.ink)),
+                            Text('Contact your school administrator.',
+                                style: const TextStyle(
+                                    fontSize: 12, color: AppColors.inkLo)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

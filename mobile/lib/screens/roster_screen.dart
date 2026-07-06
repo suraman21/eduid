@@ -197,6 +197,35 @@ class _RosterScreenState extends State<RosterScreen> {
               ),
             ),
 
+            // ── P/A/L/E legend ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Row(
+                children: [
+                  for (final st in AttendanceStatus.values) ...[
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                          color: _tone(st), shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                        switch (st) {
+                          AttendanceStatus.present => 'Present',
+                          AttendanceStatus.absent => 'Absent',
+                          AttendanceStatus.late => 'Late',
+                          AttendanceStatus.excused => 'Excused',
+                        },
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.inkLo)),
+                    if (st != AttendanceStatus.excused)
+                      const SizedBox(width: 12),
+                  ],
+                ],
+              ),
+            ),
+
             // ── Student list (fixed row height → fastest possible scroll) ──
             Expanded(
               child: ListView.builder(
@@ -210,7 +239,7 @@ class _RosterScreenState extends State<RosterScreen> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: AppCard(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      radius: 12,
+                      radius: 14,
                       child: Row(
                         children: [
                           Expanded(
@@ -246,14 +275,14 @@ class _RosterScreenState extends State<RosterScreen> {
                               padding: const EdgeInsets.only(left: 5),
                               child: Material(
                                 color: mark == st ? _tone(st) : AppColors.bg,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 child: InkWell(
                                   onTap: () =>
                                       setState(() => _marks[s.id] = st),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                   child: SizedBox(
-                                    width: 34,
-                                    height: 34,
+                                    width: 36,
+                                    height: 36,
                                     child: Center(
                                       child: Text(
                                         st.letter,

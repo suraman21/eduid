@@ -182,7 +182,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final engine = context.watch<SyncEngine>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        title: const Text('Settings',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         children: [
@@ -355,20 +362,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: _signOut,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Long-press = hidden maintenance menu (server address).
-          Center(
+          // ── About ──
+          const SectionLabel('About'),
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            // Long-press = hidden maintenance menu (server address).
             child: GestureDetector(
               onLongPress: _editServerUrl,
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Text('EduID v$_version',
-                    style:
-                        TextStyle(fontSize: 11.5, color: AppColors.inkLo)),
+              child: _row(
+                icon: Icons.info_outline_rounded,
+                tone: AppColors.inkMid,
+                title: 'App version',
+                subtitle: 'EduID v$_version',
               ),
             ),
           ),
+          const SizedBox(height: 8),
         ],
       ),
     );

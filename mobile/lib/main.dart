@@ -138,26 +138,18 @@ class _SplashGateState extends State<SplashGate> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Icon(Icons.badge_rounded,
-                      size: 44, color: AppColors.primary),
-                ),
-                const SizedBox(height: 18),
+                const EduIdMark(
+                    size: 88, background: Colors.white, glyphColor: AppColors.primary),
+                const SizedBox(height: 20),
                 const Text('EduID',
                     style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
-                        letterSpacing: 0.5)),
+                        letterSpacing: 0.2)),
                 const SizedBox(height: 4),
-                const Text('Smart Student Identity',
-                    style: TextStyle(fontSize: 13, color: Colors.white70)),
+                const Text('Your identity. Your access.',
+                    style: TextStyle(fontSize: 13.5, color: Colors.white70)),
               ],
             ),
           ),

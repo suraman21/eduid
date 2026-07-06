@@ -23,8 +23,8 @@ class RoleNoticeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const IconTile(Icons.rocket_launch_rounded,
-                    color: AppColors.primary, size: 64),
-                const SizedBox(height: 18),
+                    color: AppColors.primary, size: 72),
+                const SizedBox(height: 20),
                 const Text('Coming soon',
                     style: TextStyle(
                         fontSize: 20,

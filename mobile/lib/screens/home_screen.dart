@@ -27,6 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<SchoolClass> _classes = [];
   List<Map<String, dynamic>> _recent = [];
+  int _periodsToday = 0;
   SyncEngine? _engine;
 
   @override
@@ -51,10 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadCache() async {
     final classes = await DataService.instance.cachedClasses();
     final recent = await AttendanceService.instance.recentSessions(limit: 5);
+    final today = await DataService.instance.cachedScheduleToday();
     if (!mounted) return;
     setState(() {
       _classes = classes;
       _recent = recent;
+      _periodsToday = today.where((p) => p.className != null).length;
     });
   }
 
@@ -254,17 +257,38 @@ class _HomeScreenState extends State<HomeScreen> {
               // ── Stats row ──
               Row(
                 children: [
-                  _stat('Classes', '${_classes.length}',
-                      Icons.grid_view_rounded, AppColors.primary),
+                  Expanded(
+                    child: StatTile(
+                        value: '${_classes.length}',
+                        label: 'Classes',
+                        icon: Icons.grid_view_rounded,
+                        color: AppColors.primary),
+                  ),
                   const SizedBox(width: 10),
-                  _stat('Students', '$totalStudents',
-                      Icons.people_alt_rounded, AppColors.blue),
+                  Expanded(
+                    child: StatTile(
+                        value: '$totalStudents',
+                        label: 'Students',
+                        icon: Icons.people_alt_rounded,
+                        color: AppColors.blue),
+                  ),
                   const SizedBox(width: 10),
-                  _stat(
-                    'Queued',
-                    '${engine.pending}',
-                    Icons.cloud_upload_rounded,
-                    engine.pending > 0 ? AppColors.amber : AppColors.green,
+                  Expanded(
+                    child: StatTile(
+                        value: '$_periodsToday',
+                        label: "Today's periods",
+                        icon: Icons.schedule_rounded,
+                        color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: StatTile(
+                      value: '${engine.pending}',
+                      label: 'Queued',
+                      icon: Icons.cloud_upload_rounded,
+                      color:
+                          engine.pending > 0 ? AppColors.amber : AppColors.green,
+                    ),
                   ),
                 ],
               ),
@@ -330,15 +354,35 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.insights_rounded,
-                            color: AppColors.blue, size: 21),
-                        tooltip: 'Grades',
-                        onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    GradesScreen(schoolClass: c))),
+                      Material(
+                        color: AppColors.blueSoft,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      GradesScreen(schoolClass: c))),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 7),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.insights_rounded,
+                                    color: AppColors.blue, size: 16),
+                                SizedBox(width: 5),
+                                Text('Grades',
+                                    style: TextStyle(
+                                        color: AppColors.blue,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
+                      const SizedBox(width: 6),
                       const Icon(Icons.chevron_right_rounded,
                           color: AppColors.inkLo),
                     ],
@@ -400,27 +444,5 @@ class _HomeScreenState extends State<HomeScreen> {
   String _initial(SchoolClass c) {
     final source = (c.grade ?? c.name).replaceAll(RegExp(r'[^0-9A-Za-z]'), '');
     return source.isEmpty ? '•' : source.substring(0, 1).toUpperCase();
-  }
-
-  Widget _stat(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 19),
-            const SizedBox(height: 5),
-            Text(value,
-                style: const TextStyle(
-                    color: AppColors.ink,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 17)),
-            Text(label,
-                style:
-                    const TextStyle(color: AppColors.inkLo, fontSize: 11)),
-          ],
-        ),
-      ),
-    );
   }
 }

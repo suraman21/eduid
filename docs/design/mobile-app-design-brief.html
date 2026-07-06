@@ -1,0 +1,1397 @@
+<title>EduID Mobile — Design Handoff Brief</title>
+<style>
+  @font-face {
+    font-family: "IBM Plex Mono Fallback";
+    src: local("SFMono-Regular"), local("Menlo"), local("Consolas");
+  }
+
+  :root {
+    --paper: #faf8f4;
+    --paper-raised: #ffffff;
+    --ink: #16211c;
+    --ink-soft: #2b352f;
+    --mute: #5c6b62;
+    --line: #dde3dc;
+    --line-strong: #c7d0c8;
+    --accent: #059669;
+    --accent-deep: #065f46;
+    --accent-soft: #e7f5ee;
+    --accent-soft-line: #bfe3d1;
+    --amber: #b45309;
+    --amber-soft: #fdf2e2;
+    --red: #b91c1c;
+    --red-soft: #fbeaea;
+    --blue: #1d4ed8;
+    --blue-soft: #eaf0fd;
+    --radius-card: 14px;
+    --radius-chip: 999px;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #12160f;
+    --paper-raised: #191f19;
+    --ink: #eef2ec;
+    --ink-soft: #d3ddd2;
+    --mute: #93a19a;
+    --line: #2a332b;
+    --line-strong: #3a453b;
+    --accent: #34d399;
+    --accent-deep: #6ee7b7;
+    --accent-soft: #16261f;
+    --accent-soft-line: #24503c;
+    --amber: #fbbf67;
+    --amber-soft: #2a2113;
+    --red: #f398a0;
+    --red-soft: #2a1616;
+    --blue: #93b4fb;
+    --blue-soft: #16203a;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12160f;
+      --paper-raised: #191f19;
+      --ink: #eef2ec;
+      --ink-soft: #d3ddd2;
+      --mute: #93a19a;
+      --line: #2a332b;
+      --line-strong: #3a453b;
+      --accent: #34d399;
+      --accent-deep: #6ee7b7;
+      --accent-soft: #16261f;
+      --accent-soft-line: #24503c;
+      --amber: #fbbf67;
+      --amber-soft: #2a2113;
+      --red: #f398a0;
+      --red-soft: #2a1616;
+      --blue: #93b4fb;
+      --blue-soft: #16203a;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+
+  a { color: var(--accent-deep); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    max-width: 1280px;
+    margin: 0 auto;
+    gap: 0;
+  }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    nav.toc { display: none; }
+  }
+
+  /* ── Sticky TOC ─────────────────────────────────────────── */
+  nav.toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 32px 20px 40px 32px;
+    border-right: 1px solid var(--line);
+  }
+
+  nav.toc .brand {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  nav.toc .brand-sub {
+    font-size: 11.5px;
+    color: var(--mute);
+    letter-spacing: 0.03em;
+    margin-bottom: 24px;
+    display: block;
+  }
+
+  nav.toc .toc-group {
+    margin-bottom: 18px;
+  }
+
+  nav.toc .toc-group-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    color: var(--mute);
+    font-weight: 700;
+    margin: 0 0 8px 2px;
+  }
+
+  nav.toc a {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 5px 8px;
+    border-radius: 7px;
+    margin-bottom: 1px;
+  }
+  nav.toc a:hover { background: var(--accent-soft); color: var(--accent-deep); }
+
+  /* ── Main column ────────────────────────────────────────── */
+  main {
+    padding: 48px 48px 120px;
+    min-width: 0;
+  }
+  @media (max-width: 640px) {
+    main { padding: 28px 18px 80px; }
+  }
+
+  .doc-header {
+    margin-bottom: 56px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-soft-line);
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: var(--radius-chip);
+    margin-bottom: 18px;
+  }
+
+  h1.doc-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.7rem);
+    line-height: 1.12;
+    margin: 0 0 14px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .doc-dek {
+    font-size: 1.05rem;
+    color: var(--mute);
+    max-width: 62ch;
+    margin: 0 0 22px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    font-size: 13px;
+    color: var(--mute);
+  }
+  .meta-row strong { color: var(--ink); font-weight: 600; }
+
+  section.doc-section {
+    margin-bottom: 64px;
+    scroll-margin-top: 20px;
+  }
+
+  h2.section-title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  .section-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--mute);
+    margin: 0 0 6px;
+  }
+
+  .section-intro {
+    color: var(--mute);
+    max-width: 68ch;
+    margin: 0 0 28px;
+  }
+
+  p { max-width: 68ch; }
+  .full-width p { max-width: none; }
+
+  h3.sub-title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    margin: 30px 0 10px;
+  }
+
+  code, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-soft-line);
+    padding: 1px 6px;
+    border-radius: 5px;
+    color: var(--accent-deep);
+  }
+
+  ul, ol { padding-left: 22px; max-width: 68ch; }
+  li { margin-bottom: 5px; }
+
+  hr.rule {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 40px 0;
+  }
+
+  /* ── Color swatches ─────────────────────────────────────── */
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+    margin: 20px 0 8px;
+  }
+  .swatch {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    background: var(--paper-raised);
+  }
+  .swatch-color {
+    height: 56px;
+    border-bottom: 1px solid var(--line);
+  }
+  .swatch-body {
+    padding: 9px 11px;
+  }
+  .swatch-name {
+    font-weight: 700;
+    font-size: 12.5px;
+  }
+  .swatch-hex {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--mute);
+  }
+  .swatch-use {
+    font-size: 11px;
+    color: var(--mute);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  /* ── Screen spec cards ──────────────────────────────────── */
+  .screen-card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--paper-raised);
+    margin-bottom: 26px;
+    overflow: hidden;
+  }
+
+  .screen-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--accent-soft), transparent 140%);
+  }
+
+  .screen-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-deep);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .screen-name {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .screen-file {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--mute);
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-top: 3px;
+  }
+
+  .screen-body {
+    padding: 20px 24px 24px;
+  }
+
+  .screen-purpose {
+    color: var(--mute);
+    margin: 0 0 16px;
+    max-width: none;
+  }
+
+  .role-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 9px;
+    border-radius: var(--radius-chip);
+  }
+  .tag-teacher { background: var(--blue-soft); color: var(--blue); }
+  .tag-admin { background: var(--accent-soft); color: var(--accent-deep); }
+  .tag-parent { background: var(--amber-soft); color: var(--amber); }
+  .tag-all { background: var(--line); color: var(--ink-soft); }
+
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 16px;
+  }
+  @media (max-width: 720px) {
+    .spec-grid { grid-template-columns: 1fr; }
+  }
+
+  .spec-block h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--mute);
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+
+  .element-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .element-list li {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .element-list .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+  .element-list b { color: var(--ink); }
+  .element-list .fine { color: var(--mute); font-size: 12px; }
+
+  .state-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .state-chip {
+    border: 1px dashed var(--line-strong);
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .state-chip .state-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--mute);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .state-chip p, .state-chip span {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .note-box {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--amber-soft);
+    background: var(--amber-soft);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .note-box b { color: var(--amber); }
+
+  .opportunity-box {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--accent-soft-line);
+    background: var(--accent-soft);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .opportunity-box b { color: var(--accent-deep); }
+
+  /* ── Component inventory table ──────────────────────────── */
+  table.spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 18px 0 8px;
+  }
+  table.spec-table th {
+    text-align: left;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--mute);
+    font-weight: 700;
+    padding: 0 12px 8px 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  table.spec-table td {
+    padding: 10px 12px 10px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.spec-table tr:last-child td { border-bottom: none; }
+  .table-scroll { overflow-x: auto; }
+
+  /* ── Flow diagrams (text-based, structural) ────────────── */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    margin: 18px 0 8px;
+  }
+  .flow-step {
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 9px 13px;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--mute);
+    padding: 0 8px;
+    font-size: 14px;
+  }
+  .flow-branch {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 4px 0;
+  }
+
+  /* icon-inventory chips */
+  .icon-chip-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .icon-chip {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    padding: 4px 9px;
+    border-radius: 7px;
+    color: var(--ink-soft);
+  }
+
+  .cta-footer {
+    margin-top: 60px;
+    padding: 28px 28px;
+    border-radius: 18px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .cta-footer h3 { font-family: var(--font-display); margin: 0 0 8px; color: var(--paper); font-size: 1.3rem; }
+  .cta-footer p { color: #cbd5c9; margin: 0; max-width: 60ch; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .cta-footer { background: var(--paper-raised); border: 1px solid var(--line-strong); }
+    :root:not([data-theme="light"]) .cta-footer h3 { color: var(--ink); }
+    :root:not([data-theme="light"]) .cta-footer p { color: var(--mute); }
+  }
+  :root[data-theme="dark"] .cta-footer { background: var(--paper-raised); border: 1px solid var(--line-strong); }
+  :root[data-theme="dark"] .cta-footer h3 { color: var(--ink); }
+  :root[data-theme="dark"] .cta-footer p { color: var(--mute); }
+
+  ::selection { background: var(--accent-soft-line); }
+</style>
+
+<div class="shell">
+  <nav class="toc" aria-label="Table of contents">
+    <span class="brand">EduID Mobile</span>
+    <span class="brand-sub">Design handoff — v1.4.0</span>
+
+    <div class="toc-group">
+      <p class="toc-group-label">Orientation</p>
+      <a href="#overview">Overview &amp; goals</a>
+      <a href="#stack">Current stack &amp; constraints</a>
+      <a href="#ia">App structure &amp; navigation</a>
+    </div>
+
+    <div class="toc-group">
+      <p class="toc-group-label">System today</p>
+      <a href="#colors">Color palette in use</a>
+      <a href="#type">Typography today</a>
+      <a href="#components">Component inventory</a>
+      <a href="#icons">Iconography in use</a>
+    </div>
+
+    <div class="toc-group">
+      <p class="toc-group-label">Screen catalog</p>
+      <a href="#s-splash">01 · Splash</a>
+      <a href="#s-login">02 · Login</a>
+      <a href="#s-pin">03 · PIN unlock &amp; setup</a>
+      <a href="#s-home-teacher">04 · Home — Teacher</a>
+      <a href="#s-schedule">05 · My Schedule</a>
+      <a href="#s-roster">06 · Attendance Roster</a>
+      <a href="#s-scanner">07 · QR Scanner</a>
+      <a href="#s-grades">08 · Grades</a>
+      <a href="#s-photo-sessions">09 · Photo Sessions — list</a>
+      <a href="#s-photo-capture">10 · Photo Capture — camera</a>
+      <a href="#s-settings">11 · Settings</a>
+      <a href="#s-parent-home">12 · Parent Home</a>
+      <a href="#s-parent-child">13 · Parent — Child detail</a>
+      <a href="#s-role-notice">14 · Role notice</a>
+    </div>
+
+    <div class="toc-group">
+      <p class="toc-group-label">Flows &amp; handoff</p>
+      <a href="#flows">Key interaction flows</a>
+      <a href="#gaps">Known gaps &amp; open briefs</a>
+      <a href="#references">Reference direction</a>
+    </div>
+  </nav>
+
+  <main>
+    <header class="doc-header" id="overview">
+      <span class="eyebrow">Design handoff brief</span>
+      <h1 class="doc-title">EduID mobile app — full UI/UX inventory for redesign</h1>
+      <p class="doc-dek">
+        Everything currently built in the EduID companion app — every screen, every button, every state —
+        documented screen-by-screen so a designer can take it from here without reverse-engineering the code.
+        This is the app teachers, school admins and parents use daily in Ethiopian schools: scanning ID cards
+        for attendance, viewing schedules and grades, and (for admins) running ID-photo sessions.
+      </p>
+      <div class="meta-row">
+        <span><strong>Platform</strong> Flutter, Android-first (iOS-compatible)</span>
+        <span><strong>Version</strong> 1.4.0</span>
+        <span><strong>Screens documented</strong> 14</span>
+        <span><strong>Roles</strong> Teacher · School Admin · Parent</span>
+      </div>
+    </header>
+
+    <section class="doc-section" id="stack">
+      <p class="section-kicker">Before you open Figma</p>
+      <h2 class="section-title">What the app is built on, and why it looks the way it does</h2>
+      <p class="section-intro">
+        The current UI was built by an engineer optimizing for low-end Android phones in areas with patchy
+        connectivity — cheap devices, older GPUs, spotty 3G. That drove specific technical choices which
+        constrain (but don't have to limit) the redesign:
+      </p>
+      <ul>
+        <li><b>No blur, no gradients, no glow shadows.</b> Every surface is a flat, solid <code>Material</code> with a hairline border. This was a deliberate performance decision, not a lack of visual ambition — <code>BackdropFilter</code> and large shadows are expensive on old GPUs. A redesign can reintroduce depth, but should budget for a "lite" rendering path on lower-end devices if it leans on blur/shadow heavily.</li>
+        <li><b>Instant touch feedback everywhere.</b> Every tappable surface is wrapped in <code>InkWell</code> so the ripple starts on pointer-down before any async work resolves. Whatever the new design system is, this principle (instant feedback, never wait for a network response to acknowledge a tap) should carry over.</li>
+        <li><b>No custom fonts or image assets are bundled today.</b> <code>pubspec.yaml</code> has no <code>fonts:</code> or <code>assets:</code> section — the app renders in the OS default (Roboto on Android, San Francisco on iOS). This is one of the most visible upgrades available: a bundled type family would instantly differentiate the app from generic Flutter apps. Keep bundle-size and glyph-coverage (Latin + nothing exotic needed) in mind.</li>
+        <li><b>Offline-first, always.</b> Attendance can be captured with zero connectivity — QR verification, marking, and saving all work offline; a background <code>SyncEngine</code> pushes queued data automatically every 3 minutes and immediately after a save. The UI has to communicate sync state (queued / syncing / synced) constantly and honestly — this is not cosmetic, it's core trust with the user. See the <code>SyncBadge</code> component below.</li>
+        <li><b>Camera-heavy.</b> Two screens are full-camera experiences (QR scanning, ID-photo capture) that must remain fast to open and responsive to hold steady in a classroom.</li>
+      </ul>
+      <div class="opportunity-box">
+        <b>Brief for the designer</b> — none of the above are aesthetic mandates, they're performance/connectivity
+        constraints. You have real freedom on color, type, iconography, motion and layout. Just keep heavy blur/shadow
+        effects as an "if budget allows" tier rather than the default render path, and treat sync/offline state as a
+        first-class piece of UI, not an afterthought.
+      </div>
+    </section>
+
+    <section class="doc-section" id="ia">
+      <p class="section-kicker">Information architecture</p>
+      <h2 class="section-title">App structure &amp; navigation today</h2>
+      <p class="section-intro">
+        The app determines what to show through a single root <b>Gate</b> that reads auth state and role.
+        There are three genuinely different apps living under one shell — the client has explicitly asked that
+        Teacher and Admin feel like different, purpose-built tools rather than the same screen with a few items
+        hidden. That differentiation is already partially done (see below) but should go further in the redesign.
+      </p>
+
+      <h3 class="sub-title">Root routing (on every app launch)</h3>
+      <div class="flow">
+        <div class="flow-step">Splash (~950ms)</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Gate</div>
+      </div>
+      <div class="flow-branch">
+        <div class="flow"><div class="flow-arrow" style="padding-left:0">↳ not signed in</div><div class="flow-step">Login screen</div></div>
+        <div class="flow"><div class="flow-arrow" style="padding-left:0">↳ signed in, PIN locked</div><div class="flow-step">PIN unlock</div></div>
+        <div class="flow"><div class="flow-arrow" style="padding-left:0">↳ role = teacher</div><div class="flow-step">Teacher Shell (bottom nav)</div></div>
+        <div class="flow"><div class="flow-arrow" style="padding-left:0">↳ role = school_admin</div><div class="flow-step">Admin Shell (bottom nav)</div></div>
+        <div class="flow"><div class="flow-arrow" style="padding-left:0">↳ role = parent</div><div class="flow-step">Parent Home (no bottom nav)</div></div>
+        <div class="flow"><div class="flow-arrow" style="padding-left:0">↳ any other role</div><div class="flow-step">"Coming soon" notice</div></div>
+      </div>
+
+      <h3 class="sub-title">Teacher Shell — bottom navigation (3 tabs)</h3>
+      <div class="table-scroll">
+        <table class="spec-table">
+          <thead><tr><th>Tab</th><th>Icon (unselected → selected)</th><th>Screen</th></tr></thead>
+          <tbody>
+            <tr><td>Home</td><td><span class="mono">home_outlined</span> → <span class="mono">home_rounded</span></td><td>Home — Teacher</td></tr>
+            <tr><td>Schedule</td><td><span class="mono">calendar_month_outlined</span> → <span class="mono">calendar_month_rounded</span></td><td>My Schedule</td></tr>
+            <tr><td>Settings</td><td><span class="mono">settings_outlined</span> → <span class="mono">settings_rounded</span></td><td>Settings</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Admin Shell — bottom navigation (4 tabs)</h3>
+      <div class="table-scroll">
+        <table class="spec-table">
+          <thead><tr><th>Tab</th><th>Icon (unselected → selected)</th><th>Screen</th></tr></thead>
+          <tbody>
+            <tr><td>Home</td><td><span class="mono">space_dashboard_outlined</span> → <span class="mono">space_dashboard_rounded</span></td><td>Home — Admin <em>(currently reuses the Teacher home — flagged in Gaps)</em></td></tr>
+            <tr><td>Photos</td><td><span class="mono">photo_camera_outlined</span> → <span class="mono">photo_camera_rounded</span></td><td>Photo Sessions</td></tr>
+            <tr><td>Schedule</td><td><span class="mono">calendar_month_outlined</span> → <span class="mono">calendar_month_rounded</span></td><td>My Schedule</td></tr>
+            <tr><td>Settings</td><td><span class="mono">settings_outlined</span> → <span class="mono">settings_rounded</span></td><td>Settings</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><b>Parent</b> is currently a single scrolling home screen with no bottom navigation — it pushes to a
+      child-detail screen and to Settings via a top-right icon. This is inconsistent with the two other roles and
+      is called out in Gaps below.</p>
+
+      <p>Screens reached by pushing on top of a tab (not part of the bottom nav): Attendance Roster, QR Scanner,
+      Grades, Photo Capture, Parent Child Detail. These are task screens, entered from a tab and popped back to it.</p>
+    </section>
+
+    <section class="doc-section" id="colors">
+      <p class="section-kicker">Design system — as built</p>
+      <h2 class="section-title">Color palette currently in use</h2>
+      <p class="section-intro">
+        Defined once in <code>lib/ui/kit.dart</code> as an <code>AppColors</code> class and referenced everywhere —
+        there is no theming layer beyond this. The brand color was recently changed from indigo to emerald green to
+        match the public marketing website. Semantic colors (green/red/amber/blue) are used consistently for
+        attendance status and sync state — worth preserving as a system even if the hexes change.
+      </p>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#059669"></div><div class="swatch-body"><div class="swatch-name">primary</div><div class="swatch-hex">#059669</div><div class="swatch-use">Brand accent — buttons, active nav, links, focus rings</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#047857"></div><div class="swatch-body"><div class="swatch-name">primaryDark</div><div class="swatch-hex">#047857</div><div class="swatch-use">Pressed / darker accent state</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#ECFDF5;border-bottom:1px solid #ddd"></div><div class="swatch-body"><div class="swatch-name">primarySoft</div><div class="swatch-hex">#ECFDF5</div><div class="swatch-use">Tinted backgrounds — icon tiles, active nav indicator</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#F6F7FB;border-bottom:1px solid #ddd"></div><div class="swatch-body"><div class="swatch-name">bg</div><div class="swatch-hex">#F6F7FB</div><div class="swatch-use">Scaffold background, app-wide</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#ffffff;border-bottom:1px solid #ddd"></div><div class="swatch-body"><div class="swatch-name">surface</div><div class="swatch-hex">#FFFFFF</div><div class="swatch-use">Card / sheet background</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#E5E8F0;border-bottom:1px solid #ddd"></div><div class="swatch-body"><div class="swatch-name">border</div><div class="swatch-hex">#E5E8F0</div><div class="swatch-use">Hairline card/divider borders</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#0F172A"></div><div class="swatch-body"><div class="swatch-name">ink</div><div class="swatch-hex">#0F172A</div><div class="swatch-use">Primary text</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#475569"></div><div class="swatch-body"><div class="swatch-name">inkMid</div><div class="swatch-hex">#475569</div><div class="swatch-use">Secondary text, subtitles</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#94A3B8"></div><div class="swatch-body"><div class="swatch-name">inkLo</div><div class="swatch-hex">#94A3B8</div><div class="swatch-use">Tertiary text, placeholders, disabled</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#059669"></div><div class="swatch-body"><div class="swatch-name">green</div><div class="swatch-hex">#059669</div><div class="swatch-use">Semantic: present / synced / success</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#DC2626"></div><div class="swatch-body"><div class="swatch-name">red</div><div class="swatch-hex">#DC2626</div><div class="swatch-use">Semantic: absent / error / destructive</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#D97706"></div><div class="swatch-body"><div class="swatch-name">amber</div><div class="swatch-hex">#D97706</div><div class="swatch-use">Semantic: late / queued / pending / warning</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#0284C7"></div><div class="swatch-body"><div class="swatch-name">blue</div><div class="swatch-hex">#0284C7</div><div class="swatch-use">Semantic: excused / informational / syncing</div></div></div>
+      </div>
+      <p style="margin-top:14px;font-size:13px;color:var(--mute)">Each semantic color also has a "soft" 10%-opacity tint used for pill/chip backgrounds (e.g. <span class="mono">greenSoft</span>, <span class="mono">redSoft</span>) — generated at render time via <span class="mono">color.withOpacity(0.10)</span>, not separately defined.</p>
+    </section>
+
+    <section class="doc-section" id="type">
+      <p class="section-kicker">Design system — as built</p>
+      <h2 class="section-title">Typography today</h2>
+      <p class="section-intro">
+        There is no bundled type family — every screen renders in the platform default font at hand-tuned
+        per-widget sizes/weights (no shared type scale/tokens exist in code). This is one of the highest-leverage
+        opportunities for the redesign. Below is the de-facto scale in use today, reverse-engineered from the widgets,
+        so you know what hierarchy needs to be preserved when you introduce a real type system.
+      </p>
+      <div class="table-scroll">
+        <table class="spec-table">
+          <thead><tr><th>Role</th><th>Size / weight seen today</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td>Splash wordmark</td><td>26px / 800</td><td>Splash screen "EduID"</td></tr>
+            <tr><td>Screen greeting / hero number</td><td>21px / 800</td><td>Home greeting ("Good morning, Sara")</td></tr>
+            <tr><td>App bar title</td><td>16–17px / 700–800</td><td>Every <span class="mono">AppBar</span></td></tr>
+            <tr><td>Card title / body-emphasis</td><td>14–15px / 700</td><td>Class names, student names, section headers</td></tr>
+            <tr><td>Body text</td><td>13–14px / 400–600</td><td>Subtitles, list secondary lines</td></tr>
+            <tr><td>Caption / meta</td><td>11–12.5px / 400–600</td><td>Timestamps, student UID, helper text</td></tr>
+            <tr><td>Uppercase section label</td><td>11.5px / 800, +1.4 letter-spacing</td><td><span class="mono">SectionLabel</span> ("MY CLASSES", "RECENT ACTIVITY")</td></tr>
+            <tr><td>Status pill</td><td>10.5px / 700</td><td><span class="mono">StatusPill</span> ("synced", "P/A/L/E")</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="opportunity-box">
+        <b>Suggestion, not a constraint</b> — a two-family pairing (a display face with a bit of character for
+        headers/greetings/numbers, plus a clean workhorse for body/data) would go a long way. Numeric alignment
+        matters in a few places — attendance counts, grade percentages, student counts — so pick a face with
+        proper tabular figures.
+      </div>
+    </section>
+
+    <section class="doc-section" id="components">
+      <p class="section-kicker">Design system — as built</p>
+      <h2 class="section-title">Component inventory</h2>
+      <p class="section-intro">Nine shared components/patterns are reused across every screen. These are the
+      building blocks a new design system should replace one-for-one, so nothing breaks downstream.</p>
+      <div class="table-scroll">
+        <table class="spec-table">
+          <thead><tr><th>Component</th><th>What it is</th><th>Used on</th></tr></thead>
+          <tbody>
+            <tr><td><b>AppCard</b></td><td>Flat white surface, 14px radius, hairline border, optional full-card tap ripple. The base unit of every list row and content block in the app.</td><td>Everywhere</td></tr>
+            <tr><td><b>PrimaryButton</b></td><td>Filled brand-color button with a built-in busy-spinner state (label replaced by a spinner, no layout shift)</td><td>Login, PIN setup, Roster save</td></tr>
+            <tr><td><b>IconTile</b></td><td>Rounded-square icon chip, color-tinted 10% background matching the icon color, default 40px</td><td>Settings rows, empty states, roles notice</td></tr>
+            <tr><td><b>StatusPill</b></td><td>Small uppercase pill, tinted background, semantic color — "synced", "queued", "P"/"A"/"L"/"E", role name, letter grade</td><td>Home recent activity, Grades, Settings, Roster</td></tr>
+            <tr><td><b>SectionLabel</b></td><td>Uppercase, letter-spaced group header above a set of cards</td><td>Home, Grades, Settings, Parent screens</td></tr>
+            <tr><td><b>SyncBadge</b></td><td>Tiny live status pill in the Home app bar — spinner+"Syncing" / green-check+time / amber-cloud+"N queued". Tappable to force a sync.</td><td>Home (teacher) app bar</td></tr>
+            <tr><td><b>Skeleton / SkeletonList / SkeletonBox</b></td><td>Shimmer loading placeholders (custom-built, no package) — a list-row skeleton with avatar+2 lines+trailing chip, repeated</td><td>Photo Sessions, Schedule (loading state)</td></tr>
+            <tr><td><b>StateMessage</b></td><td>Centered icon + title + optional subtitle + optional action button — the shared empty/error-state pattern</td><td>Photo Sessions empty, Schedule empty/no-lessons-today</td></tr>
+            <tr><td><b>_Keypad</b> (private)</td><td>3×4 numeric keypad, Material ripple tiles, used only by the PIN screen</td><td>PIN unlock &amp; setup</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="doc-section" id="icons">
+      <p class="section-kicker">Design system — as built</p>
+      <h2 class="section-title">Iconography currently in use</h2>
+      <p class="section-intro">100% Material Symbols (Flutter's bundled <span class="mono">Icons</span> set, <span class="mono">_rounded</span>/<span class="mono">_outlined</span> variants). No custom icon set exists. Full list below in case the new icon system needs a 1:1 mapping.</p>
+      <div class="icon-chip-wrap">
+        <span class="icon-chip">badge_rounded</span><span class="icon-chip">numbers_rounded</span><span class="icon-chip">alternate_email_rounded</span><span class="icon-chip">lock_rounded</span><span class="icon-chip">lock_outline_rounded</span><span class="icon-chip">visibility_rounded</span><span class="icon-chip">visibility_off_rounded</span><span class="icon-chip">arrow_forward_rounded</span><span class="icon-chip">pin_rounded</span><span class="icon-chip">backspace_outlined</span><span class="icon-chip">home_outlined / _rounded</span><span class="icon-chip">calendar_month_outlined / _rounded</span><span class="icon-chip">settings_outlined / _rounded</span><span class="icon-chip">space_dashboard_outlined / _rounded</span><span class="icon-chip">photo_camera_outlined / _rounded</span><span class="icon-chip">qr_code_scanner_rounded</span><span class="icon-chip">grid_view_rounded</span><span class="icon-chip">people_alt_rounded</span><span class="icon-chip">cloud_upload_rounded</span><span class="icon-chip">cloud_done_rounded</span><span class="icon-chip">cloud_off_rounded</span><span class="icon-chip">schedule_rounded</span><span class="icon-chip">hourglass_empty_rounded</span><span class="icon-chip">insights_rounded</span><span class="icon-chip">chevron_right_rounded</span><span class="icon-chip">check_rounded</span><span class="icon-chip">check_circle_rounded</span><span class="icon-chip">verified_rounded</span><span class="icon-chip">search_rounded</span><span class="icon-chip">done_all_rounded</span><span class="icon-chip">remove_done_rounded</span><span class="icon-chip">close_rounded</span><span class="icon-chip">flash_on_rounded</span><span class="icon-chip">keyboard_arrow_up/_down_rounded</span><span class="icon-chip">timer_outlined</span><span class="icon-chip">refresh_rounded</span><span class="icon-chip">logout_rounded</span><span class="icon-chip">radio_button_checked_rounded</span><span class="icon-chip">circle_outlined</span><span class="icon-chip">receipt / photo_camera</span><span class="icon-chip">calendar_today_outlined</span><span class="icon-chip">beach_access_outlined</span><span class="icon-chip">rocket_launch_rounded</span><span class="icon-chip">camera_alt_rounded</span>
+      </div>
+    </section>
+
+    <hr class="rule" />
+
+    <h2 class="section-title" style="font-size:1.9rem;margin-bottom:6px">Screen catalog</h2>
+    <p class="section-intro">Fourteen screens, documented in the order a new user encounters them. Each entry
+    lists every visible element with its exact current label, every state the screen can be in, and specific
+    notes for what to preserve, what's flagged for improvement, and any edge case the code already accounts for.</p>
+
+    <!-- 01 SPLASH -->
+    <div class="screen-card" id="s-splash">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 01 · COLD START</span><h3 class="screen-name">Splash</h3></div>
+        <span class="screen-file">lib/main.dart · SplashGate</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-all">All roles</span></div>
+        <p class="screen-purpose">First thing anyone sees on cold app launch. Deliberately minimal — one
+        implicit animation, no packages, no image assets — to stay fast on low-end devices. Runs for a fixed
+        ~950ms then hands off to routing.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>Logo mark</b> — 84×84 white rounded-square, <span class="mono">badge_rounded</span> icon in brand color, centered</span></li>
+              <li><span class="dot"></span><span><b>Wordmark</b> — "EduID", 26px/800, white</span></li>
+              <li><span class="dot"></span><span><b>Tagline</b> — "Smart Student Identity", 13px, 70%-opacity white</span></li>
+              <li><span class="dot"></span><span>Full-bleed background = brand primary color (currently emerald)</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>Motion (current)</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>Logo scales 0.7 → 1.0 over 450ms, <span class="mono">easeOutBack</span> curve (slight overshoot)</span></li>
+              <li><span class="dot"></span><span>Fades in 0 → 1 over 350ms simultaneously</span></li>
+              <li><span class="dot"></span><span>Total hold before handoff: 950ms</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="opportunity-box"><b>Client ask: "professional animated splash, but lightweight."</b> This is
+        the one screen where a bit of personality pays off disproportionately (first impression) — but the client
+        was explicit that low-end device performance matters. Favor a single well-choreographed reveal (logo, then
+        wordmark, staggered) over particle effects, Lottie files, or anything GPU-heavy. No network/asset loading
+        should ever block this screen past ~1.2s.</div>
+      </div>
+    </div>
+
+    <!-- 02 LOGIN -->
+    <div class="screen-card" id="s-login">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 02 · AUTH</span><h3 class="screen-name">Login</h3></div>
+        <span class="screen-file">lib/screens/login_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-all">All roles</span></div>
+        <p class="screen-purpose">Every account signs in the same way: school code + email + password (Sanctum
+        token auth against the school's server). No "forgot password" self-service on mobile — users are told to
+        ask their school administrator.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements, top to bottom</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>Logo mark</b> — 64×64 rounded-square, brand color, <span class="mono">badge_rounded</span> icon</span></li>
+              <li><span class="dot"></span><span><b>"EduID"</b> wordmark, 26px/800</span></li>
+              <li><span class="dot"></span><span><b>"School management — works offline too"</b> — subtitle, 13.5px</span></li>
+              <li><span class="dot"></span><span>Card containing 3 fields:</span></li>
+              <li><span class="dot"></span><span><b>School code</b> field — label "School code", <span class="mono">numbers_rounded</span> icon, all-caps input</span></li>
+              <li><span class="dot"></span><span><b>Email</b> field — label "Email", <span class="mono">alternate_email_rounded</span> icon, email keyboard</span></li>
+              <li><span class="dot"></span><span><b>Password</b> field — label "Password", <span class="mono">lock_rounded</span> icon, show/hide toggle (<span class="mono">visibility_rounded</span> / <span class="mono">visibility_off_rounded</span>), submits on Enter</span></li>
+              <li><span class="dot"></span><span><b>Sign in</b> button — filled, brand color, arrow-forward icon, becomes a spinner while busy</span></li>
+              <li><span class="dot"></span><span>Footer line: <em>"Use the account your school gave you. Forgot your password? Ask your school administrator."</em></span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Default</span><p>Three empty fields, button enabled</p></div>
+              <div class="state-chip"><span class="state-label">Validation error</span><p>Red-tinted banner above the button: <em>"Fill in school code, email and password."</em></p></div>
+              <div class="state-chip"><span class="state-label">Server error</span><p>Same red banner, server-provided message (e.g. wrong credentials, account locked)</p></div>
+              <div class="state-chip"><span class="state-label">Busy</span><p>Button becomes spinner; fields still visible but effectively locked by the async gate</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 PIN -->
+    <div class="screen-card" id="s-pin">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 03 · AUTH · TWO MODES</span><h3 class="screen-name">PIN unlock &amp; PIN setup</h3></div>
+        <span class="screen-file">lib/screens/pin_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-all">All roles</span></div>
+        <p class="screen-purpose">One screen, two modes, modeled directly on the iOS/Android system passcode
+        pattern. <b>Unlock</b> is the fast path shown whenever the app returns from background past the user's
+        auto-lock timeout — works fully offline. <b>Setup</b> is a guided 3-step wizard reached from Settings.</p>
+
+        <h3 class="sub-title" style="margin-top:8px">Mode A — Unlock</h3>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>No app bar (full-bleed, feels modal/urgent)</span></li>
+              <li><span class="dot"></span><span><span class="mono">lock_rounded</span> icon tile, 56px</span></li>
+              <li><span class="dot"></span><span>"Welcome back, {first name}" — 19px/800</span></li>
+              <li><span class="dot"></span><span>"Quick unlock — works offline too" — subtitle</span></li>
+              <li><span class="dot"></span><span>4 PIN dots — outline when empty, filled brand-color when entered</span></li>
+              <li><span class="dot"></span><span>Small inline spinner slot beneath dots (verify in progress)</span></li>
+              <li><span class="dot"></span><span>3×4 number keypad, auto-submits on 4th digit</span></li>
+              <li><span class="dot"></span><span>Text link: <em>"Sign in with password instead"</em> (full sign-out fallback)</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Entering</span><p>Dots fill 1-by-1</p></div>
+              <div class="state-chip"><span class="state-label">Verifying</span><p>Keypad disabled, spinner shown</p></div>
+              <div class="state-chip"><span class="state-label">Wrong PIN</span><p>Red banner with server message, dots reset to empty</p></div>
+              <div class="state-chip"><span class="state-label">Locked out</span><p>Server-driven — 5 wrong attempts forces full password re-auth</p></div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="sub-title">Mode B — Setup (3 steps, reached from Settings)</h3>
+        <p style="font-size:13.5px;color:var(--mute)">App bar present here, with a live "Step X of 3" counter top-right.</p>
+        <div class="flow">
+          <div class="flow-step">Step 1 — confirm account password</div><div class="flow-arrow">→</div>
+          <div class="flow-step">Step 2 — choose 4-digit PIN</div><div class="flow-arrow">→</div>
+          <div class="flow-step">Step 3 — re-enter to confirm</div>
+        </div>
+        <ul>
+          <li>Step 1 uses a standard password <span class="mono">TextField</span> + "Continue" button, not the keypad.</li>
+          <li>Step 2 → 3 mismatch behavior: if the confirm PIN doesn't match, shows <em>"PINs didn't match — please choose again"</em> and bounces back to step 2 (not step 1 — password stays confirmed).</li>
+          <li>Wrong password error resets the entire flow back to step 1.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 04 HOME TEACHER -->
+    <div class="screen-card" id="s-home-teacher">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 04 · TAB 1 OF 3 (TEACHER) / 1 OF 4 (ADMIN)</span><h3 class="screen-name">Home</h3></div>
+        <span class="screen-file">lib/screens/home_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-teacher">Teacher</span><span class="tag tag-admin">Admin (shared today — see Gaps)</span></div>
+        <p class="screen-purpose">The command center. Everything reads from a local offline cache and repaints
+        instantly; a background sync engine refreshes it every few minutes without the user doing anything.
+        Pull-to-refresh forces an immediate sync.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements, top to bottom</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>Greeting</b> — "Good morning/afternoon/evening, {first name}", 21px/800</span></li>
+              <li><span class="dot"></span><span><b>Meta line</b> — "{School name} · {Weekday, Month Day}"</span></li>
+              <li><span class="dot"></span><span><b>Sync badge</b> (top right of header) — see component inventory</span></li>
+              <li><span class="dot"></span><span><b>Settings icon button</b> — top right, opens Settings</span></li>
+              <li><span class="dot"></span><span><b>"Scan attendance"</b> — large filled brand-color card/button, qr_code_scanner icon, disabled (greyed) if no classes cached</span></li>
+              <li><span class="dot"></span><span><b>"My schedule"</b> — large outline card/button beside it, calendar icon, opens Schedule</span></li>
+              <li><span class="dot"></span><span><b>3 stat tiles</b> — "Classes" (count, grid icon), "Students" (total across classes, people icon), "Queued" (unsynced count, cloud-upload icon — turns green when 0, amber when &gt;0)</span></li>
+              <li><span class="dot"></span><span><b>"MY CLASSES"</b> section label</span></li>
+              <li><span class="dot"></span><span>One card per class: colored initial-letter avatar, class name, "{N} students · tap for attendance", an <span class="mono">insights_rounded</span> icon-button (opens Grades for that class), a chevron. Whole card is tappable → opens the Roster for that class.</span></li>
+              <li><span class="dot"></span><span><b>"RECENT ATTENDANCE"</b> section (only if any exist) — up to 5 rows, each: cloud-done or schedule icon, "{class} · {date}", a synced/queued <span class="mono">StatusPill</span></span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">No classes yet</span><p><span class="mono">hourglass_empty_rounded</span> icon + "No classes yet — they appear automatically after the first sync."</p></div>
+              <div class="state-chip"><span class="state-label">Loading</span><p>No dedicated skeleton today — screen simply renders with empty lists until cache resolves (near-instant since it's local)</p></div>
+              <div class="state-chip"><span class="state-label">Pull-to-refresh</span><p>Standard Material spinner, brand-colored</p></div>
+            </div>
+            <h4 style="margin-top:16px">Modal: "Scan attendance for…"</h4>
+            <p style="font-size:13px">If more than one class exists, tapping "Scan attendance" opens a bottom
+            sheet listing every class with a scanner icon; each row shows student count and, if attendance was
+            already recorded today, a green "✓ morning recorded" note. If only one class exists, this sheet is
+            skipped entirely and the scanner opens directly.</p>
+            <h4 style="margin-top:10px">Dialog: duplicate-attendance guard</h4>
+            <p style="font-size:13px">Picking a class that already has attendance today triggers an
+            <span class="mono">AlertDialog</span>: <em>"Attendance already recorded — {Class} already has {types}
+            attendance today. Scanning again updates the existing record — it will not create a duplicate."</em>
+            with Cancel / Continue.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 SCHEDULE -->
+    <div class="screen-card" id="s-schedule">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 05 · TAB / PUSHED</span><h3 class="screen-name">My Schedule</h3></div>
+        <span class="screen-file">lib/screens/schedule_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-teacher">Teacher</span><span class="tag tag-admin">Admin</span></div>
+        <p class="screen-purpose">A day-at-a-time view (recently redesigned away from a full-week scroll, which
+        became unusable for schools with 8 periods + 2 breaks). Defaults to today; only the school's actual
+        working days appear as chips (a Mon–Fri school never shows Saturday/Sunday).</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>Day chip row</b> — horizontally scrollable, one pill per working day ("Mon", "Tue"…), selected chip filled brand-color, a small dot under today's chip</span></li>
+              <li><span class="dot"></span><span><b>Lesson list</b> for the selected day — each row: 5px subject-colored bar on the left edge (color set by the school per-subject on the web admin), start/end time stack, subject name (bold), "{class} · Room {room}" line, a "Now" pill on the current period</span></li>
+              <li><span class="dot"></span><span><b>Break rows</b> — rendered differently: a centered divider line with "☕ {label} · {start}–{end}" text, not a card</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Loading</span><p><span class="mono">SkeletonList</span> shimmer</p></div>
+              <div class="state-chip"><span class="state-label">No schedule at all</span><p><span class="mono">StateMessage</span>: calendar icon, "No schedule yet", "…appears here automatically once the school sets it up."</p></div>
+              <div class="state-chip"><span class="state-label">Nothing on selected day</span><p><span class="mono">StateMessage</span>: beach_access icon, "Nothing on {Day}", "No lessons scheduled for you this day."</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 ROSTER -->
+    <div class="screen-card" id="s-roster">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 06 · PUSHED FROM HOME</span><h3 class="screen-name">Attendance Roster</h3></div>
+        <span class="screen-file">lib/screens/roster_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-teacher">Teacher</span><span class="tag tag-admin">Admin</span></div>
+        <p class="screen-purpose">The core daily task. Everyone defaults to Present; the teacher adjusts
+        exceptions (or scans QR cards to verify presence) and saves. Saving queues the session locally and
+        returns to Home instantly — sync happens in the background within ~1 second if online.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>App bar title</b> — class name (bold) + live "{N} present · {N} absent" counter beneath it</span></li>
+              <li><span class="dot"></span><span><b>Session-type dropdown</b> (app bar, right) — Morning / Afternoon / Full day</span></li>
+              <li><span class="dot"></span><span><b>Search field</b> — "Search name or ID…"</span></li>
+              <li><span class="dot"></span><span><b>Bulk actions</b> — "Mark all present" (done_all, green) and "Mark all absent" (remove_done, red) icon buttons beside search</span></li>
+              <li><span class="dot"></span><span><b>Student rows</b> — fixed 68px height for fast scrolling. Each: name (+ a green <span class="mono">verified_rounded</span> checkmark if QR-scanned this session) and UID beneath, then 4 tap-targets — <b>P / A / L / E</b> single-letter toggle chips, the active one filled with its semantic color (green/red/amber/blue), others neutral</span></li>
+              <li><span class="dot"></span><span><b>Footer</b> — "Scan" outline button (opens camera) + "Save" primary button, label changes to "Save · {N} absent" when there are absences</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>Notes for the designer</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>The P/A/L/E four-button row per student is the single most-repeated interaction pattern in the whole app — worth special craft (this is the "professional coloring" moment the client asked for)</span></li>
+              <li><span class="dot"></span><span>Scanned-but-not-yet-marked students auto-default to Present with a verified badge — the teacher never has to manually confirm a scanned student</span></li>
+              <li><span class="dot"></span><span>Opens the scanner automatically if entered via the Home "Scan attendance" quick action</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 07 SCANNER -->
+    <div class="screen-card" id="s-scanner">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 07 · FULL-SCREEN CAMERA</span><h3 class="screen-name">QR Scanner</h3></div>
+        <span class="screen-file">lib/screens/scanner_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-teacher">Teacher</span><span class="tag tag-admin">Admin</span></div>
+        <p class="screen-purpose">Continuous scan-the-whole-line mode — never leaves the camera between students.
+        100% offline: the scanned QR payload is verified against the locally cached roster + a cryptographic token,
+        no network round-trip needed.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>Full-bleed live camera preview, black background</span></li>
+              <li><span class="dot"></span><span><b>Top bar</b> (over camera) — round close button (×), "Scan student IDs" + class name, round flash-toggle button</span></li>
+              <li><span class="dot"></span><span><b>Center aiming frame</b> — 250×250 rounded square outline; brand color by default, flashes semantic color on each scan result</span></li>
+              <li><span class="dot"></span><span><b>Bottom feedback banner</b> — appears for ~1.1s after each scan: "✓ {name}" (green, success) / "{name} — already marked" (blue) / "Invalid card, or not in this class" (red); default idle text is "Point at the QR code — students are marked present automatically, one after another."</span></li>
+              <li><span class="dot"></span><span><b>"Done" button</b> — full-width white pill at the very bottom, label becomes "Done — {N} scanned" once at least one student is verified</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>Behavior notes</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>1.2 second cooldown between scans (prevents one card firing multiple times per second)</span></li>
+              <li><span class="dot"></span><span>Duplicate scans in the same session are recognized and flagged distinctly from invalid ones</span></li>
+              <li><span class="dot"></span><span>This is a rapid-fire, stand-in-front-of-a-line-of-kids tool — legibility and speed of the flash feedback matters more than subtlety</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 08 GRADES -->
+    <div class="screen-card" id="s-grades">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 08 · PUSHED FROM HOME</span><h3 class="screen-name">Grades</h3></div>
+        <span class="screen-file">lib/screens/grades_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-teacher">Teacher (read-only)</span></div>
+        <p class="screen-purpose">Read-only gradebook for one class — server pre-computes weighted totals,
+        letter grades and class rank. Stale-while-revalidate: opens instantly from cache, then quietly refreshes.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>App bar: "Grades · {Class}" + "{Term} · {Academic year}" subtitle</span></li>
+              <li><span class="dot"></span><span>One expandable card per student: rank badge (filled brand-color if top-3, else neutral), name + UID, overall average % (green ≥80, blue ≥50, red below, grey if none), chevron</span></li>
+              <li><span class="dot"></span><span>Expanded state reveals a divider + per-subject rows: subject name, total or "incomplete" (grey italic-style), and a letter-grade <span class="mono">StatusPill</span> when available</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Loading (first ever open)</span><p>Centered spinner</p></div>
+              <div class="state-chip"><span class="state-label">Never cached + offline</span><p>"No grades available offline yet. Open this screen once while online to cache it."</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 09 PHOTO SESSIONS -->
+    <div class="screen-card" id="s-photo-sessions">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 09 · TAB 2 OF 4 (ADMIN)</span><h3 class="screen-name">Photo Sessions</h3></div>
+        <span class="screen-file">lib/screens/photo_sessions_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-admin">Admin only</span></div>
+        <p class="screen-purpose">Newest screen in the app. The school admin creates a photo session on the web
+        (choosing a class or the whole school); it appears here automatically. This screen shows progress and the
+        student queue, and launches the guided camera capture flow.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>Session summary card</b> — camera icon tile, class name (or "Whole school"), "{captured} of {total} photographed", an amber "{N} queued" pill if any photos are waiting to upload, a progress bar, and a "Start capturing" / "Session complete" primary button</span></li>
+              <li><span class="dot"></span><span><b>"QUEUE"</b> section label</span></li>
+              <li><span class="dot"></span><span>One row per student — status icon (✓ filled circle = has photo, amber half-filled = current-up-next, hollow circle = not yet reached), name, UID</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Loading</span><p><span class="mono">SkeletonList</span></p></div>
+              <div class="state-chip"><span class="state-label">No active session</span><p><span class="mono">StateMessage</span>: camera icon, "No active photo session", "Create one from the web panel (Photo Sessions → New)…"</p></div>
+              <div class="state-chip"><span class="state-label">Queued uploads flushed</span><p>On pull-to-refresh/open, a snackbar reports &quot;{N} queued photo(s) uploaded&quot; if the offline queue just cleared</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 PHOTO CAPTURE -->
+    <div class="screen-card" id="s-photo-capture">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 10 · FULL-SCREEN CAMERA</span><h3 class="screen-name">Photo Capture</h3></div>
+        <span class="screen-file">lib/screens/photo_capture_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-admin">Admin only</span></div>
+        <p class="screen-purpose">Guided ID-photo booth — walks the session queue one student at a time. Every
+        capture is compressed on-device before upload (~900px, JPEG quality 70) and queues automatically for later
+        upload if offline.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>Full-bleed camera preview, black chrome</span></li>
+              <li><span class="dot"></span><span><b>Alignment guide overlay</b> — dashed head-oval + dashed shoulders-arc, drawn over the live preview (the "dotted human icon" the client asked for)</span></li>
+              <li><span class="dot"></span><span>App bar: "{N} remaining" counter, transparent/black</span></li>
+              <li><span class="dot"></span><span>Below the preview: current student's name + UID, helper text "Align the face inside the frame, then tap the shutter."</span></li>
+              <li><span class="dot"></span><span><b>Shutter button</b> — 72px circle, white ring, brand-color fill, camera icon; becomes a spinner mid-capture</span></li>
+              <li><span class="dot"></span><span><b>Skip</b> text button, left of the shutter</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Initializing camera</span><p>White spinner on black</p></div>
+              <div class="state-chip"><span class="state-label">Camera unavailable</span><p>"Camera unavailable. Check the app's camera permission in your phone settings."</p></div>
+              <div class="state-chip"><span class="state-label">Capturing</span><p>Shutter → spinner, buttons disabled</p></div>
+              <div class="state-chip"><span class="state-label">Uploaded online</span><p>Snackbar: "Saved — {name}"</p></div>
+              <div class="state-chip"><span class="state-label">Uploaded offline</span><p>Snackbar: "No internet — photo queued, it will upload automatically."</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="opportunity-box"><b>This screen directly answers the client's brief</b> for a guided,
+        professional capture flow with an alignment box and real-time compression. The current guide is a simple
+        dashed-line painter — there's real room to make this feel like a proper photo-booth product (subtle
+        corner brackets, a face-detection-driven guide, a capture countdown, haptic feedback on shutter) as long
+        as it stays camera-preview-cheap.</div>
+      </div>
+    </div>
+
+    <!-- 11 SETTINGS -->
+    <div class="screen-card" id="s-settings">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 11 · TAB (LAST)</span><h3 class="screen-name">Settings</h3></div>
+        <span class="screen-file">lib/screens/settings_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-all">All roles</span></div>
+        <p class="screen-purpose">Account info, security (PIN + auto-lock), sync status, and sign-out — all on
+        one scrolling page today (a candidate for restructuring into sub-pages in the redesign if it grows).</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements, top to bottom</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span><b>Account card</b> — initials avatar (brand-tinted), name, email, "{school} · {code}", a role <span class="mono">StatusPill</span> ("teacher"/"school admin"/"parent")</span></li>
+              <li><span class="dot"></span><span><b>"SECURITY"</b> section — "Set/Change a quick-unlock PIN" row (subtitle "4 digits · unlocks the app even offline"); if a PIN exists, a second row <b>"Auto-lock"</b> showing the current choice</span></li>
+              <li><span class="dot"></span><span><b>"SYNC"</b> section (hidden for parents) — "Automatic sync" row with live status subtitle + a manual refresh icon-button (replaced by a spinner while syncing); if uploads are queued, a sub-list of each pending session ("{class} · {date} ({type})", with an error line if a sync attempt failed)</span></li>
+              <li><span class="dot"></span><span><b>"Sign out"</b> row, red icon, subtitle warns how many sessions are unsynced if any</span></li>
+              <li><span class="dot"></span><span>Footer — "EduID v1.4.0", long-press reveals a hidden server-URL override dialog (support/maintenance use only)</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>Auto-lock picker (dialog)</h4>
+            <p style="font-size:13px">A <span class="mono">SimpleDialog</span> titled "Auto-lock" with radio
+            options: Immediately / After 1 minute / After 5 minutes / After 15 minutes / After 30 minutes / Never.</p>
+            <h4 style="margin-top:14px">Sign-out confirmation (dialog)</h4>
+            <p style="font-size:13px">If nothing is pending: "Cached data on this device will be cleared." If
+            sessions are unsynced: red-flagged warning naming exactly how many will be <b>lost</b> — "Connect to
+            the internet and let them sync first." Destructive action styled red.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12 PARENT HOME -->
+    <div class="screen-card" id="s-parent-home">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 12 · ROOT (PARENT)</span><h3 class="screen-name">Parent Home</h3></div>
+        <span class="screen-file">lib/screens/parent_home_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-parent">Parent only</span></div>
+        <p class="screen-purpose">Read-only window onto a guardian's own children. No offline cache, no bottom
+        nav today — a single list screen that fetches on demand.</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Elements</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>Greeting header (same pattern as teacher home) + settings icon button</span></li>
+              <li><span class="dot"></span><span>"MY CHILDREN" section</span></li>
+              <li><span class="dot"></span><span>One card per child — initials avatar, name, "{class} · {UID}", a status pill if not active (e.g. "graduated"), chevron. Tap opens Parent Child Detail.</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>States</h4>
+            <div class="state-strip">
+              <div class="state-chip"><span class="state-label">Loading</span><p>Centered spinner</p></div>
+              <div class="state-chip"><span class="state-label">Error</span><p>Message + "Try again" outline button</p></div>
+              <div class="state-chip"><span class="state-label">No children linked</span><p>"No students are linked to your account yet. Ask the school office to link your children."</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="note-box"><b>Flagged inconsistency</b> — Parent has no bottom navigation while Teacher and
+        Admin do. See Gaps below.</div>
+      </div>
+    </div>
+
+    <!-- 13 PARENT CHILD -->
+    <div class="screen-card" id="s-parent-child">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 13 · PUSHED FROM PARENT HOME</span><h3 class="screen-name">Parent — Child Detail</h3></div>
+        <span class="screen-file">lib/screens/parent_child_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-parent">Parent only</span></div>
+        <p class="screen-purpose">Two tabs for one child: Attendance and Grades. Read-only; grades show only
+        what the school has published (drafts are never parent-visible).</p>
+        <div class="spec-grid">
+          <div class="spec-block">
+            <h4>Tab 1 — Attendance</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>"THIS MONTH" — 4 stat tiles: Present / Absent / Late / Excused, each a count + semantic-colored number</span></li>
+              <li><span class="dot"></span><span>"RECENT DAYS" — one card per record: date, "{session type} · {note}", a colored uppercase status pill (PRESENT/ABSENT/LATE/EXCUSED)</span></li>
+              <li><span class="dot"></span><span>Empty state: "No attendance recorded yet."</span></li>
+            </ul>
+          </div>
+          <div class="spec-block">
+            <h4>Tab 2 — Grades</h4>
+            <ul class="element-list">
+              <li><span class="dot"></span><span>Grouped by term — section label "{Term} · {Academic year}"</span></li>
+              <li><span class="dot"></span><span>One card per subject: subject name + overall % (brand color, bold), then a wrap of small chips, one per assessment ("CA: 18/20", "Midterm: 40/50"…)</span></li>
+              <li><span class="dot"></span><span>Empty state: "No published grades yet. Grades appear here after the school publishes them."</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 14 ROLE NOTICE -->
+    <div class="screen-card" id="s-role-notice">
+      <div class="screen-head">
+        <div><span class="screen-id">SCREEN 14 · FALLBACK</span><h3 class="screen-name">Role notice ("Coming soon")</h3></div>
+        <span class="screen-file">lib/screens/role_notice_screen.dart</span>
+      </div>
+      <div class="screen-body">
+        <div class="role-tags"><span class="tag tag-all">Any unsupported role</span></div>
+        <p class="screen-purpose">Shown to any signed-in account whose role has no mobile experience yet (e.g.
+        pure office staff). Keeps the door open — "one app for everyone, features unlock per role" — rather than
+        rejecting the login.</p>
+        <ul class="element-list">
+          <li><span class="dot"></span><span>Rocket icon tile, "Coming soon" title</span></li>
+          <li><span class="dot"></span><span>"Mobile features for {role} accounts are on the way. You can keep using the web portal in the meantime."</span></li>
+          <li><span class="dot"></span><span>"Sign out" outline button</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="rule" />
+
+    <section class="doc-section" id="flows">
+      <p class="section-kicker">Cross-screen behavior</p>
+      <h2 class="section-title">Key interaction flows worth designing end-to-end</h2>
+
+      <h3 class="sub-title">1 · Scan-based attendance (the core daily task)</h3>
+      <div class="flow">
+        <div class="flow-step">Home</div><div class="flow-arrow">→</div>
+        <div class="flow-step">tap "Scan attendance"</div><div class="flow-arrow">→</div>
+        <div class="flow-step">class picker sheet (if &gt;1 class)</div><div class="flow-arrow">→</div>
+        <div class="flow-step">duplicate-guard dialog (if already recorded)</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Roster (auto-opens scanner)</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Scanner (continuous)</div><div class="flow-arrow">→</div>
+        <div class="flow-step">"Done" → back to Roster, verified students marked Present</div><div class="flow-arrow">→</div>
+        <div class="flow-step">adjust exceptions</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Save → queued → auto-synced</div>
+      </div>
+
+      <h3 class="sub-title">2 · Photo session capture</h3>
+      <div class="flow">
+        <div class="flow-step">Admin creates session on web</div><div class="flow-arrow">→</div>
+        <div class="flow-step">appears on app's Photos tab</div><div class="flow-arrow">→</div>
+        <div class="flow-step">"Start capturing"</div><div class="flow-arrow">→</div>
+        <div class="flow-step">guided camera, one student at a time</div><div class="flow-arrow">→</div>
+        <div class="flow-step">shutter → compress → upload (or queue offline)</div><div class="flow-arrow">→</div>
+        <div class="flow-step">auto-advance to next student</div><div class="flow-arrow">→</div>
+        <div class="flow-step">queue empty → auto-pop to session summary</div>
+      </div>
+
+      <h3 class="sub-title">3 · Auto-lock / PIN security</h3>
+      <p>App backgrounded past the user's chosen timeout (default 5 min; options: immediate / 1 / 5 / 15 / 30 min
+      / never) → next foreground shows PIN unlock instead of the last screen. Works fully offline. Falling back
+      to full password sign-in is always one tap away.</p>
+
+      <h3 class="sub-title">4 · Sign-out with unsynced data</h3>
+      <p>The app actively protects against silent data loss — sign-out is intercepted with a confirmation dialog
+      that names exactly how many attendance sessions haven't uploaded yet and will be lost if they proceed
+      anyway. This safety-net pattern should be preserved (and could be made even more visible/reassuring) in the
+      redesign.</p>
+    </section>
+
+    <section class="doc-section" id="gaps">
+      <p class="section-kicker">For the redesign to solve</p>
+      <h2 class="section-title">Known gaps &amp; open briefs</h2>
+      <p class="section-intro">Beyond a visual refresh, these are structural/UX issues the client has already
+      flagged or that surfaced during this audit — treat them as part of the brief, not just a paint job.</p>
+
+      <ul>
+        <li><b>Admin Home currently reuses the Teacher Home screen verbatim.</b> A school admin's job is oversight
+        (how is the school doing today, across all classes) not just "take attendance for my one class." The
+        client specifically asked for a real admin overview: summary charts (attendance rate trend, students
+        missing photos, pending card orders, sync health across the school), not a scan button front-and-center.
+        The Admin Shell already has its own 4-tab structure — Home just needs its own screen design now.</li>
+        <li><b>Parent has no bottom navigation</b> while Teacher and Admin do — worth deciding whether Parent gets
+        a matching tab bar (e.g. Children / Settings) for consistency, or whether its simplicity is intentional
+        and should be preserved as a deliberately lighter experience.</li>
+        <li><b>No custom type family or icon set</b> — see Typography section. Highest-leverage single change
+        available.</li>
+        <li><b>Attendance P/A/L/E buttons and the QR scanner flash-feedback</b> are the two most-repeated, highest-
+        frequency interactions in the whole app (used dozens of times a day per teacher) — they deserve the most
+        design iteration and user-testing of anything here.</li>
+        <li><b>Motion is currently minimal-to-none</b> outside the splash screen and shimmer skeletons — no
+        page-transition personality, no micro-interactions on the P/A/L/E toggles, scan success flashes, or grade
+        rank badges. The client referenced Duolingo as a tone reference specifically for how satisfying small
+        interactions feel — there's real room here as long as it stays cheap on low-end hardware (favor implicit
+        `AnimatedContainer`/`AnimatedScale`-style transforms over particle/Lottie effects).</li>
+        <li><b>Settings is one long list</b> — Account, Security, Sync and Sign-out are all stacked on one screen.
+        Fine today at this scale; worth revisiting if more settings get added (e.g. notification preferences).</li>
+      </ul>
+    </section>
+
+    <section class="doc-section" id="references">
+      <p class="section-kicker">Tone</p>
+      <h2 class="section-title">Reference direction from the client</h2>
+      <p>The client named <b>Duolingo</b> as a UX/motion reference — not for its visual style (Duolingo is
+      playful/mascot-driven, which doesn't fit a school-administration tool) but for how it makes routine,
+      repetitive actions (a daily lesson, in EduID's case: daily attendance) feel satisfying rather than
+      administrative — clear instant feedback, a sense of progress, momentum. The client also asked for the app's
+      accent to match the public marketing website's <b>emerald green</b>, which is already wired through the
+      app's single color source (<span class="mono">AppColors.primary</span>) — changing it site-wide is a
+      one-line change, so feel free to propose a refined shade without worrying about implementation cost.</p>
+    </section>
+
+    <div class="cta-footer">
+      <h3>Where to start</h3>
+      <p>Recommended order: (1) lock a type pairing + full color system, since almost every screen depends on
+      both; (2) redesign the Attendance Roster + Scanner pair, since it's the highest-frequency flow in the app;
+      (3) design the missing Admin Home overview from scratch; (4) apply the new system across the remaining
+      screens using this document as the element-by-element checklist.</p>
+    </div>
+  </main>
+</div>

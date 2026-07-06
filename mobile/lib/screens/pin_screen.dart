@@ -162,11 +162,7 @@ class _PinScreenState extends State<PinScreen> {
               constraints: const BoxConstraints(maxWidth: 380),
               child: Column(
                 children: [
-                  IconTile(
-                    _isUnlock ? Icons.lock_rounded : Icons.pin_rounded,
-                    color: AppColors.primary,
-                    size: 56,
-                  ),
+                  const EduIdMark(size: 60),
                   const SizedBox(height: 14),
                   Text(
                     _isUnlock
@@ -229,9 +225,10 @@ class _PinScreenState extends State<PinScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(4, (i) {
                         final filled = i < _pin.length;
-                        return Container(
-                          width: 14,
-                          height: 14,
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          width: 16,
+                          height: 16,
                           margin: const EdgeInsets.symmetric(horizontal: 9),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
@@ -241,8 +238,8 @@ class _PinScreenState extends State<PinScreen> {
                             border: Border.all(
                                 color: filled
                                     ? AppColors.primary
-                                    : AppColors.inkLo,
-                                width: 1.6),
+                                    : AppColors.border,
+                                width: 1.8),
                           ),
                         );
                       }),

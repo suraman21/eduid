@@ -190,18 +190,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.zero,
-      radius: 12,
+      radius: 14,
       borderColor: now ? AppColors.primary : AppColors.border,
       child: IntrinsicHeight(
         child: Row(children: [
           // Subject colour bar — instant visual scan of the day.
           Container(
-            width: 5,
+            width: 6,
             decoration: BoxDecoration(
               color: color,
               borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12)),
+                  topLeft: Radius.circular(14),
+                  bottomLeft: Radius.circular(14)),
             ),
           ),
           Padding(

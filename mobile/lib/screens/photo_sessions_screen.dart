@@ -81,21 +81,17 @@ class _PhotoSessionsScreenState extends State<PhotoSessionsScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         AppCard(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.photo_camera_rounded,
-                      color: AppColors.primary),
+                ProgressRing(
+                  value: progress,
+                  size: 72,
+                  strokeWidth: 7,
+                  centerText: '${(progress * 100).round()}%',
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,37 +99,30 @@ class _PhotoSessionsScreenState extends State<PhotoSessionsScreen> {
                       Text(s['class_name'] ?? 'Whole school',
                           style: const TextStyle(
                               fontWeight: FontWeight.w800, fontSize: 15)),
+                      const SizedBox(height: 2),
                       Text('$captured of $total photographed',
                           style: const TextStyle(
                               fontSize: 12.5, color: AppColors.inkMid)),
+                      if (_pending > 0) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: AppColors.amberSoft,
+                              borderRadius: BorderRadius.circular(8)),
+                          child: Text('$_pending queued',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.amber)),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                if (_pending > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: AppColors.amberSoft,
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Text('$_pending queued',
-                        style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.amber)),
-                  ),
               ]),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: AppColors.border,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
