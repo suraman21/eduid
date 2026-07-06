@@ -66,28 +66,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo mark
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Icon(Icons.badge_rounded,
-                          size: 32, color: Colors.white),
-                    ),
-                  ),
+                  const Center(child: EduIdMark(size: 68)),
                   const SizedBox(height: 16),
-                  const Text('EduID',
+                  const Text('Welcome back',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 26,
+                          fontSize: 25,
                           fontWeight: FontWeight.w800,
                           color: AppColors.ink,
                           letterSpacing: -0.5)),
                   const SizedBox(height: 4),
-                  const Text('School management — works offline too',
+                  const Text('Sign in to your EduID account',
                       textAlign: TextAlign.center,
                       style:
                           TextStyle(color: AppColors.inkMid, fontSize: 13.5)),

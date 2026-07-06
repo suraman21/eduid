@@ -65,6 +65,13 @@ class _ParentChildScreenState extends State<ParentChildScreen> {
     final terms =
         (_grades?['terms'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
+    final present = (summary?['present'] as num?) ?? 0;
+    final totalDays = summary == null
+        ? 0
+        : ['present', 'absent', 'late', 'excused']
+            .fold<num>(0, (sum, k) => sum + ((summary[k] as num?) ?? 0));
+    final presentRate = totalDays > 0 ? present / totalDays * 100 : null;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -127,28 +134,60 @@ class _ParentChildScreenState extends State<ParentChildScreen> {
                                 ('excused', 'Excused'),
                               ]) ...[
                                 Expanded(
-                                  child: AppCard(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                    child: Column(
-                                      children: [
-                                        Text('${summary?[e.$1] ?? 0}',
-                                            style: TextStyle(
-                                                fontSize: 17,
-                                                fontWeight: FontWeight.w800,
-                                                color: _tone(e.$1))),
-                                        Text(e.$2,
-                                            style: const TextStyle(
-                                                fontSize: 10,
-                                                color: AppColors.inkLo)),
-                                      ],
-                                    ),
+                                  child: StatTile(
+                                    value: '${summary?[e.$1] ?? 0}',
+                                    label: e.$2,
+                                    color: _tone(e.$1),
                                   ),
                                 ),
                                 if (e.$1 != 'excused') const SizedBox(width: 8),
                               ],
                             ],
                           ),
+                          if (presentRate != null) ...[
+                            const SizedBox(height: 10),
+                            AppCard(
+                              color: presentRate >= 90
+                                  ? AppColors.greenSoft
+                                  : presentRate < 75
+                                      ? AppColors.redSoft
+                                      : AppColors.amberSoft,
+                              borderColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    presentRate >= 90
+                                        ? Icons.star_rounded
+                                        : presentRate < 75
+                                            ? Icons.error_outline_rounded
+                                            : Icons.info_outline_rounded,
+                                    size: 18,
+                                    color: presentRate >= 90
+                                        ? AppColors.green
+                                        : presentRate < 75
+                                            ? AppColors.red
+                                            : AppColors.amber,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      presentRate >= 90
+                                          ? '${widget.studentName.split(' ').first} was present ${presentRate.toStringAsFixed(0)}% of days this month — great attendance.'
+                                          : presentRate < 75
+                                              ? '${widget.studentName.split(' ').first} was present ${presentRate.toStringAsFixed(0)}% of days this month — attendance has dipped.'
+                                              : '${widget.studentName.split(' ').first} was present ${presentRate.toStringAsFixed(0)}% of days this month.',
+                                      style: const TextStyle(
+                                          fontSize: 12.5,
+                                          color: AppColors.inkMid,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 20),
                           const SectionLabel('Recent days'),
                           if (records.isEmpty)
@@ -164,7 +203,7 @@ class _ParentChildScreenState extends State<ParentChildScreen> {
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 11),
-                              radius: 12,
+                              radius: 14,
                               child: Row(
                                 children: [
                                   Expanded(
@@ -223,7 +262,7 @@ class _ParentChildScreenState extends State<ParentChildScreen> {
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 12),
-                                radius: 12,
+                                radius: 14,
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
