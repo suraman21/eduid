@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../services/data_service.dart';
+import '../services/sync_engine.dart';
 import '../ui/kit.dart';
 import '../ui/skeleton.dart';
 
@@ -26,6 +28,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   _View _view = _View.weekly;
   late DateTime _selected; // the focused date
+  SyncEngine? _engine;
 
   static const _dayShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -34,6 +37,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     super.initState();
     _selected = _today();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh when a background sync lands. Without this the timetable tab
+    // (kept alive in the IndexedStack) stays on its first, pre-sync read —
+    // which is why it showed "no timetable yet" while Home already had classes.
+    _engine ??= context.read<SyncEngine>()..addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    _engine?.removeListener(_load);
+    super.dispose();
   }
 
   DateTime _today() {

@@ -44,6 +44,10 @@ Future<void> main() async {
   auth.addListener(driveSync);
   driveSync();
 
+  // Pull fresh profile/school on cold start so a name (or accent, session
+  // types…) an admin changed on the web shows up without re-logging in.
+  if (auth.signedIn) auth.refreshProfile();
+
   runApp(
     MultiProvider(
       providers: [
@@ -88,6 +92,11 @@ class _EduIdAppState extends State<EduIdApp> with WidgetsBindingObserver {
         widget.auth.appPaused();
       case AppLifecycleState.resumed:
         widget.auth.appResumed();
+        // Coming back to the app is a natural moment to pick up profile/school
+        // changes made elsewhere (e.g. an admin renamed this teacher).
+        if (widget.auth.signedIn && !widget.auth.locked) {
+          widget.auth.refreshProfile();
+        }
       default:
         break;
     }

@@ -41,24 +41,38 @@ class DataService {
     });
 
     // Rosters (incl. qr_token → offline QR verification works after this).
+    // Each class is fetched independently: one class failing (a transient
+    // error, a 403 on a single class) must NOT abort the whole sync and, in
+    // particular, must not stop the schedule below from being cached — that
+    // was the cause of "2 classes on Home but no timetable".
     for (final c in classes) {
-      final r = await ApiClient.instance.get('/classes/${c.id}/students');
-      final students = (r.data['students'] as List)
-          .cast<Map<String, dynamic>>()
-          .map((j) => Student.fromApi(j, c.id))
-          .toList();
-      await d.transaction((txn) async {
-        await txn.delete('students', where: 'class_id = ?', whereArgs: [c.id]);
-        for (final s in students) {
-          await txn.insert('students', s.toDb(), conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-      });
+      try {
+        final r = await ApiClient.instance.get('/classes/${c.id}/students');
+        final students = (r.data['students'] as List)
+            .cast<Map<String, dynamic>>()
+            .map((j) => Student.fromApi(j, c.id))
+            .toList();
+        await d.transaction((txn) async {
+          await txn.delete('students', where: 'class_id = ?', whereArgs: [c.id]);
+          for (final s in students) {
+            await txn.insert('students', s.toDb(),
+                conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        });
+      } catch (_) {
+        // Keep any previously cached roster for this class; retry next sync.
+      }
     }
 
-    // Schedule (best-effort — the school may not use timetables yet).
+    // Schedule — fetched independently of rosters. Each endpoint is guarded on
+    // its own so a today-only or week-only hiccup still caches the other, and
+    // an empty/absent timetable simply leaves the cache empty (the screen then
+    // shows the "not set up yet" state, which is correct).
     try {
       final today = await ApiClient.instance.get('/schedule/today');
       await LocalDb.instance.putMeta('schedule_today', jsonEncode(today.data));
+    } catch (_) {}
+    try {
       final week = await ApiClient.instance.get('/schedule/week');
       await LocalDb.instance.putMeta('schedule_week', jsonEncode(week.data));
     } catch (_) {}

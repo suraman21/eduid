@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../services/data_service.dart';
+import '../services/sync_engine.dart';
 import '../ui/skeleton.dart';
 import 'grades_screen.dart';
 
@@ -16,11 +18,27 @@ class GradesTabScreen extends StatefulWidget {
 
 class _GradesTabScreenState extends State<GradesTabScreen> {
   List<SchoolClass>? _classes;
+  SyncEngine? _engine;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload whenever a background sync lands — this tab lives in an
+    // IndexedStack (kept alive) and would otherwise stay on its first (often
+    // empty, pre-sync) read forever.
+    _engine ??= context.read<SyncEngine>()..addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    _engine?.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {

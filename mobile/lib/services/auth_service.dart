@@ -112,6 +112,34 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pull fresh profile + school info from the server and update the cached
+  /// copies. This is why an admin renaming a teacher on the web now shows up in
+  /// the app (previously the name was frozen at login). Non-fatal and silent:
+  /// offline or a transient error just keeps the current values.
+  Future<void> refreshProfile() async {
+    if (!signedIn) return;
+    try {
+      final res = await ApiClient.instance.get('/auth/me');
+      final data = res.data as Map<String, dynamic>;
+      final freshUser = data['user'] as Map<String, dynamic>?;
+      final freshSchool = data['school'] as Map<String, dynamic>?;
+      var changed = false;
+      if (freshUser != null) {
+        user = freshUser;
+        await _storage.write(key: 'user_json', value: jsonEncode(freshUser));
+        changed = true;
+      }
+      if (freshSchool != null) {
+        school = freshSchool;
+        await _storage.write(key: 'school_json', value: jsonEncode(freshSchool));
+        changed = true;
+      }
+      if (changed) notifyListeners();
+    } catch (_) {
+      // Offline / transient — keep the cached profile.
+    }
+  }
+
   Future<void> login({
     required String schoolCode,
     required String email,
