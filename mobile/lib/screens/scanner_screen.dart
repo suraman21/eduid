@@ -41,6 +41,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
   String? _flashText;
   Color _flashColor = AppColors.green;
 
+  // Success overlay (green check + name + time), shown briefly on a valid scan.
+  String? _successName;
+  String? _successTime;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -65,8 +69,26 @@ class _ScannerScreenState extends State<ScannerScreen> {
       _flash('${student.fullName} — already marked', AppColors.blue);
     } else {
       setState(() => _found.add(student));
-      _flash('✓ ${student.fullName}', AppColors.green);
+      _showSuccess(student.fullName);
     }
+  }
+
+  /// Full green "Check-in successful!" overlay for a valid, first-time scan —
+  /// matches the design's confirmation and gives an unmistakable signal.
+  void _showSuccess(String name) {
+    final now = TimeOfDay.now();
+    final hh = now.hour.toString().padLeft(2, '0');
+    final mm = now.minute.toString().padLeft(2, '0');
+    setState(() {
+      _successName = name;
+      _successTime = '$hh:$mm';
+      _flashText = null;
+    });
+    Future.delayed(const Duration(milliseconds: 1300), () {
+      if (mounted && _successName == name) {
+        setState(() => _successName = null);
+      }
+    });
   }
 
   void _flash(String text, Color color) {
@@ -81,12 +103,52 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final frameColor = _flashText == null ? AppColors.primary : _flashColor;
+    final frameColor = _successName != null
+        ? AppColors.green
+        : (_flashText == null ? AppColors.primary : _flashColor);
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           MobileScanner(controller: _controller, onDetect: _onDetect),
+
+          // Dim + success confirmation on a valid scan.
+          if (_successName != null)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.55),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: const BoxDecoration(
+                          color: AppColors.green, shape: BoxShape.circle),
+                      child: const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 44),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Check-in successful!',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    Text(_successName!,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(_successTime ?? '',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
 
           // Top bar
           SafeArea(

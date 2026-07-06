@@ -23,6 +23,11 @@ class ApiClient {
   /// Set when any request gets a 401 — AuthService watches this.
   bool sessionExpired = false;
 
+  /// Invoked once when a request comes back 401 (token expired or revoked
+  /// server-side). Wired in main() to end the session and route to login so
+  /// the user is never stranded on a dead token with silently failing syncs.
+  void Function()? onUnauthorized;
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _dio.options.baseUrl = prefs.getString('server_url') ?? _defaultBaseUrl;
@@ -36,8 +41,17 @@ class ApiClient {
         handler.next(options);
       },
       onError: (e, handler) {
-        if (e.response?.statusCode == 401) {
+        // A 401 on a normal (data) endpoint means our token is dead → end the
+        // session. But the auth endpoints legitimately answer 401 as part of
+        // their own flow (login = bad credentials, pin/verify = wrong PIN) and
+        // must NOT trigger a forced sign-out — otherwise one wrong PIN would
+        // wipe the whole session.
+        final path = e.requestOptions.path;
+        final isAuthEndpoint = path.contains('/auth/login') ||
+            path.contains('/auth/pin/');
+        if (e.response?.statusCode == 401 && !isAuthEndpoint && !sessionExpired) {
           sessionExpired = true;
+          onUnauthorized?.call();
         }
         handler.next(e);
       },

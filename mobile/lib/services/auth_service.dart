@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,9 +24,33 @@ class AuthService extends ChangeNotifier {
   bool locked = false;          // true when a PIN unlock is required
   int _localPinFailures = 0;
 
+  /// Set when the session ended because the server rejected the token (401):
+  /// the login screen shows a "signed out" note so the user understands why
+  /// they are suddenly back at login. Cleared on the next successful sign-in.
+  bool sessionWasExpired = false;
+
   bool get signedIn => user != null;
   bool get hasLocalPin => _hasLocalPin;
   bool _hasLocalPin = false;
+
+  /// Server rejected our token (a 401 on any request). End the session
+  /// locally — no network logout, the token is already dead — and flag it so
+  /// login can explain what happened. Called from the ApiClient 401 hook.
+  void handleUnauthorized() {
+    if (!signedIn) return;
+    sessionWasExpired = true;
+    signOut(local: true);
+  }
+
+  /// Session types the school actually uses (from the login payload / cadence).
+  /// The attendance roster offers exactly these instead of a hardcoded set.
+  List<String> get sessionTypes {
+    final raw = school?['session_types'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw.map((e) => e.toString()).toList();
+    }
+    return const ['morning', 'afternoon'];
+  }
 
   /// Account role from the server: teacher | school_admin | (future: parent…).
   /// The app routes features by this — one EduID app for every user type.
@@ -107,6 +132,7 @@ class AuthService extends ChangeNotifier {
     await _storage.write(key: 'school_json', value: jsonEncode(school));
 
     ApiClient.instance.sessionExpired = false;
+    sessionWasExpired = false;
     locked = false;
     notifyListeners();
   }
@@ -141,9 +167,10 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return null;
     } catch (e) {
-      final msg = ApiClient.messageFrom(e);
-      // Network unreachable → offline local verification.
-      if (msg.startsWith('Cannot reach')) {
+      // Genuinely offline (no server reached) → verify against the local hash.
+      // Detected from the exception TYPE, not a message string, so localized
+      // or reworded copy can never disable offline unlock.
+      if (_isOffline(e)) {
         final salt = await _storage.read(key: 'pin_salt');
         final hash = await _storage.read(key: 'pin_hash');
         if (salt != null && hash != null && _hashPin(pin, salt) == hash) {
@@ -159,13 +186,27 @@ class AuthService extends ChangeNotifier {
         }
         return 'Incorrect PIN (offline). ${5 - _localPinFailures} attempts left.';
       }
-      // Server said locked (423) → the token was revoked; force re-login.
-      if (ApiClient.instance.sessionExpired || msg.contains('locked') || msg.contains('log in')) {
-        await signOut();
-        return 'PIN locked. Please sign in again.';
+      // The server answered. A 423 means the PIN is locked and the server has
+      // already revoked our token — force a full re-login. A 401 here is the
+      // normal "wrong PIN" answer (with attempts remaining) and is shown as-is.
+      final status = e is DioException ? e.response?.statusCode : null;
+      if (status == 423) {
+        await signOut(local: true);
+        return 'For your security, please sign in again.';
       }
-      return msg;
+      return ApiClient.messageFrom(e);
     }
+  }
+
+  /// True when the request never reached the server (no connectivity / DNS /
+  /// timeout) — the signal to fall back to offline PIN verification.
+  bool _isOffline(Object e) {
+    if (e is! DioException) return false;
+    return e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        (e.type == DioExceptionType.unknown && e.response == null);
   }
 
   void lock() {
@@ -175,11 +216,16 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> signOut() async {
-    try {
-      await ApiClient.instance.post('/auth/logout');
-    } catch (_) {
-      // Offline sign-out is fine — the token dies with local storage.
+  /// Sign out and wipe the device. [local] skips the network logout call —
+  /// used when the token is already known dead (a 401/423), so we don't fire a
+  /// doomed request that would just 401 again.
+  Future<void> signOut({bool local = false}) async {
+    if (!local) {
+      try {
+        await ApiClient.instance.post('/auth/logout');
+      } catch (_) {
+        // Offline sign-out is fine — the token dies with local storage.
+      }
     }
     await ApiClient.instance.clearToken();
     await _storage.delete(key: 'user_json');

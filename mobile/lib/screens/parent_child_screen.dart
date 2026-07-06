@@ -65,11 +65,13 @@ class _ParentChildScreenState extends State<ParentChildScreen> {
     final terms =
         (_grades?['terms'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-    final present = (summary?['present'] as num?) ?? 0;
+    num asNum(dynamic v) =>
+        v is num ? v : (v is String ? (num.tryParse(v) ?? 0) : 0);
+    final present = asNum(summary?['present']);
     final totalDays = summary == null
         ? 0
         : ['present', 'absent', 'late', 'excused']
-            .fold<num>(0, (sum, k) => sum + ((summary[k] as num?) ?? 0));
+            .fold<num>(0, (sum, k) => sum + asNum(summary[k]));
     final presentRate = totalDays > 0 ? present / totalDays * 100 : null;
 
     return DefaultTabController(

@@ -111,30 +111,46 @@ class DataService {
     return v == null ? null : DateTime.tryParse(v);
   }
 
-  /// Today's periods from the cache (refreshed by refreshAll).
+  /// Today's periods from the cache (refreshed by refreshAll). Defensive: a
+  /// missing/partial/corrupt blob yields an empty list instead of crashing.
   Future<List<PeriodSlot>> cachedScheduleToday() async {
     final raw = await LocalDb.instance.getMeta('schedule_today');
     if (raw == null) return [];
-    final data = jsonDecode(raw) as Map<String, dynamic>;
-    return (data['schedule'] as List)
-        .cast<Map<String, dynamic>>()
-        .map(PeriodSlot.fromApi)
-        .toList();
+    try {
+      final data = jsonDecode(raw);
+      final list = (data is Map ? data['schedule'] : null);
+      if (list is! List) return [];
+      return list
+          .whereType<Map>()
+          .map((e) => PeriodSlot.fromApi(e.cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
-  /// Weekly schedule: day (1=Mon…7=Sun) → periods.
+  /// Weekly schedule: day (1=Mon…7=Sun) → periods. Defensive on shape.
   Future<Map<int, List<PeriodSlot>>> cachedScheduleWeek() async {
     final raw = await LocalDb.instance.getMeta('schedule_week');
     if (raw == null) return {};
-    final data = jsonDecode(raw) as Map<String, dynamic>;
-    final out = <int, List<PeriodSlot>>{};
-    for (final day in (data['week'] as List).cast<Map<String, dynamic>>()) {
-      out[day['day'] as int] = (day['periods'] as List)
-          .cast<Map<String, dynamic>>()
-          .map(PeriodSlot.fromApi)
-          .toList();
+    try {
+      final data = jsonDecode(raw);
+      final week = (data is Map ? data['week'] : null);
+      if (week is! List) return {};
+      final out = <int, List<PeriodSlot>>{};
+      for (final day in week.whereType<Map>()) {
+        final dayNum = day['day'];
+        final periods = day['periods'];
+        if (dayNum is! int || periods is! List) continue;
+        out[dayNum] = periods
+            .whereType<Map>()
+            .map((e) => PeriodSlot.fromApi(e.cast<String, dynamic>()))
+            .toList();
+      }
+      return out;
+    } catch (_) {
+      return {};
     }
-    return out;
   }
 
   /// Last cached grades for one class — instant, no network. The screen shows

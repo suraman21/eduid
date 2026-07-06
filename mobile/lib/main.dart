@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/api_client.dart';
+import 'screens/classes_screen.dart';
+import 'screens/grades_tab_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/photo_sessions_screen.dart';
@@ -20,6 +22,11 @@ Future<void> main() async {
 
   final auth = AuthService();
   await auth.restore();
+
+  // A 401 on any data request (token expired or revoked server-side) ends the
+  // session and routes back to login — the user is never stranded on a dead
+  // token with silently failing background syncs.
+  ApiClient.instance.onUnauthorized = auth.handleUnauthorized;
 
   // Automatic sync: runs whenever a TEACHER/ADMIN is signed in and unlocked.
   // Parents don't sync class rosters — their screens fetch on demand with a
@@ -175,12 +182,13 @@ class _Gate extends StatelessWidget {
     final role = auth.role;
     if (role == 'teacher') return const TeacherShell();
     if (role == 'school_admin') return const AdminShell();
-    if (role == 'parent') return const ParentHomeScreen();
+    if (role == 'parent') return const ParentShell();
     return RoleNoticeScreen(role: role);
   }
 }
 
-/// Teacher: their daily work — classes & scanning, schedule, settings.
+/// Teacher: Home · Schedule · Classes · Grades · More — the daily workflow,
+/// matching the design's five-tab bar.
 class TeacherShell extends StatefulWidget {
   const TeacherShell({super.key});
 
@@ -194,10 +202,15 @@ class _TeacherShellState extends State<TeacherShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _tab, children: const [
-        HomeScreen(),
-        ScheduleScreen(),
-        SettingsScreen(),
+      body: IndexedStack(index: _tab, children: [
+        HomeScreen(
+          onOpenSchedule: () => setState(() => _tab = 1),
+          onOpenClasses: () => setState(() => _tab = 2),
+        ),
+        const ScheduleScreen(),
+        const ClassesScreen(),
+        const GradesTabScreen(),
+        const SettingsScreen(),
       ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
@@ -215,18 +228,28 @@ class _TeacherShellState extends State<TeacherShell> {
                   Icon(Icons.calendar_month_rounded, color: AppColors.primary),
               label: 'Schedule'),
           NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
+              icon: Icon(Icons.grid_view_outlined),
               selectedIcon:
-                  Icon(Icons.settings_rounded, color: AppColors.primary),
-              label: 'Settings'),
+                  Icon(Icons.grid_view_rounded, color: AppColors.primary),
+              label: 'Classes'),
+          NavigationDestination(
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon:
+                  Icon(Icons.insights_rounded, color: AppColors.primary),
+              label: 'Grades'),
+          NavigationDestination(
+              icon: Icon(Icons.menu_rounded),
+              selectedIcon: Icon(Icons.menu_rounded, color: AppColors.primary),
+              label: 'More'),
         ],
       ),
     );
   }
 }
 
-/// School admin: oversight + operations — home, Photo Session Mode,
-/// schedule, settings. Different job, different shell.
+/// School admin: Home · Classes · Photos · More. Admins don't teach a personal
+/// timetable, so there's no Schedule tab — Photo Session Mode is their tab
+/// instead. Class rosters and gradebooks are reachable from Classes.
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
 
@@ -240,11 +263,11 @@ class _AdminShellState extends State<AdminShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _tab, children: const [
-        HomeScreen(),
-        PhotoSessionsScreen(),
-        ScheduleScreen(),
-        SettingsScreen(),
+      body: IndexedStack(index: _tab, children: [
+        HomeScreen(onOpenClasses: () => setState(() => _tab = 1)),
+        const ClassesScreen(),
+        const PhotoSessionsScreen(),
+        const SettingsScreen(),
       ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
@@ -258,20 +281,59 @@ class _AdminShellState extends State<AdminShell> {
                   Icon(Icons.space_dashboard_rounded, color: AppColors.primary),
               label: 'Home'),
           NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon:
+                  Icon(Icons.grid_view_rounded, color: AppColors.primary),
+              label: 'Classes'),
+          NavigationDestination(
               icon: Icon(Icons.photo_camera_outlined),
               selectedIcon:
                   Icon(Icons.photo_camera_rounded, color: AppColors.primary),
               label: 'Photos'),
           NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon:
-                  Icon(Icons.calendar_month_rounded, color: AppColors.primary),
-              label: 'Schedule'),
+              icon: Icon(Icons.menu_rounded),
+              selectedIcon: Icon(Icons.menu_rounded, color: AppColors.primary),
+              label: 'More'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Parent: Home (my children) · More. A lean two-tab bar keeps the app's
+/// navigation consistent without inventing features parents don't have.
+class ParentShell extends StatefulWidget {
+  const ParentShell({super.key});
+
+  @override
+  State<ParentShell> createState() => _ParentShellState();
+}
+
+class _ParentShellState extends State<ParentShell> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _tab, children: const [
+        ParentHomeScreen(),
+        SettingsScreen(),
+      ]),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (i) => setState(() => _tab = i),
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.primarySoft,
+        destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded, color: AppColors.primary),
+              label: 'Home'),
+          NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
               selectedIcon:
-                  Icon(Icons.settings_rounded, color: AppColors.primary),
-              label: 'Settings'),
+                  Icon(Icons.person_rounded, color: AppColors.primary),
+              label: 'Profile'),
         ],
       ),
     );

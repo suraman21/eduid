@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
@@ -9,16 +8,23 @@ import '../services/data_service.dart';
 import '../services/sync_engine.dart';
 import '../ui/kit.dart';
 import '../ui/sync_badge.dart';
-import 'grades_screen.dart';
 import 'roster_screen.dart';
-import 'schedule_screen.dart';
-import 'settings_screen.dart';
 
-/// Home — greeting, stats, quick actions (Scan attendance / Schedule),
-/// tappable class cards and recent activity. Everything reads the offline
-/// cache; the SyncEngine refreshes it in the background.
+/// Home — greeting, key stats, the primary Scan Attendance action, what's up
+/// next today, and recent activity. Everything reads the offline cache; the
+/// SyncEngine refreshes it in the background. Class lists and gradebooks live
+/// in their own tabs (reached via the stat tiles' "View all" links).
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    super.key,
+    this.onOpenClasses,
+    this.onOpenSchedule,
+  });
+
+  /// Tab-switch callbacks from the shell (null when the tab doesn't exist for
+  /// this role — the matching link/stat is then hidden or non-tappable).
+  final VoidCallback? onOpenClasses;
+  final VoidCallback? onOpenSchedule;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,7 +33,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<SchoolClass> _classes = [];
   List<Map<String, dynamic>> _recent = [];
-  int _periodsToday = 0;
+  List<PeriodSlot> _todayTeaching = [];
   SyncEngine? _engine;
 
   @override
@@ -39,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reload the cached lists every time a background sync completes.
     _engine ??= context.read<SyncEngine>()..addListener(_loadCache);
   }
 
@@ -57,18 +62,20 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _classes = classes;
       _recent = recent;
-      _periodsToday = today.where((p) => p.className != null).length;
+      _todayTeaching = today.where((p) => p.className != null).toList();
     });
   }
 
   Future<void> _openRoster(SchoolClass c, {bool scan = false}) async {
+    final sessionTypes = context.read<AuthService>().sessionTypes;
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => RosterScreen(schoolClass: c, autoScan: scan)));
+        builder: (_) => RosterScreen(
+            schoolClass: c, autoScan: scan, sessionTypes: sessionTypes)));
     _loadCache();
   }
 
-  /// "Scan attendance" quick action: pick the class, then go straight to the
-  /// camera — the fastest path from home to a scanned student.
+  /// "Scan attendance": pick the class, then go straight to the camera — the
+  /// fastest path from home to a scanned student.
   Future<void> _scanAttendance() async {
     if (_classes.isEmpty) return;
     if (_classes.length == 1) {
@@ -118,8 +125,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (chosen == null || !mounted) return;
 
-    // Duplicate guard: this class already has attendance today. Re-scanning
-    // is allowed (it EDITS the same session — the server merges, never
+    // Duplicate guard: this class already has attendance today. Re-scanning is
+    // allowed (it EDITS the same session — the server merges, never
     // duplicates) but the teacher should do it on purpose, not by accident.
     if (chosen.recordedToday.isNotEmpty) {
       final go = await showDialog<bool>(
@@ -153,6 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _classes.fold<int>(0, (sum, c) => sum + c.studentCount);
     final firstName =
         (auth.user?['name'] as String? ?? '').split(' ').firstOrNull ?? '';
+    final recordedCount =
+        _classes.where((c) => c.recordedToday.isNotEmpty).length;
 
     return Scaffold(
       body: SafeArea(
@@ -162,236 +171,173 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
             children: [
-              // ── Header ──
+              // ── Header: "Good morning," + green name + wave ──
               Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text('${_greeting()},',
+                            style: const TextStyle(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink,
+                                letterSpacing: -0.4)),
                         Text(
-                          _greeting(firstName),
+                          firstName.isEmpty ? '👋' : '$firstName 👋',
                           style: const TextStyle(
                               fontSize: 21,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.ink,
+                              color: AppColors.primary,
                               letterSpacing: -0.4),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          '${auth.school?['name'] ?? ''} · ${DateFormat('EEE, MMM d').format(DateTime.now())}',
-                          style: const TextStyle(
-                              fontSize: 12.5, color: AppColors.inkLo),
-                        ),
+                        const Text("Here's what's happening today.",
+                            style: TextStyle(
+                                fontSize: 12.5, color: AppColors.inkLo)),
                       ],
                     ),
                   ),
                   const SyncBadge(),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined,
-                        color: AppColors.inkMid),
-                    tooltip: 'Settings',
-                    onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const SettingsScreen())),
-                  ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // ── Quick actions ──
+              // ── 2×2 stat grid ──
               Row(
                 children: [
                   Expanded(
-                    child: AppCard(
-                      color: AppColors.primary,
-                      borderColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 16),
-                      onTap: _classes.isEmpty ? null : _scanAttendance,
-                      child: const Row(
-                        children: [
-                          Icon(Icons.qr_code_scanner_rounded,
-                              color: Colors.white, size: 22),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text('Scan attendance',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14)),
-                          ),
-                        ],
-                      ),
+                    child: _StatTile(
+                      icon: Icons.people_alt_rounded,
+                      value: '$totalStudents',
+                      label: 'Students',
+                      linkText: widget.onOpenClasses != null ? 'View all' : null,
+                      onTap: widget.onOpenClasses,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: AppCard(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 16),
-                      onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const ScheduleScreen())),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.calendar_month_rounded,
-                              color: AppColors.primary, size: 22),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text('My schedule',
-                                style: TextStyle(
-                                    color: AppColors.ink,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14)),
-                          ),
-                        ],
-                      ),
+                    child: _StatTile(
+                      icon: Icons.menu_book_rounded,
+                      value: '${_classes.length}',
+                      label: 'Classes',
+                      linkText: widget.onOpenClasses != null ? 'View all' : null,
+                      onTap: widget.onOpenClasses,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-
-              // ── Stats row ──
               Row(
                 children: [
                   Expanded(
-                    child: StatTile(
-                        value: '${_classes.length}',
-                        label: 'Classes',
-                        icon: Icons.grid_view_rounded,
-                        color: AppColors.primary),
+                    child: widget.onOpenSchedule != null
+                        ? _StatTile(
+                            icon: Icons.calendar_month_rounded,
+                            value: '${_todayTeaching.length}',
+                            label: "Today's periods",
+                            linkText: 'View schedule',
+                            onTap: widget.onOpenSchedule,
+                          )
+                        : _StatTile(
+                            icon: Icons.cloud_upload_rounded,
+                            value: '${engine.pending}',
+                            label: 'Queued',
+                            valueColor: engine.pending > 0
+                                ? AppColors.amber
+                                : AppColors.green,
+                          ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: StatTile(
-                        value: '$totalStudents',
-                        label: 'Students',
-                        icon: Icons.people_alt_rounded,
-                        color: AppColors.blue),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: StatTile(
-                        value: '$_periodsToday',
-                        label: "Today's periods",
-                        icon: Icons.schedule_rounded,
-                        color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: StatTile(
-                      value: '${engine.pending}',
-                      label: 'Queued',
-                      icon: Icons.cloud_upload_rounded,
-                      color:
-                          engine.pending > 0 ? AppColors.amber : AppColors.green,
+                    child: _StatTile(
+                      icon: Icons.fact_check_rounded,
+                      value: _classes.isEmpty
+                          ? '—'
+                          : '$recordedCount/${_classes.length}',
+                      label: 'Recorded today',
+                      valueColor: AppColors.primary,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
 
-              // ── Classes ──
-              const SectionLabel('My classes'),
-              if (_classes.isEmpty)
-                const AppCard(
-                  padding: EdgeInsets.all(28),
-                  child: Column(
-                    children: [
-                      Icon(Icons.hourglass_empty_rounded,
-                          color: AppColors.inkLo, size: 34),
-                      SizedBox(height: 10),
-                      Text(
-                        'No classes yet — they appear automatically\nafter the first sync.',
-                        textAlign: TextAlign.center,
-                        style:
-                            TextStyle(color: AppColors.inkMid, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              for (final c in _classes)
-                AppCard(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  // The WHOLE card opens attendance — one tap to work.
-                  onTap: () => _openRoster(c),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(13),
+              // ── Primary action: Scan Attendance ──
+              Material(
+                color: _classes.isEmpty ? AppColors.inkLo : AppColors.primary,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _classes.isEmpty ? null : _scanAttendance,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.qr_code_scanner_rounded,
+                              color: Colors.white, size: 24),
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _initial(c),
-                          style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 17),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(c.name,
-                                style: const TextStyle(
-                                    color: AppColors.ink,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15)),
-                            const SizedBox(height: 2),
-                            Text('${c.studentCount} students · tap for attendance',
-                                style: const TextStyle(
-                                    color: AppColors.inkLo, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      Material(
-                        color: AppColors.blueSoft,
-                        borderRadius: BorderRadius.circular(10),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      GradesScreen(schoolClass: c))),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 7),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.insights_rounded,
-                                    color: AppColors.blue, size: 16),
-                                SizedBox(width: 5),
-                                Text('Grades',
-                                    style: TextStyle(
-                                        color: AppColors.blue,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12)),
-                              ],
-                            ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Scan Attendance',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16)),
+                              SizedBox(height: 2),
+                              Text('Start scanning QR codes',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12.5)),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.chevron_right_rounded,
-                          color: AppColors.inkLo),
-                    ],
+                        const Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 20),
+                      ],
+                    ),
                   ),
                 ),
+              ),
+
+              // ── Up next (next teaching period today) ──
+              if (_nextPeriod() != null) ...[
+                const SizedBox(height: 22),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SectionLabel('Up next'),
+                    if (widget.onOpenSchedule != null)
+                      GestureDetector(
+                        onTap: widget.onOpenSchedule,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 4, bottom: 8),
+                          child: Text('View all',
+                              style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12)),
+                        ),
+                      ),
+                  ],
+                ),
+                _upNextCard(_nextPeriod()!),
+              ],
 
               // ── Recent activity ──
               if (_recent.isNotEmpty) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: 22),
                 const SectionLabel('Recent attendance'),
                 for (final row in _recent)
                   AppCard(
@@ -434,15 +380,149 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _greeting(String name) {
+  String _greeting() {
     final h = DateTime.now().hour;
-    final word =
-        h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
-    return name.isEmpty ? word : '$word, $name';
+    return h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
   }
 
-  String _initial(SchoolClass c) {
-    final source = (c.grade ?? c.name).replaceAll(RegExp(r'[^0-9A-Za-z]'), '');
-    return source.isEmpty ? '•' : source.substring(0, 1).toUpperCase();
+  /// The current or next teaching period today (by start time). Null outside
+  /// teaching hours or when there's no timetable.
+  PeriodSlot? _nextPeriod() {
+    if (_todayTeaching.isEmpty) return null;
+    final now = TimeOfDay.now();
+    final nowM = now.hour * 60 + now.minute;
+    int toM(String t) {
+      final p = t.split(':');
+      if (p.length < 2) return -1;
+      return (int.tryParse(p[0]) ?? 0) * 60 + (int.tryParse(p[1]) ?? 0);
+    }
+
+    // Prefer the period happening now, else the next upcoming one.
+    for (final p in _todayTeaching) {
+      final end = toM(p.endTime);
+      if (end >= nowM) return p;
+    }
+    return null;
+  }
+
+  Widget _upNextCard(PeriodSlot p) {
+    String hhmm(String t) => t.length >= 5 ? t.substring(0, 5) : t;
+    final now = TimeOfDay.now();
+    final nowM = now.hour * 60 + now.minute;
+    final startParts = p.startTime.split(':');
+    final startM = startParts.length >= 2
+        ? (int.tryParse(startParts[0]) ?? 0) * 60 +
+            (int.tryParse(startParts[1]) ?? 0)
+        : 0;
+    final live = nowM >= startM;
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: const Icon(Icons.menu_book_rounded,
+                color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.subjectName ?? p.className ?? p.label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: AppColors.ink)),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    '${hhmm(p.startTime)}–${hhmm(p.endTime)}',
+                    if (p.className != null) p.className,
+                    if (p.room != null) 'Room ${p.room}',
+                  ].whereType<String>().join(' · '),
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.inkLo),
+                ),
+              ],
+            ),
+          ),
+          if (live) const StatusPill('Now', color: AppColors.primary),
+        ],
+      ),
+    );
+  }
+}
+
+/// Home stat tile: soft icon chip, big value, label, and an optional green
+/// "View all" link — the exact layout from the teacher dashboard design.
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.linkText,
+    this.onTap,
+    this.valueColor,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final String? linkText;
+  final VoidCallback? onTap;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: valueColor ?? AppColors.ink,
+                  height: 1.0)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(fontSize: 12, color: AppColors.inkMid)),
+          if (linkText != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(linkText!,
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5)),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.primary, size: 15),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

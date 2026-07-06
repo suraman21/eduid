@@ -55,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sessionExpired = context.watch<AuthService>().sessionWasExpired;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -80,6 +81,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                       style:
                           TextStyle(color: AppColors.inkMid, fontSize: 13.5)),
+                  if (sessionExpired) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.amberSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 18, color: AppColors.amber),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                                'Your session ended. Please sign in again.',
+                                style: TextStyle(
+                                    color: AppColors.amber, fontSize: 12.5)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 28),
 
                   AppCard(

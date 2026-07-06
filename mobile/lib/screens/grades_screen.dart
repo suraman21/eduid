@@ -8,9 +8,13 @@ import '../ui/kit.dart';
 /// come pre-computed from the server. Opens INSTANTLY from the cache, then
 /// refreshes from the network in the background (stale-while-revalidate).
 class GradesScreen extends StatefulWidget {
-  const GradesScreen({super.key, required this.schoolClass});
+  const GradesScreen({super.key, required this.schoolClass, this.classes});
 
   final SchoolClass schoolClass;
+
+  /// When supplied (the Grades tab), a class switcher is shown so the teacher
+  /// can move between their classes without leaving the screen.
+  final List<SchoolClass>? classes;
 
   @override
   State<GradesScreen> createState() => _GradesScreenState();
@@ -20,19 +24,21 @@ class _GradesScreenState extends State<GradesScreen> {
   Map<String, dynamic>? _data;
   bool _loading = true;
   bool _sortByRank = true;
+  late SchoolClass _current;
   final Set<int> _expanded = {};
   final Set<String> _expandedSubject = {};
 
   @override
   void initState() {
     super.initState();
+    _current = widget.schoolClass;
     _load();
   }
 
   Future<void> _load() async {
+    setState(() => _loading = true);
     // 1. Cache first — paints immediately.
-    final cached =
-        await DataService.instance.gradesCached(widget.schoolClass.id);
+    final cached = await DataService.instance.gradesCached(_current.id);
     if (mounted && cached != null) {
       setState(() {
         _data = cached;
@@ -40,12 +46,23 @@ class _GradesScreenState extends State<GradesScreen> {
       });
     }
     // 2. Network refresh in the background.
-    final fresh = await DataService.instance.grades(widget.schoolClass.id);
+    final fresh = await DataService.instance.grades(_current.id);
     if (!mounted) return;
     setState(() {
       _data = fresh ?? _data;
       _loading = false;
     });
+  }
+
+  void _switchClass(SchoolClass? c) {
+    if (c == null || c.id == _current.id) return;
+    setState(() {
+      _current = c;
+      _data = null;
+      _expanded.clear();
+      _expandedSubject.clear();
+    });
+    _load();
   }
 
   Color _avgTone(num? avg) {
@@ -76,12 +93,14 @@ class _GradesScreenState extends State<GradesScreen> {
           .compareTo(b['full_name']?.toString() ?? ''));
     }
 
+    final switchable = (widget.classes ?? const []).length > 1;
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Grades · ${widget.schoolClass.name}',
+            Text(switchable ? 'Grades' : 'Grades · ${_current.name}',
                 style: const TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w800)),
             if (term != null)
@@ -91,67 +110,76 @@ class _GradesScreenState extends State<GradesScreen> {
           ],
         ),
       ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.primary, strokeWidth: 2.6))
-          : _data == null
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'No grades available offline yet.\nOpen this screen once while online to cache it.',
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: AppColors.inkMid, fontSize: 13),
-                    ),
-                  ),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-                      child: Row(
+      body: Column(
+        children: [
+          if (switchable) _classSwitcher(),
+          Expanded(
+            child: _loading && _data == null
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.primary, strokeWidth: 2.6))
+                : _data == null
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Text(
+                            'No grades available offline yet.\nOpen this screen once while online to cache it.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: AppColors.inkMid, fontSize: 13),
+                          ),
+                        ),
+                      )
+                    : Column(
                         children: [
-                          Expanded(
-                            child: StatTile(
-                              value: classAvg != null
-                                  ? '${classAvg.toStringAsFixed(1)}%'
-                                  : '—',
-                              label: 'Class average',
-                              color: _avgTone(classAvg),
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(20, 14, 20, 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: StatTile(
+                                    value: classAvg != null
+                                        ? '${classAvg.toStringAsFixed(1)}%'
+                                        : '—',
+                                    label: 'Class average',
+                                    color: _avgTone(classAvg),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: StatTile(
+                                    value: '${students.length}',
+                                    label: 'Students',
+                                    color: AppColors.blue,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: StatTile(
-                              value: '${students.length}',
-                              label: 'Students',
-                              color: AppColors.blue,
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(20, 10, 20, 6),
+                            child: Row(
+                              children: [
+                                const Text('Sort by',
+                                    style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.inkMid)),
+                                const SizedBox(width: 10),
+                                _sortChip('Rank', _sortByRank,
+                                    () => setState(() => _sortByRank = true)),
+                                const SizedBox(width: 8),
+                                _sortChip(
+                                    'Name (A–Z)',
+                                    !_sortByRank,
+                                    () => setState(
+                                        () => _sortByRank = false)),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
-                      child: Row(
-                        children: [
-                          const Text('Sort by',
-                              style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.inkMid)),
-                          const SizedBox(width: 10),
-                          _sortChip('Rank', _sortByRank,
-                              () => setState(() => _sortByRank = true)),
-                          const SizedBox(width: 8),
-                          _sortChip('Name (A–Z)', !_sortByRank,
-                              () => setState(() => _sortByRank = false)),
-                        ],
-                      ),
-                    ),
-                    Expanded(
+                          Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
                         itemCount: sorted.length,
@@ -253,8 +281,45 @@ class _GradesScreenState extends State<GradesScreen> {
                         },
                       ),
                     ),
-                  ],
-                ),
+                        ],
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Rounded class-picker shown at the top of the Grades tab.
+  Widget _classSwitcher() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            isExpanded: true,
+            value: _current.id,
+            borderRadius: BorderRadius.circular(14),
+            icon: const Icon(Icons.expand_more_rounded,
+                color: AppColors.inkMid),
+            style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink),
+            items: [
+              for (final c in widget.classes!)
+                DropdownMenuItem(value: c.id, child: Text(c.name)),
+            ],
+            onChanged: (id) =>
+                _switchClass(widget.classes!.firstWhere((c) => c.id == id)),
+          ),
+        ),
+      ),
     );
   }
 
@@ -278,51 +343,24 @@ class _GradesScreenState extends State<GradesScreen> {
   }
 
   /// One subject line inside an expanded student — tap again to reveal the
-  /// real CA / Midterm / Final weighted breakdown for that subject.
+  /// Category / Weight / Score / Weighted breakdown (CA · Midterm · Final,
+  /// the school's real assessment model) exactly like the design's table.
   Widget _subjectRow(
       Map<String, dynamic> sub, dynamic studentId, Map<String, dynamic>? weights) {
     final key = '$studentId-${sub['subject_id']}';
     final open = _expandedSubject.contains(key);
 
-    Widget scoreLine(String label, Map<String, dynamic>? part, num? weightPct) {
-      final pct = part == null
-          ? null
-          : (part['score'] as num) / (part['max'] as num) * 100;
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                  weightPct != null ? '$label · ${weightPct.round()}%' : label,
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.inkMid)),
-            ),
-            Text(
-              part == null
-                  ? 'not graded'
-                  : '${part['score']}/${part['max']} (${pct!.toStringAsFixed(0)}%)',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: part == null ? AppColors.inkLo : AppColors.ink),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
         color: AppColors.bg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => setState(
-              () => open ? _expandedSubject.remove(key) : _expandedSubject.add(key)),
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() =>
+              open ? _expandedSubject.remove(key) : _expandedSubject.add(key)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -357,18 +395,93 @@ class _GradesScreenState extends State<GradesScreen> {
                   ],
                 ),
                 if (open) ...[
-                  const SizedBox(height: 6),
-                  scoreLine('Continuous assessment', sub['ca'] as Map<String, dynamic>?,
+                  const SizedBox(height: 10),
+                  _breakdownHeader(),
+                  const SizedBox(height: 4),
+                  _breakdownRow('Continuous', sub['ca'] as Map?,
                       weights?['ca'] as num?),
-                  scoreLine('Midterm', sub['midterm'] as Map<String, dynamic>?,
+                  _breakdownRow('Midterm', sub['midterm'] as Map?,
                       weights?['midterm'] as num?),
-                  scoreLine('Final', sub['final'] as Map<String, dynamic>?,
+                  _breakdownRow('Final', sub['final'] as Map?,
                       weights?['final'] as num?),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Divider(height: 1),
+                  ),
+                  _breakdownRow('Total', null, 100,
+                      totalWeighted: sub['total'] as num?, bold: true),
                 ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _breakdownHeader() {
+    const s = TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        color: AppColors.inkLo,
+        letterSpacing: 0.4);
+    return Row(
+      children: const [
+        Expanded(flex: 3, child: Text('CATEGORY', style: s)),
+        Expanded(
+            flex: 2,
+            child: Text('WEIGHT', style: s, textAlign: TextAlign.right)),
+        Expanded(
+            flex: 2,
+            child: Text('SCORE', style: s, textAlign: TextAlign.right)),
+        Expanded(
+            flex: 2,
+            child: Text('WEIGHTED', style: s, textAlign: TextAlign.right)),
+      ],
+    );
+  }
+
+  /// A single breakdown line. [part] is {score,max} or null; [weightPct] is the
+  /// category weight; weighted = score% × weight. The Total row passes
+  /// [totalWeighted] directly.
+  Widget _breakdownRow(String label, Map? part, num? weightPct,
+      {num? totalWeighted, bool bold = false}) {
+    final scorePct = part == null
+        ? null
+        : ((part['score'] as num) / ((part['max'] as num) == 0 ? 1 : part['max'] as num)) * 100;
+    final weighted = totalWeighted ??
+        (scorePct != null && weightPct != null
+            ? scorePct * weightPct / 100
+            : null);
+
+    final style = TextStyle(
+        fontSize: 12,
+        fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
+        color: bold ? AppColors.ink : AppColors.inkMid);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: Text(label, style: style)),
+          Expanded(
+            flex: 2,
+            child: Text(weightPct != null ? '${weightPct.round()}%' : '—',
+                style: style, textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(scorePct != null ? '${scorePct.toStringAsFixed(0)}%' : '—',
+                style: style, textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(weighted != null ? weighted.toStringAsFixed(1) : '—',
+                style: style.copyWith(
+                    color: bold ? AppColors.primary : AppColors.ink),
+                textAlign: TextAlign.right),
+          ),
+        ],
       ),
     );
   }

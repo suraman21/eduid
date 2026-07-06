@@ -11,13 +11,21 @@ import 'scanner_screen.dart';
 /// live search, bulk actions, continuous QR scanning. Saving queues the
 /// session and the SyncEngine pushes it automatically within a second.
 class RosterScreen extends StatefulWidget {
-  const RosterScreen(
-      {super.key, required this.schoolClass, this.autoScan = false});
+  const RosterScreen({
+    super.key,
+    required this.schoolClass,
+    this.autoScan = false,
+    this.sessionTypes = const ['morning', 'afternoon'],
+  });
 
   final SchoolClass schoolClass;
 
   /// Open the QR scanner immediately (home "Scan attendance" quick action).
   final bool autoScan;
+
+  /// Session slots the school actually records (from its attendance cadence).
+  /// The picker offers exactly these — never a hardcoded morning/afternoon.
+  final List<String> sessionTypes;
 
   @override
   State<RosterScreen> createState() => _RosterScreenState();
@@ -28,12 +36,28 @@ class _RosterScreenState extends State<RosterScreen> {
   final Map<int, AttendanceStatus> _marks = {};
   final Set<int> _scanned = {};
   final _search = TextEditingController();
-  String _sessionType = 'morning';
+  late String _sessionType;
   bool _saving = false;
+
+  /// Human label for a session-type key ('full_day' → 'Full day', etc.).
+  static String _sessionLabel(String key) => switch (key) {
+        'morning' => 'Morning',
+        'afternoon' => 'Afternoon',
+        'full_day' => 'Full day',
+        'once' => 'Full day',
+        _ => key
+            .split('_')
+            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' '),
+      };
 
   @override
   void initState() {
     super.initState();
+    // Default to the first slot the school uses (falls back safely).
+    _sessionType = widget.sessionTypes.isNotEmpty
+        ? widget.sessionTypes.first
+        : 'morning';
     _load();
     _search.addListener(() => setState(() {}));
   }
@@ -141,23 +165,24 @@ class _RosterScreenState extends State<RosterScreen> {
           ],
         ),
         actions: [
-          // Session type
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: DropdownButton<String>(
-              value: _sessionType,
-              underline: const SizedBox.shrink(),
-              style: const TextStyle(fontSize: 13, color: AppColors.inkMid),
-              items: const [
-                DropdownMenuItem(value: 'morning', child: Text('Morning')),
-                DropdownMenuItem(
-                    value: 'afternoon', child: Text('Afternoon')),
-                DropdownMenuItem(value: 'full_day', child: Text('Full day')),
-              ],
-              onChanged: (v) =>
-                  setState(() => _sessionType = v ?? 'morning'),
+          // Session type — only shown when the school actually has a choice
+          // (a single-session school records one slot; no picker needed).
+          if (widget.sessionTypes.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: DropdownButton<String>(
+                value: _sessionType,
+                underline: const SizedBox.shrink(),
+                borderRadius: BorderRadius.circular(12),
+                style: const TextStyle(fontSize: 13, color: AppColors.inkMid),
+                items: [
+                  for (final t in widget.sessionTypes)
+                    DropdownMenuItem(value: t, child: Text(_sessionLabel(t))),
+                ],
+                onChanged: (v) => setState(
+                    () => _sessionType = v ?? widget.sessionTypes.first),
+              ),
             ),
-          ),
         ],
       ),
       body: SafeArea(
@@ -197,113 +222,116 @@ class _RosterScreenState extends State<RosterScreen> {
               ),
             ),
 
-            // ── P/A/L/E legend ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Row(
-                children: [
-                  for (final st in AttendanceStatus.values) ...[
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                          color: _tone(st), shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                        switch (st) {
-                          AttendanceStatus.present => 'Present',
-                          AttendanceStatus.absent => 'Absent',
-                          AttendanceStatus.late => 'Late',
-                          AttendanceStatus.excused => 'Excused',
-                        },
-                        style: const TextStyle(
-                            fontSize: 11, color: AppColors.inkLo)),
-                    if (st != AttendanceStatus.excused)
-                      const SizedBox(width: 12),
-                  ],
-                ],
-              ),
-            ),
-
             // ── Student list (fixed row height → fastest possible scroll) ──
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                itemCount: visible.length,
-                itemExtent: 68,
-                itemBuilder: (context, i) {
-                  final s = visible[i];
-                  final mark = _marks[s.id] ?? AttendanceStatus.present;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: AppCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      radius: 14,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+              child: visible.isEmpty
+                  ? Center(
+                      child: Text(
+                          _students.isEmpty
+                              ? 'No students cached for this class yet.'
+                              : 'No students match "${_search.text.trim()}".',
+                          style: const TextStyle(
+                              color: AppColors.inkLo, fontSize: 13)),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      itemCount: visible.length,
+                      itemExtent: 70,
+                      itemBuilder: (context, i) {
+                        final s = visible[i];
+                        final mark = _marks[s.id] ?? AttendanceStatus.present;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: AppCard(
+                            padding:
+                                const EdgeInsets.fromLTRB(10, 0, 8, 0),
+                            radius: 14,
+                            child: Row(
                               children: [
-                                Row(children: [
-                                  Flexible(
-                                    child: Text(s.fullName,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.ink,
-                                            fontSize: 14)),
+                                _Avatar(s.fullName),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(children: [
+                                        Flexible(
+                                          child: Text(s.fullName,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.ink,
+                                                  fontSize: 14)),
+                                        ),
+                                        if (_scanned.contains(s.id))
+                                          const Padding(
+                                            padding:
+                                                EdgeInsets.only(left: 5),
+                                            child: Icon(
+                                                Icons.verified_rounded,
+                                                size: 15,
+                                                color: AppColors.green),
+                                          ),
+                                      ]),
+                                      Text('ID: ${s.uid}',
+                                          style: const TextStyle(
+                                              fontSize: 10.5,
+                                              color: AppColors.inkLo)),
+                                    ],
                                   ),
-                                  if (_scanned.contains(s.id))
-                                    const Padding(
-                                      padding: EdgeInsets.only(left: 5),
-                                      child: Icon(Icons.verified_rounded,
-                                          size: 15, color: AppColors.green),
-                                    ),
-                                ]),
-                                Text(s.uid,
-                                    style: const TextStyle(
-                                        fontSize: 10.5,
-                                        color: AppColors.inkLo)),
+                                ),
+                                for (final st in AttendanceStatus.values)
+                                  _PaleToggle(
+                                    status: st,
+                                    selected: mark == st,
+                                    tone: _tone(st),
+                                    onTap: () => setState(
+                                        () => _marks[s.id] = st),
+                                  ),
                               ],
                             ),
                           ),
-                          for (final st in AttendanceStatus.values)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 5),
-                              child: Material(
-                                color: mark == st ? _tone(st) : AppColors.bg,
-                                borderRadius: BorderRadius.circular(12),
-                                child: InkWell(
-                                  onTap: () =>
-                                      setState(() => _marks[s.id] = st),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    width: 36,
-                                    height: 36,
-                                    child: Center(
-                                      child: Text(
-                                        st.letter,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 12.5,
-                                          color: mark == st
-                                              ? Colors.white
-                                              : AppColors.inkMid,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
+            ),
+
+            // ── P/A/L/E legend (colored circular badges, matches the design) ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (final e in const [
+                    (AttendanceStatus.present, 'Present'),
+                    (AttendanceStatus.absent, 'Absent'),
+                    (AttendanceStatus.late, 'Late'),
+                    (AttendanceStatus.excused, 'Excused'),
+                  ])
+                    Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                              color: _tone(e.$1), shape: BoxShape.circle),
+                          child: Text(e.$1.letter,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800)),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(e.$2,
+                            style: const TextStyle(
+                                fontSize: 11, color: AppColors.inkMid)),
+                      ],
+                    ),
+                ],
               ),
             ),
 
@@ -335,6 +363,81 @@ class _RosterScreenState extends State<RosterScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Circular initials avatar (offline-safe — no network image needed).
+class _Avatar extends StatelessWidget {
+  const _Avatar(this.name);
+  final String name;
+
+  String get _initials {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    final first = parts.first[0];
+    final last = parts.length > 1 ? parts.last[0] : '';
+    return '$first$last'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+          color: AppColors.primarySoft, shape: BoxShape.circle),
+      child: Text(_initials,
+          style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+              fontSize: 13)),
+    );
+  }
+}
+
+/// One P/A/L/E toggle: a filled colour tile when selected, a quiet letter
+/// otherwise — the exact treatment from the design.
+class _PaleToggle extends StatelessWidget {
+  const _PaleToggle({
+    required this.status,
+    required this.selected,
+    required this.tone,
+    required this.onTap,
+  });
+
+  final AttendanceStatus status;
+  final bool selected;
+  final Color tone;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Material(
+        color: selected ? tone : AppColors.bg,
+        borderRadius: BorderRadius.circular(11),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(11),
+          child: SizedBox(
+            width: 34,
+            height: 34,
+            child: Center(
+              child: Text(
+                status.letter,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  color: selected ? Colors.white : AppColors.inkLo,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
