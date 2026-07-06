@@ -299,11 +299,37 @@ class School extends Model
     }
 
     /**
+     * The feature flags the school panel branches on, resolved in ONE cached
+     * read instead of eight. HandleInertiaRequests shares this on every
+     * navigation, so collapsing eight cache lookups into one measurably cuts
+     * per-request overhead on the file cache driver used in shared hosting.
+     */
+    public function frontendFeatures(): array
+    {
+        return Cache::remember(
+            "school.{$this->id}.features.frontend",
+            now()->addHour(),
+            fn () => [
+                'gradebook'       => $this->hasFeature('gradebook'),
+                'report_cards'    => $this->hasFeature('report_cards'),
+                'csv_import'      => $this->hasFeature('csv_import'),
+                'timetable'       => $this->hasFeature('timetable'),
+                'year_transition' => $this->hasFeature('year_transition'),
+                'analytics'       => $this->hasFeature('analytics'),
+                'alerts'          => $this->hasFeature('alerts'),
+                'fees'            => $this->hasFeature('fees'),
+            ],
+        );
+    }
+
+    /**
      * Flush the feature cache for this school.
      * Call this whenever a school's feature overrides or plan is changed.
      */
     public function flushFeatureCache(): void
     {
+        Cache::forget("school.{$this->id}.features.frontend");
+
         // Cache::forget() does not support wildcards, so the previous "*" call was
         // a silent no-op. Enumerate every registered feature key and forget each
         // exact cache entry for this school. The registry list is tiny and itself

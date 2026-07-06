@@ -46,7 +46,7 @@ class ClassController extends BaseSchoolController
         $this->requireAdmin();
         $this->requireWritableSubscription();
 
-        $validated = $request->validate($this->rules());
+        $validated = $request->validate($this->rules(), $this->messages());
         $validated['is_active'] = true;
         $validated['level_order'] = $validated['level_order'] ?? 0;
 
@@ -80,7 +80,7 @@ class ClassController extends BaseSchoolController
 
         $validated = $request->validate($this->rules($class->id) + [
             'is_active' => 'boolean',
-        ]);
+        ], $this->messages());
         $validated['is_active'] = $request->boolean('is_active');
         $validated['level_order'] = $validated['level_order'] ?? 0;
 
@@ -106,6 +106,21 @@ class ClassController extends BaseSchoolController
             'section'       => 'required|string|max:10',
             'academic_year' => 'required|string|max:20',
             'level_order'   => 'nullable|integer|min:0',
+        ];
+    }
+
+    /**
+     * Clear, unambiguous messages. A class is unique by grade + section +
+     * academic year, so the default "grade has already been taken" is
+     * misleading — it makes admins think they can't reuse a grade for another
+     * section (which they absolutely can). Spell out the real conflict.
+     */
+    private function messages(): array
+    {
+        return [
+            'grade.unique' => 'A class for this grade and section already exists for '
+                .(request('academic_year') ?: 'this academic year')
+                .'. To add another section, change the Section field (e.g. A → B).',
         ];
     }
 }

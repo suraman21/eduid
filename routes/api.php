@@ -24,30 +24,9 @@ use App\Http\Controllers\Api\V1\TelegramWebhookController;
 // ── Public Endpoints ─────────────────────────────────────────────
 Route::prefix('v1')->group(function () {
 
-    // Health check — used by uptime monitors
-    Route::get('/health', function () {
-        try {
-            \Illuminate\Support\Facades\DB::connection()->getPdo();
-            $dbStatus = 'ok';
-        } catch (\Exception $e) {
-            $dbStatus = 'error';
-        }
-
-        $storageStatus = is_writable(storage_path('app')) ? 'ok' : 'error';
-
-        // Schema drift (deploy skipped `migrate`) has caused production 500s —
-        // surface it here so uptime monitors flag it before users hit it.
-        $pending = \App\Support\SchemaHealth::pendingMigrations();
-
-        return response()->json([
-            'status'  => ($dbStatus === 'ok' && $storageStatus === 'ok' && $pending === 0) ? 'ok' : 'degraded',
-            'db'      => $dbStatus,
-            'storage' => $storageStatus,
-            'pending_migrations' => $pending,
-            'version' => '1.0.0',
-            'time'    => now()->toIso8601String(),
-        ]);
-    })->name('api.health');
+    // Health check — used by uptime monitors. Controller (not a closure) so
+    // `route:cache` can run.
+    Route::get('/health', [\App\Http\Controllers\SystemController::class, 'health'])->name('api.health');
 
     // Authentication Login
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.login');

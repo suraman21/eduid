@@ -57,27 +57,8 @@ use Inertia\Inertia;
 
 // ── Public Routes ─────────────────────────────────────────────
 
-// Marketing / Sales page
-Route::get('/', function () {
-    // Send an authenticated visitor to their dashboard. School (web guard)
-    // takes precedence — the admin portal is reached via /admin explicitly.
-    if (Auth::guard('web')->check()) {
-        return redirect('/school/dashboard');
-    }
-    if (Auth::guard('admin')->check()) {
-        return redirect('/admin/dashboard');
-    }
-    return Inertia::render('Welcome', [
-        'success' => session('success'),
-        'error'   => session('error'),
-        // Live pricing — assembled from the plans the Super Admin edits, so the
-        // public page and the Packages dashboard never drift apart.
-        'plans'   => \App\Http\Controllers\PublicController::plans(),
-        // Card printing price — single source of truth is the order model, the
-        // same constant the real school card-order flow bills against.
-        'cardAnnualPrice' => \App\Models\CardOrder::PRICING['annual_renewal'],
-    ]);
-})->name('home');
+// Marketing / Sales page. (Controller, not a closure, so route:cache works.)
+Route::get('/', [\App\Http\Controllers\SystemController::class, 'home'])->name('home');
 
 // Lead capture / Contact form (public — throttled against lead-spam).
 Route::post('/contact', [LeadController::class, 'store'])->middleware('throttle:contact')->name('contact.store');
@@ -85,24 +66,8 @@ Route::post('/contact', [LeadController::class, 'store'])->middleware('throttle:
 // Client-side error sink: the React error boundary posts unexpected UI crashes
 // here so the details are logged on the SERVER (never shown to the user or the
 // browser console). Throttled so a crash-loop can't flood the log.
-Route::post('/client-error', function (\Illuminate\Http\Request $request) {
-    $data = $request->validate([
-        'ref'     => 'required|string|max:40',
-        'message' => 'nullable|string|max:1000',
-        'stack'   => 'nullable|string|max:5000',
-        'url'     => 'nullable|string|max:500',
-    ]);
-
-    \Illuminate\Support\Facades\Log::error("[{$data['ref']}] Client UI error: ".($data['message'] ?? 'unknown'), [
-        'stack'   => $data['stack'] ?? null,
-        'url'     => $data['url'] ?? $request->headers->get('referer'),
-        'user_id' => auth()->id(),
-        'ip'      => $request->ip(),
-        'agent'   => $request->userAgent(),
-    ]);
-
-    return response()->noContent();
-})->middleware('throttle:contact')->name('client-error');
+Route::post('/client-error', [\App\Http\Controllers\SystemController::class, 'clientError'])
+    ->middleware('throttle:contact')->name('client-error');
 
 // ── Auth Routes ───────────────────────────────────────────────
 
@@ -118,12 +83,7 @@ Route::get('/admin/login/verify', [AdminLoginController::class, 'showOtpForm'])-
 Route::post('/admin/login/verify', [AdminLoginController::class, 'verifyOtp'])->middleware('throttle:login')->name('admin.otp.verify');
 
 // Redirect /admin to /admin/login (or dashboard if already logged in)
-Route::get('/admin', function () {
-    if (Auth::guard('admin')->check()) {
-        return redirect('/admin/dashboard');
-    }
-    return redirect()->route('admin.login');
-});
+Route::get('/admin', [\App\Http\Controllers\SystemController::class, 'adminEntry']);
 
 // Super Admin logout (admin guard only — a school login in the same browser
 // survives; each portal signs out independently).
