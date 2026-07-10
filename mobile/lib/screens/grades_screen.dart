@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/data_service.dart';
 import '../ui/kit.dart';
+import '../ui/skeleton.dart';
 
 /// Read-only gradebook for one class — weighted totals, letters and ranks
 /// come pre-computed from the server. Opens INSTANTLY from the cache, then
@@ -72,6 +73,30 @@ class _GradesScreenState extends State<GradesScreen> {
     return AppColors.red;
   }
 
+  /// The prerequisite/empty notice for the loaded payload, if any. The server
+  /// tells us WHY grades aren't showing (no term / no subjects / no grades /
+  /// no students); older cached blobs without that field fall back to a
+  /// generic "no grades" when the student list is empty.
+  String? _noticeFor(Map<String, dynamic> data) {
+    final n = data['notice'] as String?;
+    if (n != null) return n;
+    final students = data['students'] as List?;
+    if (students == null || students.isEmpty) return 'no_grades';
+    return null;
+  }
+
+  Widget _gradeNotice(String notice) {
+    final (IconData icon, String title) = switch (notice) {
+      'no_term' => (Icons.event_busy_rounded, 'No academic term yet'),
+      'no_subjects' => (Icons.menu_book_rounded, 'No subjects assigned'),
+      'no_students' => (Icons.people_alt_outlined, 'No students in this class'),
+      _ => (Icons.grading_rounded, 'No grades yet'),
+    };
+    final msg = _data?['notice_message'] as String? ??
+        'Grades appear here once teachers record and the admin publishes them.';
+    return StateMessage(icon: icon, title: title, subtitle: msg);
+  }
+
   @override
   Widget build(BuildContext context) {
     final students = List<Map<String, dynamic>>.from(
@@ -115,22 +140,19 @@ class _GradesScreenState extends State<GradesScreen> {
           if (switchable) _classSwitcher(),
           Expanded(
             child: _loading && _data == null
-                ? const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.primary, strokeWidth: 2.6))
+                ? const SkeletonList()
                 : _data == null
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text(
-                            'No grades available offline yet.\nOpen this screen once while online to cache it.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColors.inkMid, fontSize: 13),
-                          ),
-                        ),
+                    ? StateMessage(
+                        icon: Icons.cloud_off_rounded,
+                        title: "Couldn't load grades",
+                        subtitle:
+                            'Open this screen once while online, then it works offline too.',
+                        actionLabel: 'Try again',
+                        onAction: _load,
                       )
-                    : Column(
+                    : _noticeFor(_data!) != null
+                        ? _gradeNotice(_noticeFor(_data!)!)
+                        : Column(
                         children: [
                           Padding(
                             padding:

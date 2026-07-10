@@ -155,9 +155,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep showing a skeleton — not an empty state — while the very first sync
+    // is still in flight, so the timetable doesn't flash "No timetable yet"
+    // before its data arrives a moment later.
+    final engine = context.watch<SyncEngine>();
+    final stillLoading =
+        _loading || (_week.isEmpty && engine.initialSyncPending);
+    final offline = engine.status == SyncStatus.offline;
+
     return Scaffold(
       body: SafeArea(
-        child: _loading
+        child: stillLoading
             ? const SkeletonList()
             : Column(
                 children: [
@@ -166,11 +174,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   const SizedBox(height: 6),
                   Expanded(
                     child: _week.isEmpty
-                        ? const StateMessage(
-                            icon: Icons.calendar_today_outlined,
-                            title: 'No timetable yet',
-                            subtitle:
-                                'Your timetable appears here automatically once the school sets it up.',
+                        ? StateMessage(
+                            icon: offline
+                                ? Icons.cloud_off_rounded
+                                : Icons.calendar_today_outlined,
+                            title: offline
+                                ? "Can't load your timetable"
+                                : 'No timetable yet',
+                            subtitle: offline
+                                ? 'You appear to be offline. Your timetable will load once you reconnect.'
+                                : 'No periods are scheduled for you. Your timetable appears here once the school sets it up on the web.',
                           )
                         : switch (_view) {
                             _View.weekly => _weeklyView(),

@@ -18,16 +18,39 @@ class GradeController extends BaseApiController
             return response()->json(['message' => 'You are not assigned to this class.'], 403);
         }
 
+        $school = $this->currentSchool();
+
         $termId = request()->query('term_id');
         $term = $termId
             ? Term::where('id', $termId)->firstOrFail()
             : Term::where('is_current', true)->first();
 
+        // No term configured yet is a normal not-set-up state, not an error.
+        // Return 200 with a clear notice so the app can explain the next step
+        // instead of showing a misleading "no grades / offline" message.
         if (! $term) {
-            return response()->json(['message' => 'No current term found.'], 404);
+            return response()->json([
+                'class'    => ['id' => $class->id, 'name' => $class->display_name],
+                'term'     => null,
+                'weights'  => ['ca' => 40, 'midterm' => 20, 'final' => 40],
+                'students' => [],
+                'notice'   => 'no_term',
+                'notice_message' => 'No academic term has been set up yet. Ask your school admin to create a term (Grades → Terms) before grades can be recorded.',
+            ]);
         }
 
-        $school = $this->currentSchool();
+        // Subjects must be assigned to the class before grades mean anything.
+        if (ClassSubject::where('class_id', $class->id)->doesntExist()) {
+            return response()->json([
+                'class'    => ['id' => $class->id, 'name' => $class->display_name],
+                'term'     => ['id' => $term->id, 'name' => $term->name, 'academic_year' => $term->academic_year],
+                'weights'  => ['ca' => 40, 'midterm' => 20, 'final' => 40],
+                'students' => [],
+                'notice'   => 'no_subjects',
+                'notice_message' => 'No subjects are assigned to this class yet. Assign subjects on the web (Classes → Subjects) so grades can be entered.',
+            ]);
+        }
+
         $config = AssessmentConfig::where('school_id', $school->id)
             ->where('academic_year', $term->academic_year)
             ->whereNull('grade_level')
@@ -119,6 +142,19 @@ class GradeController extends BaseApiController
         }
         unset($row);
 
+        // Distinguish "class has no students" from "no grades entered yet" so
+        // the app shows the right message rather than a bare empty list.
+        $anyGrade = $allGrades->flatten()->isNotEmpty();
+        $notice = null;
+        $noticeMessage = null;
+        if ($students->isEmpty()) {
+            $notice = 'no_students';
+            $noticeMessage = 'This class has no active students yet.';
+        } elseif (! $anyGrade) {
+            $notice = 'no_grades';
+            $noticeMessage = 'No grades have been entered for this term yet. Grades appear here once teachers record and the admin publishes them.';
+        }
+
         return response()->json([
             'class' => ['id' => $class->id, 'name' => $class->display_name],
             'term'  => ['id' => $term->id, 'name' => $term->name, 'academic_year' => $term->academic_year],
@@ -128,6 +164,8 @@ class GradeController extends BaseApiController
                 'final' => $config ? (float) $config->final_weight : 40,
             ],
             'students' => $rows,
+            'notice'   => $notice,
+            'notice_message' => $noticeMessage,
         ]);
     }
 }

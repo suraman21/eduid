@@ -139,6 +139,37 @@ export default function Index({
                     )}
                 </div>
 
+                {/* No terms yet — grades are unusable until one exists. Guide
+                    the admin straight to term creation instead of leaving them
+                    at an empty selector. */}
+                {terms.length === 0 && (
+                    <Card className="p-5 mb-6">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                                style={{ background: alpha(accent, 0.12), color: accent }}>
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-sm font-bold text-slate-800">Set up an academic term first</h3>
+                                <p className="text-sm text-slate-500 mt-1">
+                                    Grades are organised by term (e.g. Semester 1). {is_admin
+                                        ? 'Create your first term to start recording grades — it takes a few seconds.'
+                                        : 'Ask your school administrator to create a term before grades can be recorded.'}
+                                </p>
+                                {is_admin && (
+                                    <Link
+                                        href="/school/grades/terms"
+                                        className="inline-block mt-3 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                                        style={{ backgroundColor: accent }}
+                                    >
+                                        Create a term
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Filter form */}
                 <Card className="p-5 mb-6">
                     <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">

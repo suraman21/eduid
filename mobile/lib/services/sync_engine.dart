@@ -26,6 +26,13 @@ class SyncEngine extends ChangeNotifier {
   DateTime? lastSync;
   int pending = 0;
 
+  /// True while the FIRST successful pull is still outstanding and we are not
+  /// in a known-offline state — i.e. the cache may still be about to fill.
+  /// Cache-backed screens use this to keep showing a skeleton instead of a
+  /// premature "nothing here" empty state right after launch.
+  bool get initialSyncPending =>
+      lastSync == null && status != SyncStatus.offline;
+
   void start() {
     _timer?.cancel();
     _timer = Timer.periodic(_interval, (_) => sync());

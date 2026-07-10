@@ -75,17 +75,23 @@ class _ClassesScreenState extends State<ClassesScreen> {
   @override
   Widget build(BuildContext context) {
     final engine = context.watch<SyncEngine>();
+    final stillLoading =
+        _loading || (_classes.isEmpty && engine.initialSyncPending);
+    final offline = engine.status == SyncStatus.offline;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Classes')),
-      body: _loading
+      body: stillLoading
           ? const SkeletonList()
           : _classes.isEmpty
-              ? const StateMessage(
-                  icon: Icons.grid_view_rounded,
-                  title: 'No classes yet',
-                  subtitle:
-                      'Your classes appear here automatically after the first sync.',
+              ? StateMessage(
+                  icon: offline
+                      ? Icons.cloud_off_rounded
+                      : Icons.grid_view_rounded,
+                  title: offline ? "Can't load classes" : 'No classes yet',
+                  subtitle: offline
+                      ? 'You appear to be offline. Your classes will load once you reconnect.'
+                      : "You aren't assigned to any classes yet. Ask your school admin to assign you.",
                 )
               : RefreshIndicator(
                   color: AppColors.primary,

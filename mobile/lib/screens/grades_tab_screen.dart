@@ -49,21 +49,28 @@ class _GradesTabScreenState extends State<GradesTabScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final engine = context.watch<SyncEngine>();
     final classes = _classes;
-    if (classes == null) {
+
+    // Skeleton until the first cache read completes AND, if it came back empty,
+    // until the first sync has resolved — so Grades never flashes "no classes"
+    // before the sync fills the cache a moment later.
+    if (classes == null || (classes.isEmpty && engine.initialSyncPending)) {
       return Scaffold(
         appBar: AppBar(title: const Text('Grades')),
         body: const SkeletonList(),
       );
     }
     if (classes.isEmpty) {
+      final offline = engine.status == SyncStatus.offline;
       return Scaffold(
         appBar: AppBar(title: const Text('Grades')),
-        body: const StateMessage(
-          icon: Icons.insights_rounded,
-          title: 'No classes yet',
-          subtitle:
-              'Grades appear here once your classes and their assessments are set up.',
+        body: StateMessage(
+          icon: offline ? Icons.cloud_off_rounded : Icons.insights_rounded,
+          title: offline ? "Can't load classes" : 'No classes yet',
+          subtitle: offline
+              ? 'You appear to be offline. Grades will load once you reconnect.'
+              : "You aren't assigned to any classes yet. Ask your school admin to assign you.",
         ),
       );
     }
