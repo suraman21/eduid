@@ -26,6 +26,7 @@ use App\Http\Controllers\School\AdmissionController as SchoolAdmissionController
 use App\Http\Controllers\School\TranscriptController as SchoolTranscriptController;
 use App\Http\Controllers\School\CertificateController as SchoolCertificateController;
 use App\Http\Controllers\School\StaffDocumentController as SchoolStaffDocumentController;
+use App\Http\Controllers\School\ReportController as SchoolReportController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
@@ -324,6 +325,14 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
         Route::resource('/staff', SchoolStaffController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.staff');
+
+        // Reports — enrolment, retention, results, at-risk. Read-only.
+        Route::prefix('reports')->name('school.reports.')->group(function () {
+            Route::get('/', [SchoolReportController::class, 'index'])->name('index');
+            Route::get('/{report}/export', [SchoolReportController::class, 'export'])
+                ->whereIn('report', ['enrolment', 'retention', 'results', 'at-risk'])
+                ->name('export');
+        });
 
         // Staff paperwork — contracts, licences, clearances, permits.
         // The register is school-wide and ordered by expiry, so it sits at

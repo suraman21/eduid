@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
     { label: 'Staff files',    href: '/school/staff-documents', icon: FolderLock,      inertia: true, roles: ['school_admin'] },
     { label: 'Programmes',     href: '/school/programmes',      icon: Layers,          inertia: true, roles: ['school_admin', 'staff'] },
     { label: 'Promotions',     href: '/school/promotions',      icon: ArrowUpRight,    inertia: true, roles: ['school_admin'] },
+    { label: 'Reports',        href: '/school/reports',         icon: BarChart3,       inertia: true, roles: ['school_admin'] },
     { label: 'Classes',        href: '/school/classes',         icon: GraduationCap,   inertia: true, roles: ['school_admin', 'staff'], tour: 'nav-classes' },
     { label: 'Subjects',       href: '/school/subjects',        icon: BookOpen,        inertia: true, roles: ['school_admin'] },
     { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'], tour: 'nav-staff' },
