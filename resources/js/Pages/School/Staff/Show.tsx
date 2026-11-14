@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Edit2, CheckCircle, XCircle } from 'lucide-react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import type { PageProps } from '@/types';
+import StaffDocumentPanel, { type StaffDoc } from '@/Components/StaffDocumentPanel';
 
 /* ── colour helpers ──────────────────────────────────────────── */
 function normHex(c: string | null | undefined) {
@@ -64,10 +65,13 @@ interface TeachingRow {
 interface Props {
     member: StaffMember;
     teaching: TeachingRow[] | null;
+    documents: StaffDoc[];
+    document_types: { value: string; label: string }[];
+    warn_days: number;
     is_admin: boolean;
 }
 
-export default function Show({ member, teaching, is_admin }: Props) {
+export default function Show({ member, teaching, documents, document_types, warn_days, is_admin }: Props) {
     const { props } = usePage<PageProps>();
     const accent = normHex(props.accent);
 
@@ -200,6 +204,18 @@ export default function Show({ member, teaching, is_admin }: Props) {
                     <BoolRow label="Department coordinator" value={member.is_coordinator} />
                     <BoolRow label="Can record staff attendance" value={member.can_record_staff_attendance} />
                 </Card>
+            </div>
+
+            {/* Paperwork — contracts, licences, clearances, permits */}
+            <div className="mt-6">
+                <StaffDocumentPanel
+                    staffId={member.id}
+                    documents={documents ?? []}
+                    types={document_types ?? []}
+                    isAdmin={is_admin}
+                    accent={accent}
+                    warnDays={warn_days ?? 60}
+                />
             </div>
         </SchoolLayout>
     );

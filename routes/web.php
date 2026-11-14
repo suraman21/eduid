@@ -25,6 +25,7 @@ use App\Http\Controllers\School\BulkPromotionController as SchoolBulkPromotionCo
 use App\Http\Controllers\School\AdmissionController as SchoolAdmissionController;
 use App\Http\Controllers\School\TranscriptController as SchoolTranscriptController;
 use App\Http\Controllers\School\CertificateController as SchoolCertificateController;
+use App\Http\Controllers\School\StaffDocumentController as SchoolStaffDocumentController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
@@ -323,6 +324,20 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
         Route::resource('/staff', SchoolStaffController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.staff');
+
+        // Staff paperwork — contracts, licences, clearances, permits.
+        // The register is school-wide and ordered by expiry, so it sits at
+        // /staff-documents rather than under a single staff member.
+        Route::prefix('staff-documents')->name('school.staff-documents.')->group(function () {
+            Route::get('/', [SchoolStaffDocumentController::class, 'index'])->name('index');
+        });
+
+        Route::prefix('staff/{staff}/documents')->name('school.staff.documents.')->group(function () {
+            Route::post('/',                   [SchoolStaffDocumentController::class, 'store'])->name('store');
+            Route::get('/{document}/download', [SchoolStaffDocumentController::class, 'download'])->name('download');
+            Route::post('/{document}/verify',  [SchoolStaffDocumentController::class, 'verify'])->name('verify');
+            Route::delete('/{document}',       [SchoolStaffDocumentController::class, 'destroy'])->name('destroy');
+        });
 
         // Report Cards (web-viewable, print-friendly — no server-side PDF).
         // Gated on the 'report_cards' module of the school's package.

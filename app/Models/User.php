@@ -194,6 +194,18 @@ class User extends Authenticatable
         return $this->hasMany(AttendanceSession::class, 'teacher_id');
     }
 
+    /**
+     * Contracts, licences, clearances and other paperwork held against this
+     * member — ordered the way the compliance register orders them, so the
+     * first thing an admin sees is whatever lapses soonest.
+     */
+    public function staffDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StaffDocument::class, 'user_id')
+            ->orderByRaw('CASE WHEN expires_on IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('expires_on');
+    }
+
     public function cardOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(CardOrder::class, 'ordered_by');

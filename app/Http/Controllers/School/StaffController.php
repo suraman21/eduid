@@ -120,6 +120,30 @@ class StaffController extends BaseSchoolController
                 'initials'                      => strtoupper(substr($staff->name, 0, 2)),
             ],
             'teaching' => $staff->isTeacher() ? $this->teachingSummary($staff) : null,
+            'documents' => $staff->staffDocuments()
+                ->with('uploader:id,name')
+                ->get()
+                ->map(fn ($d) => [
+                    'id'           => $d->id,
+                    'type'         => $d->type,
+                    'type_label'   => $d->typeLabel(),
+                    'title'        => $d->title,
+                    'description'  => $d->description,
+                    'file_name'    => $d->original_name,
+                    'file_size'    => $d->humanSize(),
+                    'is_pdf'       => $d->isPdf(),
+                    'is_image'     => $d->isImage(),
+                    'issued_on'    => $d->issued_on?->format('Y-m-d'),
+                    'expires_on'   => $d->expires_on?->format('Y-m-d'),
+                    'expiry_state' => $d->expiryState(),
+                    'days_left'    => $d->daysUntilExpiry(),
+                    'is_expired'   => $d->isExpired(),
+                    'is_verified'  => (bool) $d->is_verified,
+                    'uploaded_by'  => $d->uploader?->name,
+                ]),
+            'document_types' => collect(\App\Models\StaffDocument::TYPES)
+                ->map(fn ($l, $k) => ['value' => $k, 'label' => $l])->values(),
+            'warn_days' => \App\Models\StaffDocument::WARN_DAYS,
             'is_admin' => auth()->user()?->isSchoolAdmin() ?? false,
         ]);
     }
