@@ -377,6 +377,12 @@ export default function Show({ student, lifecycle, is_admin, parent_app, alerts_
                     >
                         <ScrollText className="w-4 h-4" /> Transcript
                     </Link>
+                    <Link
+                        href={`/school/certificates/create?student_id=${student.id}`}
+                        className="flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-2xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                    >
+                        <Award className="w-4 h-4" /> Certificate
+                    </Link>
                     <a
                         href={`/school/students/${student.id}/id-card`}
                         className="flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-2xl transition-all"

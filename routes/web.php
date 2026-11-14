@@ -24,6 +24,7 @@ use App\Http\Controllers\School\ProgrammeController as SchoolProgrammeController
 use App\Http\Controllers\School\BulkPromotionController as SchoolBulkPromotionController;
 use App\Http\Controllers\School\AdmissionController as SchoolAdmissionController;
 use App\Http\Controllers\School\TranscriptController as SchoolTranscriptController;
+use App\Http\Controllers\School\CertificateController as SchoolCertificateController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
@@ -416,6 +417,18 @@ Route::middleware(['auth', 'role:school_admin,staff', 'school.scope'])->prefix('
                 Route::get('/{transcript}', [SchoolTranscriptController::class, 'issued'])->name('issued');
                 Route::post('/{transcript}/revoke', [SchoolTranscriptController::class, 'revoke'])->name('revoke');
             });
+
+        // Certificates — generated letters, frozen on issue.
+        // Literal routes (/create, /students, /preview) precede {certificate}.
+        Route::prefix('certificates')->name('school.certificates.')->group(function () {
+            Route::get('/',          [SchoolCertificateController::class, 'index'])->name('index');
+            Route::get('/create',    [SchoolCertificateController::class, 'create'])->name('create');
+            Route::get('/students',  [SchoolCertificateController::class, 'searchStudents'])->name('students');
+            Route::post('/preview',  [SchoolCertificateController::class, 'preview'])->name('preview');
+            Route::post('/',         [SchoolCertificateController::class, 'store'])->name('store');
+            Route::get('/{certificate}',         [SchoolCertificateController::class, 'show'])->whereNumber('certificate')->name('show');
+            Route::post('/{certificate}/revoke', [SchoolCertificateController::class, 'revoke'])->whereNumber('certificate')->name('revoke');
+        });
 
         // Admissions pipeline — enquiry through to enrolment.
         Route::prefix('admissions')->name('school.admissions.')->group(function () {
