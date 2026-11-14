@@ -6,7 +6,7 @@ import {
     Plus, Trash2, Star, Smartphone, Send,
     GraduationCap, ArrowUpRight, RotateCcw, LogOut, Award, Undo2,
     FileText, Upload, Download, Eye, CheckCircle2, Clock, MapPin,
-    History, Paperclip, X, AlertTriangle,
+    History, Paperclip, X, AlertTriangle, ScrollText,
 } from 'lucide-react';
 import SchoolLayout from '@/Layouts/SchoolLayout';
 import type { PageProps } from '@/types';
@@ -371,6 +371,12 @@ export default function Show({ student, lifecycle, is_admin, parent_app, alerts_
                     <ArrowLeft className="w-4 h-4" /> Back to Students
                 </Link>
                 <div className="flex items-center gap-2">
+                    <Link
+                        href={`/school/students/${student.id}/transcripts`}
+                        className="flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-2xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                    >
+                        <ScrollText className="w-4 h-4" /> Transcript
+                    </Link>
                     <a
                         href={`/school/students/${student.id}/id-card`}
                         className="flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-2xl transition-all"

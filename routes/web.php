@@ -23,6 +23,7 @@ use App\Http\Controllers\School\StudentLifecycleController as SchoolStudentLifec
 use App\Http\Controllers\School\ProgrammeController as SchoolProgrammeController;
 use App\Http\Controllers\School\BulkPromotionController as SchoolBulkPromotionController;
 use App\Http\Controllers\School\AdmissionController as SchoolAdmissionController;
+use App\Http\Controllers\School\TranscriptController as SchoolTranscriptController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
@@ -405,6 +406,15 @@ Route::middleware(['auth', 'role:school_admin,staff', 'school.scope'])->prefix('
                 Route::get('/{document}/download', [SchoolStudentLifecycleController::class, 'downloadDocument'])->name('download');
                 Route::delete('/{document}', [SchoolStudentLifecycleController::class, 'destroyDocument'])->name('destroy');
                 Route::post('/{document}/verify', [SchoolStudentLifecycleController::class, 'verifyDocument'])->name('verify');
+            });
+
+        // Academic transcripts — live preview, issue a frozen copy, revoke.
+        Route::prefix('students/{student}/transcripts')->name('school.students.transcripts.')
+            ->group(function () {
+                Route::get('/',      [SchoolTranscriptController::class, 'show'])->name('show');
+                Route::post('/',     [SchoolTranscriptController::class, 'issue'])->name('issue');
+                Route::get('/{transcript}', [SchoolTranscriptController::class, 'issued'])->name('issued');
+                Route::post('/{transcript}/revoke', [SchoolTranscriptController::class, 'revoke'])->name('revoke');
             });
 
         // Admissions pipeline — enquiry through to enrolment.
