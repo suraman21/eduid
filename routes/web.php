@@ -22,6 +22,7 @@ use App\Http\Controllers\School\StudentController as SchoolStudentController;
 use App\Http\Controllers\School\StudentLifecycleController as SchoolStudentLifecycleController;
 use App\Http\Controllers\School\ProgrammeController as SchoolProgrammeController;
 use App\Http\Controllers\School\BulkPromotionController as SchoolBulkPromotionController;
+use App\Http\Controllers\School\AdmissionController as SchoolAdmissionController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
@@ -405,6 +406,18 @@ Route::middleware(['auth', 'role:school_admin,staff', 'school.scope'])->prefix('
                 Route::delete('/{document}', [SchoolStudentLifecycleController::class, 'destroyDocument'])->name('destroy');
                 Route::post('/{document}/verify', [SchoolStudentLifecycleController::class, 'verifyDocument'])->name('verify');
             });
+
+        // Admissions pipeline — enquiry through to enrolment.
+        Route::prefix('admissions')->name('school.admissions.')->group(function () {
+            Route::get('/',              [SchoolAdmissionController::class, 'index'])->name('index');
+            Route::get('/create',        [SchoolAdmissionController::class, 'create'])->name('create');
+            Route::post('/',             [SchoolAdmissionController::class, 'store'])->name('store');
+            Route::get('/{application}', [SchoolAdmissionController::class, 'show'])->name('show');
+            Route::patch('/{application}', [SchoolAdmissionController::class, 'update'])->name('update');
+            Route::delete('/{application}', [SchoolAdmissionController::class, 'destroy'])->name('destroy');
+            Route::post('/{application}/status',  [SchoolAdmissionController::class, 'changeStatus'])->name('status');
+            Route::post('/{application}/convert', [SchoolAdmissionController::class, 'convert'])->name('convert');
+        });
 
         // End-of-year bulk promotion for a whole cohort.
         Route::prefix('promotions')->name('school.promotions.')->group(function () {
