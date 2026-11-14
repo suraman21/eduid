@@ -16,9 +16,16 @@ class SchoolClass extends Model
 
     protected $fillable = [
         'school_id',
+        'programme_id',
         'grade',
         'section',
         'academic_year',
+        'cohort_kind',
+        'level_number',
+        'shift',
+        'capacity',
+        'start_date',
+        'end_date',
         'level_order',
         'is_active',
         'homeroom_teacher_id',
@@ -27,10 +34,30 @@ class SchoolClass extends Model
     protected function casts(): array
     {
         return [
-            'is_active'   => 'boolean',
-            'level_order' => 'integer',
+            'is_active'    => 'boolean',
+            'level_order'  => 'integer',
+            'level_number' => 'integer',
+            'capacity'     => 'integer',
+            'start_date'   => 'date',
+            'end_date'     => 'date',
         ];
     }
+
+    public const SHIFTS = [
+        'full_day'  => 'Full day',
+        'morning'   => 'Morning',
+        'afternoon' => 'Afternoon',
+        'evening'   => 'Evening',
+        'weekend'   => 'Weekend',
+    ];
+
+    public const KINDS = [
+        'grade_section' => 'Grade section',
+        'semester'      => 'Semester',
+        'batch'         => 'Batch',
+        'intake'        => 'Intake',
+        'group'         => 'Group',
+    ];
 
     // ── Relationships ──────────────────────────────────────────
 
@@ -59,6 +86,16 @@ class SchoolClass extends Model
         return $this->hasMany(ClassSubject::class, 'class_id');
     }
 
+    public function programme(): BelongsTo
+    {
+        return $this->belongsTo(Programme::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(StudentEnrollment::class, 'class_id');
+    }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     /**
@@ -67,6 +104,36 @@ class SchoolClass extends Model
     public function getDisplayNameAttribute(): string
     {
         return "{$this->grade} - {$this->section}";
+    }
+
+    /**
+     * Richer label used by the lifecycle UI, e.g. "Grade 9 A · 2026/2027 · Morning".
+     */
+    public function getLifecycleLabelAttribute(): string
+    {
+        $base = trim("{$this->grade} {$this->section}");
+        $bits = [$base];
+
+        if ($this->academic_year) {
+            $bits[] = $this->academic_year;
+        }
+        if ($this->shift && $this->shift !== 'full_day') {
+            $bits[] = self::SHIFTS[$this->shift] ?? $this->shift;
+        }
+
+        return implode(' · ', $bits);
+    }
+
+    /**
+     * Seats still open, or null when no capacity was set.
+     */
+    public function seatsRemaining(): ?int
+    {
+        if (!$this->capacity) {
+            return null;
+        }
+
+        return max(0, $this->capacity - $this->enrollments()->where('is_current', true)->count());
     }
 
     /**

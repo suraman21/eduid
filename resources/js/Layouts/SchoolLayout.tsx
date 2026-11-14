@@ -5,6 +5,7 @@ import {
     LayoutDashboard, Users, GraduationCap, BookOpen, UserCog,
     ClipboardCheck, FileBarChart, Menu, LogOut, Upload, Search, X,
     UserCircle, CreditCard, FileText, CalendarRange, Rocket, BarChart3, Wallet, Settings,
+    Layers, ArrowUpRight,
 } from 'lucide-react';
 import type { PageProps } from '@/types';
 import Toast from '@/Components/Toast';
@@ -19,6 +20,8 @@ interface NavItem { label: string; href: string; icon: React.ElementType; inerti
 const navItems: NavItem[] = [
     { label: 'Dashboard',      href: '/school/dashboard',       icon: LayoutDashboard, inertia: true, tour: 'nav-dashboard' },
     { label: 'Students',       href: '/school/students',        icon: Users,           inertia: true, roles: ['school_admin', 'staff'], tour: 'nav-students' },
+    { label: 'Programmes',     href: '/school/programmes',      icon: Layers,          inertia: true, roles: ['school_admin', 'staff'] },
+    { label: 'Promotions',     href: '/school/promotions',      icon: ArrowUpRight,    inertia: true, roles: ['school_admin'] },
     { label: 'Classes',        href: '/school/classes',         icon: GraduationCap,   inertia: true, roles: ['school_admin', 'staff'], tour: 'nav-classes' },
     { label: 'Subjects',       href: '/school/subjects',        icon: BookOpen,        inertia: true, roles: ['school_admin'] },
     { label: 'Staff',          href: '/school/staff',           icon: UserCog,         inertia: true, roles: ['school_admin'], tour: 'nav-staff' },

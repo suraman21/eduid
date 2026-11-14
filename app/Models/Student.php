@@ -66,6 +66,39 @@ class Student extends Model
         return $this->hasMany(AttendanceRecord::class);
     }
 
+    // ── Lifecycle ───────────────────────────────────────────────
+
+    /** Every period of study, newest first. */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(StudentEnrollment::class)->orderByDesc('enrolled_on');
+    }
+
+    /** The single open period of study, if any. */
+    public function currentEnrollment(): HasMany
+    {
+        return $this->hasMany(StudentEnrollment::class)
+            ->where('is_current', true)
+            ->latest('enrolled_on');
+    }
+
+    public function profile(): HasMany
+    {
+        return $this->hasMany(StudentProfile::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(StudentDocument::class)->orderByDesc('created_at');
+    }
+
+    public function lifecycleEvents(): HasMany
+    {
+        return $this->hasMany(LifecycleEvent::class)
+            ->orderByDesc('occurred_on')
+            ->orderByDesc('id');
+    }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     /**

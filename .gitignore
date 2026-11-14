@@ -25,3 +25,9 @@ yarn-error.log
 /.vscode
 /.zed
 .claude/
+
+# Local server artefacts — never commit
+.env.bak*
+.env.bak2d*
+/env
+/vendor.broken*

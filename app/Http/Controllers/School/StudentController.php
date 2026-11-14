@@ -129,6 +129,27 @@ class StudentController extends BaseSchoolController
     {
         $student->load('schoolClass', 'guardians.user');
 
+        $enrollmentService = app(\App\Services\EnrollmentService::class);
+        $current = $enrollmentService->currentFor($student);
+
+        $profile = \App\Models\StudentProfile::firstOrCreate(
+            ['student_id' => $student->id],
+            ['school_id' => $student->school_id],
+        );
+
+        $classes = SchoolClass::query()
+            ->where('is_active', true)
+            ->orderBy('level_order')
+            ->orderBy('grade')
+            ->orderBy('section')
+            ->get()
+            ->map(fn ($c) => [
+                'id'             => $c->id,
+                'label'          => $c->lifecycle_label,
+                'academic_year'  => $c->academic_year,
+                'seats_remaining'=> $c->seatsRemaining(),
+            ]);
+
         return Inertia::render('School/Students/Show', [
             'student' => [
                 'id'              => $student->id,
@@ -168,10 +189,87 @@ class StudentController extends BaseSchoolController
                     'telegram_link'   => app(\App\Services\TelegramService::class)->deepLink($g),
                 ]),
             ],
+
+            /* ── Lifecycle: the 360° record ─────────────────────── */
+            'lifecycle' => [
+                'current' => $current ? $this->enrollmentPayload($current) : null,
+                'history' => $student->enrollments()
+                    ->with('cohort')
+                    ->get()
+                    ->map(fn ($e) => $this->enrollmentPayload($e)),
+                'events'  => $student->lifecycleEvents()
+                    ->with('recordedBy:id,name')
+                    ->get()
+                    ->map(fn ($ev) => [
+                        'id'          => $ev->id,
+                        'event'       => $ev->event,
+                        'label'       => $ev->label(),
+                        'occurred_on' => $ev->occurred_on?->format('Y-m-d'),
+                        'from_label'  => $ev->from_label,
+                        'to_label'    => $ev->to_label,
+                        'notes'       => $ev->notes,
+                        'by'          => $ev->recordedBy?->name,
+                        'is_exit'     => in_array($ev->event, \App\Models\LifecycleEvent::EXIT_EVENTS, true),
+                    ]),
+                'profile' => $profile->only([
+                    'national_id', 'birth_place', 'nationality', 'mother_tongue', 'religion',
+                    'region', 'zone', 'woreda', 'kebele', 'house_number', 'address_line',
+                    'phone', 'email',
+                    'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
+                    'previous_school', 'previous_school_year', 'previous_grade', 'admission_source',
+                    'allergies', 'chronic_conditions', 'insurance_provider', 'insurance_number',
+                    'special_needs', 'exit_reason_category', 'exit_note', 'exit_destination',
+                ]),
+                'documents' => $student->documents()->get()->map(fn ($d) => [
+                    'id'          => $d->id,
+                    'type'        => $d->type,
+                    'type_label'  => $d->typeLabel(),
+                    'title'       => $d->title,
+                    'description' => $d->description,
+                    'original_name' => $d->original_name,
+                    'mime_type'   => $d->mime_type,
+                    'size'        => $d->humanSize(),
+                    'is_image'    => $d->isImage(),
+                    'is_pdf'      => $d->isPdf(),
+                    'issued_on'   => $d->issued_on?->format('Y-m-d'),
+                    'is_verified' => (bool) $d->is_verified,
+                    'created_at'  => $d->created_at?->format('d M Y'),
+                    'view_url'    => route('school.students.documents.show', [$student->id, $d->id]),
+                    'download_url'=> route('school.students.documents.download', [$student->id, $d->id]),
+                ]),
+                'classes'     => $classes,
+                'document_types' => collect(\App\Models\StudentDocument::TYPES)
+                    ->map(fn ($label, $key) => ['value' => $key, 'label' => $label])
+                    ->values(),
+            ],
+
             'is_admin'   => auth()->user()?->isSchoolAdmin() ?? false,
             'parent_app' => $this->currentSchool()->hasFeature('parent_app'),
             'alerts_on'  => $this->currentSchool()->hasFeature('alerts'),
         ]);
+    }
+
+    /** Shape one enrolment row for the lifecycle UI. */
+    private function enrollmentPayload(\App\Models\StudentEnrollment $e): array
+    {
+        return [
+            'id'            => $e->id,
+            'label'         => $e->label(),
+            'class_name'    => $e->cohort
+                ? trim($e->cohort->grade . ' ' . $e->cohort->section)
+                : null,
+            'academic_year' => $e->academic_year,
+            'term_label'    => $e->term_label,
+            'level_number'  => $e->level_number,
+            'status'        => $e->status,
+            'exit_reason'   => $e->exit_reason,
+            'exit_note'     => $e->exit_note,
+            'destination_school' => $e->destination_school,
+            'enrolled_on'   => $e->enrolled_on?->format('Y-m-d'),
+            'ended_on'      => $e->ended_on?->format('Y-m-d'),
+            'is_current'    => (bool) $e->is_current,
+            'duration'      => $e->durationLabel(),
+        ];
     }
 
     /**

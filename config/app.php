@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://arkeoid.arkeonethiopia.com'),
+    'url' => env('APP_URL', 'https://eduid.arkeonethiopia.com'),
 
     /*
     |--------------------------------------------------------------------------

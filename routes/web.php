@@ -19,6 +19,9 @@ use App\Http\Controllers\School\AnalyticsController as SchoolAnalyticsController
 use App\Http\Controllers\School\StudentImportController as SchoolStudentImportController;
 use App\Http\Controllers\School\DashboardController as SchoolDashboardController;
 use App\Http\Controllers\School\StudentController as SchoolStudentController;
+use App\Http\Controllers\School\StudentLifecycleController as SchoolStudentLifecycleController;
+use App\Http\Controllers\School\ProgrammeController as SchoolProgrammeController;
+use App\Http\Controllers\School\BulkPromotionController as SchoolBulkPromotionController;
 use App\Http\Controllers\School\ClassController as SchoolClassController;
 use App\Http\Controllers\School\SubjectController as SchoolSubjectController;
 use App\Http\Controllers\School\TimetableController as SchoolTimetableController;
@@ -375,6 +378,48 @@ Route::middleware(['auth', 'role:school_admin', 'school.scope'])->prefix('school
 // Ring 3 — school admins + support staff (registry pages; writes are
 // additionally requireAdmin()-guarded inside the controllers).
 Route::middleware(['auth', 'role:school_admin,staff', 'school.scope'])->prefix('school')->group(function () {
+        // ── Student lifecycle ────────────────────────────────────
+        // Registered before the students resource so that a literal segment
+        // ("lifecycle", "documents") is never mistaken for a student id.
+        // Writes are additionally requireAdmin()-guarded inside the controller.
+        Route::prefix('students/{student}/lifecycle')->name('school.students.lifecycle.')
+            ->group(function () {
+                Route::post('/enroll',       [SchoolStudentLifecycleController::class, 'enroll'])->name('enroll');
+                Route::post('/promote',      [SchoolStudentLifecycleController::class, 'promote'])->name('promote');
+                Route::post('/repeat',       [SchoolStudentLifecycleController::class, 'repeat'])->name('repeat');
+                Route::post('/change-class', [SchoolStudentLifecycleController::class, 'changeClass'])->name('change-class');
+                Route::post('/transfer',     [SchoolStudentLifecycleController::class, 'transfer'])->name('transfer');
+                Route::post('/withdraw',     [SchoolStudentLifecycleController::class, 'withdraw'])->name('withdraw');
+                Route::post('/graduate',     [SchoolStudentLifecycleController::class, 'graduate'])->name('graduate');
+                Route::post('/reinstate',    [SchoolStudentLifecycleController::class, 'reinstate'])->name('reinstate');
+            });
+
+        Route::patch('students/{student}/profile', [SchoolStudentLifecycleController::class, 'updateProfile'])
+            ->name('school.students.profile.update');
+
+        Route::prefix('students/{student}/documents')->name('school.students.documents.')
+            ->group(function () {
+                Route::post('/',            [SchoolStudentLifecycleController::class, 'storeDocument'])->name('store');
+                Route::get('/{document}',   [SchoolStudentLifecycleController::class, 'showDocument'])->name('show');
+                Route::get('/{document}/download', [SchoolStudentLifecycleController::class, 'downloadDocument'])->name('download');
+                Route::delete('/{document}', [SchoolStudentLifecycleController::class, 'destroyDocument'])->name('destroy');
+                Route::post('/{document}/verify', [SchoolStudentLifecycleController::class, 'verifyDocument'])->name('verify');
+            });
+
+        // End-of-year bulk promotion for a whole cohort.
+        Route::prefix('promotions')->name('school.promotions.')->group(function () {
+            Route::get('/',  [SchoolBulkPromotionController::class, 'index'])->name('index');
+            Route::post('/', [SchoolBulkPromotionController::class, 'store'])->name('store');
+        });
+
+        // Programmes of study (the layer above classes).
+        Route::prefix('programmes')->name('school.programmes.')->group(function () {
+            Route::get('/',              [SchoolProgrammeController::class, 'index'])->name('index');
+            Route::post('/',             [SchoolProgrammeController::class, 'store'])->name('store');
+            Route::patch('/{programme}', [SchoolProgrammeController::class, 'update'])->name('update');
+            Route::delete('/{programme}', [SchoolProgrammeController::class, 'destroy'])->name('destroy');
+        });
+
         Route::resource('/students', SchoolStudentController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
             ->names('school.students');
